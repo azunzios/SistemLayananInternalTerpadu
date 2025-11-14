@@ -1,0 +1,26 @@
+# ===== FRONTEND =====
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.env
+/frontend/.env.*
+
+
+# ===== BACKEND =====
+/backend/vendor/
+/backend/node_modules/
+/backend/storage/*
+!/backend/storage/app
+!/backend/storage/framework
+!/backend/storage/logs
+/backend/.env
+/backend/.env.*
+
+
+# ===== GLOBAL =====
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
