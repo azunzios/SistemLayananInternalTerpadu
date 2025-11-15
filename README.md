@@ -1,4 +1,4 @@
-# Aplikasi Perbaikan & Zoom Management  
+# Aplikasi Manajemen Perbaikan Barang & Zoom
 ![Laravel](https://img.shields.io/badge/Laravel-FF2D20?logo=laravel&logoColor=white&style=for-the-badge)
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white&style=for-the-badge)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white&style=for-the-badge)  
