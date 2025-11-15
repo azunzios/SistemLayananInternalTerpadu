@@ -17,6 +17,12 @@ frontend/ # React + Vite client
 
 # Instalasi Backend (Laravel)
 
+## Requirements
+
+Composer versi 2  
+PHP minimal veri 8.2  
+dan kita akan menginstall Laravel versi 12.0  
+
 ## Masuk ke folder backend:
 
 ```bash
@@ -35,7 +41,9 @@ Sementara belum ada data yang dibuat
 
 `php artisan serve` (biasanya ada di localhost:8000)
 
-# Instalasi Frontend (React + Vite (typescript))
+# Instalasi Frontend (React + Vite (typescript))  
+
+Node.js minimal versi 24 LTS  
 
 ## Masuk ke folder
 
@@ -51,7 +59,8 @@ Nanti kita atur .env nya ketika backendnya sudah mulai dibuat
 
 ## Jalankan frontend
 
-`npm run dev` (biasanya ada di localhost:5173)
+`npm run dev`  
+vite akan berjalan di localhost:5173 sedangkan appnya ada di localhost:3000   
 
 # Workflow Pengembangan (Sangat Penting)
 
