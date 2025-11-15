@@ -31,7 +31,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { getNotifications, saveNotifications, getActiveRole, setActiveRole } from '../lib/storage';
 import type { User as UserType, UserRole } from '../types';
 import type { ViewType } from './main-layout';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,

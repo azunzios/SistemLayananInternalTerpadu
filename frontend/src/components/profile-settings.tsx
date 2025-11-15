@@ -9,7 +9,7 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import { User as UserIcon, Key, Shield, CheckCircle, Eye, EyeOff, Camera } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getUsers, saveUsers, setCurrentUser as saveCurrentUser, addAuditLog } from '../lib/storage';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';

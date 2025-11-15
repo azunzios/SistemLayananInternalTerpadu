@@ -52,7 +52,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getInventory, saveInventory } from '../lib/storage';
 import type { User, InventoryItem } from '../types';
 

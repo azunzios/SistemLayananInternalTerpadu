@@ -45,7 +45,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getTickets, saveTickets, addNotification, getUsers, createWorkOrder } from '../lib/storage';
 import type { Ticket, TicketStatus, User, WorkOrder, WorkOrderType, ProblemType } from '../types';
 

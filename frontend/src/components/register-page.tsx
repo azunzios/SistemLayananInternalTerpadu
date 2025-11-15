@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Eye, EyeOff, Building, UserPlus, AlertCircle, Check } from 'lucide-react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
 import { getUsers, saveUsers, addAuditLog, addNotification } from '../lib/storage';
 import type { User } from '../types';

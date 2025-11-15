@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import { Eye, EyeOff, Building, Users, AlertCircle, Mail, Info, Shield, ClipboardCheck, Package, Wrench, UserCircle } from 'lucide-react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
 import { getUsers, setCurrentUser, addAuditLog, setRememberToken } from '../lib/storage';
 import type { User } from '../types';

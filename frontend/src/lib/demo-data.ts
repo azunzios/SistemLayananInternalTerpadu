@@ -496,7 +496,7 @@ export const getDemoTickets = (): Ticket[] => {
       description: 'Koordinasi persiapan pelaksanaan Sensus Pertanian 2025 dengan seluruh Kabupaten/Kota se-NTB',
       type: 'zoom_meeting',
       status: 'menunggu_review',
-      priority: 'mendesak',
+      priority: 'P1',
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       data: {

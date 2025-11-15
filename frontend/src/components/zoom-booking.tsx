@@ -34,7 +34,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Video, Calendar as CalendarIcon, Clock, CheckCircle, XCircle, AlertCircle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getZoomBookings, getTickets, saveTickets, addNotification } from '../lib/storage';
 import type { User, ZoomBooking } from '../types';
 import type { ViewType } from './main-layout';

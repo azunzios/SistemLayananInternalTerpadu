@@ -40,7 +40,7 @@ import {
 import { Switch } from './ui/switch';
 import { Users, Search, Edit, Trash2, Plus, Shield, UserCheck, UserX } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getUsers, saveUsers, addAuditLog, addNotification } from '../lib/storage';
 import type { User, UserRole } from '../types';
 

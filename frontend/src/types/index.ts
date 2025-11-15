@@ -1,4 +1,4 @@
-// Type definitions for BPS NTB Ticketing System
+// type definition buat aplikasi ini
 
 export type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'user';
 
@@ -79,7 +79,7 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   data: Record<string, any>;
-  attachments: Attachment[];
+  attachments?: Attachment[];
   timeline: TimelineEvent[];
   
   // Perbaikan specific fields

@@ -8,7 +8,6 @@ import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription } from './ui/alert';
 import { TicketProgressTracker } from './ticket-progress-tracker';
@@ -42,7 +41,6 @@ import {
 import {
   ArrowLeft,
   Clock,
-  User,
   CheckCircle,
   XCircle,
   MessageSquare,
@@ -54,16 +52,13 @@ import {
   Activity,
   AlertCircle,
   Truck,
-  MapPin,
-  Monitor,
-  Cpu,
   FileText,
   AlertTriangle,
   ClipboardCheck,
   CheckCircle2,
   FolderKanban,
 } from 'lucide-react';
-import type { Ticket, User, TimelineEvent, TicketStatus, UrgencyLevel } from '../types';
+import type { User, TicketStatus, UrgencyLevel } from '../types';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { getTickets, saveTickets, getUsers, addNotification, createWorkOrder, getWorkOrdersByTicket } from '../lib/storage';

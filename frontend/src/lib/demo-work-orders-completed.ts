@@ -1,5 +1,5 @@
 // Demo Work Orders yang sudah Completed untuk Kartu Kendali
-import { WorkOrder, Ticket } from '../types';
+import type { WorkOrder, Ticket } from '../types';
 
 export const getCompletedWorkOrdersDemo = (): WorkOrder[] => {
   const now = new Date();

@@ -1,7 +1,48 @@
 // LocalStorage management utilities for BPS NTB Ticketing System
 
-import { User, Ticket, Category, InventoryItem, SparepartRequest, ZoomBooking, AuditLog, Notification, WorkOrder, KartuKendali } from '../types';
+import type { User, Ticket, Category, InventoryItem, SparepartRequest, ZoomBooking, AuditLog, Notification, WorkOrder, KartuKendali } from '../types';
 import { seedDemoData } from './demo-data';
+import { api } from './api';
+
+// Runtime flag: when false, use API instead of localStorage for domain data
+const USE_LOCAL_MOCK = (import.meta as any)?.env?.VITE_ENABLE_MOCK === 'true';
+
+// Simple in-memory cache for API-first mode to keep getters synchronous
+const cache = {
+  tickets: [] as Ticket[],
+  categories: [] as Category[],
+  inventory: [] as InventoryItem[],
+  sparepartRequests: [] as SparepartRequest[],
+  zoomBookings: [] as ZoomBooking[],
+  auditLogs: [] as AuditLog[],
+  notifications: [] as Notification[],
+  workOrders: [] as WorkOrder[],
+  kartuKendali: [] as KartuKendali[],
+};
+
+let cacheLoaded = false;
+
+export async function loadDataFromApiOnce() {
+  if (USE_LOCAL_MOCK || cacheLoaded) return;
+  try {
+    const [tickets, categories, inventory, zoomBookings, workOrders] = await Promise.all([
+      api.get<Ticket[]>('tickets'),
+      api.get<Category[]>('categories').catch(() => []),
+      api.get<InventoryItem[]>('inventory').catch(() => []),
+      api.get<ZoomBooking[]>('zoom/bookings').catch(() => []),
+      api.get<WorkOrder[]>('work-orders').catch(() => []),
+    ]);
+    cache.tickets = Array.isArray(tickets) ? tickets : [];
+    cache.categories = categories || [];
+    cache.inventory = inventory || [];
+    cache.zoomBookings = zoomBookings || [];
+    cache.workOrders = workOrders || [];
+    cacheLoaded = true;
+  } catch (err) {
+    console.warn('Failed loading initial API data, using empty caches', err);
+    cacheLoaded = true;
+  }
+}
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -27,6 +68,8 @@ const CURRENT_DATA_VERSION = '3.0'; // Increment this to force re-initialization
 
 // Initialize default data with demo accounts
 export const initializeDefaultData = () => {
+  // In API mode, do not seed local demo data
+  if (!USE_LOCAL_MOCK) return;
   // Check data version
   const currentVersion = localStorage.getItem(STORAGE_KEYS.DATA_VERSION);
   const demoInitialized = localStorage.getItem(STORAGE_KEYS.DEMO_INITIALIZED);
@@ -120,85 +163,113 @@ export const clearActiveRole = (userId?: string) => {
 
 // Ticket management
 export const getTickets = (): Ticket[] => {
+  if (!USE_LOCAL_MOCK) {
+    return cache.tickets;
+  }
   const tickets = localStorage.getItem(STORAGE_KEYS.TICKETS);
   if (!tickets) return [];
-  
   const parsedTickets: Ticket[] = JSON.parse(tickets);
-  
-  // Migration: Ensure all tickets have required fields
   const migratedTickets = parsedTickets.map(ticket => ({
     ...ticket,
     attachments: ticket.attachments || [],
     timeline: ticket.timeline || [
-      {
-        id: `tl-${ticket.id}-1`,
-        timestamp: ticket.createdAt,
-        action: 'CREATED',
-        actor: ticket.userId,
-        details: 'Tiket dibuat',
-      },
+      { id: `tl-${ticket.id}-1`, timestamp: ticket.createdAt, action: 'CREATED', actor: ticket.userId, details: 'Tiket dibuat' },
     ],
   }));
-  
-  // Save migrated data if changes were made
   if (JSON.stringify(parsedTickets) !== JSON.stringify(migratedTickets)) {
     saveTickets(migratedTickets);
   }
-  
   return migratedTickets;
 };
 
 export const saveTickets = (tickets: Ticket[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.tickets = tickets;
+    // Attempt bulk save; ignore failures in UI thread
+    api.put('tickets', tickets as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(tickets));
 };
 
 // Category management
 export const getCategories = (): Category[] => {
+  if (!USE_LOCAL_MOCK) return cache.categories;
   const categories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
   return categories ? JSON.parse(categories) : [];
 };
 
 export const saveCategories = (categories: Category[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.categories = categories;
+    api.put('categories', categories as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
 };
 
 // Inventory management
 export const getInventory = (): InventoryItem[] => {
+  if (!USE_LOCAL_MOCK) return cache.inventory;
   const inventory = localStorage.getItem(STORAGE_KEYS.INVENTORY);
   return inventory ? JSON.parse(inventory) : [];
 };
 
 export const saveInventory = (inventory: InventoryItem[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.inventory = inventory;
+    api.put('inventory', inventory as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(inventory));
 };
 
 // Sparepart requests
 export const getSparepartRequests = (): SparepartRequest[] => {
+  if (!USE_LOCAL_MOCK) return cache.sparepartRequests;
   const requests = localStorage.getItem(STORAGE_KEYS.SPAREPART_REQUESTS);
   return requests ? JSON.parse(requests) : [];
 };
 
 export const saveSparepartRequests = (requests: SparepartRequest[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.sparepartRequests = requests;
+    api.put('sparepart-requests', requests as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.SPAREPART_REQUESTS, JSON.stringify(requests));
 };
 
 // Zoom bookings
 export const getZoomBookings = (): ZoomBooking[] => {
+  if (!USE_LOCAL_MOCK) return cache.zoomBookings;
   const bookings = localStorage.getItem(STORAGE_KEYS.ZOOM_BOOKINGS);
   return bookings ? JSON.parse(bookings) : [];
 };
 
 export const saveZoomBookings = (bookings: ZoomBooking[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.zoomBookings = bookings;
+    api.put('zoom/bookings', bookings as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.ZOOM_BOOKINGS, JSON.stringify(bookings));
 };
 
 // Audit logs
 export const getAuditLogs = (): AuditLog[] => {
+  if (!USE_LOCAL_MOCK) return cache.auditLogs;
   const logs = localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS);
   return logs ? JSON.parse(logs) : [];
 };
 
 export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
+  if (!USE_LOCAL_MOCK) {
+    const newLog: AuditLog = { ...log, id: Date.now().toString(), timestamp: new Date().toISOString() } as any;
+    cache.auditLogs = [...cache.auditLogs, newLog];
+    api.post('audit-logs', newLog as any).catch(() => {});
+    return;
+  }
   const logs = getAuditLogs();
   const newLog: AuditLog = {
     ...log,
@@ -211,35 +282,40 @@ export const addAuditLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
 
 // Notifications
 export const getNotifications = (userId: string): Notification[] => {
+  if (!USE_LOCAL_MOCK) return cache.notifications.filter(n => n.userId === userId);
   const notifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
   if (!notifications) return [];
-  
   const parsed = JSON.parse(notifications);
-  
-  // Migration: Check if old object format (Record<string, Notification[]>)
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    // Convert old object format to array format
     const migratedNotifications: Notification[] = [];
     Object.values(parsed).forEach((userNotifs: any) => {
       if (Array.isArray(userNotifs)) {
         migratedNotifications.push(...userNotifs);
       }
     });
-    // Save migrated data
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(migratedNotifications));
     return migratedNotifications.filter(n => n.userId === userId);
   }
-  
-  // Normal array format
   const allNotifications: Notification[] = Array.isArray(parsed) ? parsed : [];
   return allNotifications.filter(n => n.userId === userId);
 };
 
 export const saveNotifications = (notifications: Notification[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.notifications = notifications;
+    api.put('notifications', notifications as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
 };
 
 export const addNotification = (notification: Omit<Notification, 'id' | 'createdAt'>) => {
+  if (!USE_LOCAL_MOCK) {
+    const newNotification: Notification = { ...notification, id: Date.now().toString(), createdAt: new Date().toISOString() } as any;
+    cache.notifications = [...cache.notifications, newNotification];
+    api.post('notifications', newNotification as any).catch(() => {});
+    return;
+  }
   const notifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
   let allNotifications: Notification[] = [];
   
@@ -317,15 +393,38 @@ export const clearRememberToken = () => {
 // ============================================
 
 export const getWorkOrders = (): WorkOrder[] => {
+  if (!USE_LOCAL_MOCK) return cache.workOrders;
   const data = localStorage.getItem(STORAGE_KEYS.WORK_ORDERS);
   return data ? JSON.parse(data) : [];
 };
 
 export const saveWorkOrders = (workOrders: WorkOrder[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.workOrders = workOrders;
+    api.put('work-orders', workOrders as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(workOrders));
 };
 
 export const createWorkOrder = (data: Partial<WorkOrder> & { ticketId: string; type: 'sparepart' | 'vendor'; createdBy: string }) => {
+  if (!USE_LOCAL_MOCK) {
+    const wo: WorkOrder = {
+      id: `wo-${Date.now()}`,
+      ticketId: data.ticketId!,
+      type: data.type!,
+      status: 'requested',
+      createdBy: data.createdBy!,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      spareparts: data.spareparts,
+      vendorInfo: data.vendorInfo,
+      timeline: [{ id: `tl-${Date.now()}`, timestamp: new Date().toISOString(), action: 'WORK_ORDER_CREATED', actor: data.createdBy!, details: `Work Order ${data.type} dibuat` }],
+    } as any;
+    cache.workOrders = [...cache.workOrders, wo];
+    api.post('work-orders', wo as any).catch(() => {});
+    return wo;
+  }
   const workOrder: WorkOrder = {
     id: `wo-${Date.now()}`,
     ticketId: data.ticketId,
@@ -352,6 +451,15 @@ export const createWorkOrder = (data: Partial<WorkOrder> & { ticketId: string; t
 };
 
 export const updateWorkOrder = (id: string, updates: Partial<WorkOrder>) => {
+  if (!USE_LOCAL_MOCK) {
+    const index = cache.workOrders.findIndex(wo => wo.id === id);
+    if (index !== -1) {
+      cache.workOrders[index] = { ...cache.workOrders[index], ...updates, updatedAt: new Date().toISOString() } as any;
+      api.put(`work-orders/${id}`, cache.workOrders[index] as any).catch(() => {});
+      return cache.workOrders[index];
+    }
+    return null;
+  }
   const workOrders = getWorkOrders();
   const index = workOrders.findIndex(wo => wo.id === id);
   if (index !== -1) {
@@ -363,11 +471,13 @@ export const updateWorkOrder = (id: string, updates: Partial<WorkOrder>) => {
 };
 
 export const getWorkOrdersByTicket = (ticketId: string): WorkOrder[] => {
+  if (!USE_LOCAL_MOCK) return cache.workOrders.filter(wo => wo.ticketId === ticketId);
   const workOrders = getWorkOrders();
   return workOrders.filter(wo => wo.ticketId === ticketId);
 };
 
 export const getWorkOrderById = (id: string): WorkOrder | undefined => {
+  if (!USE_LOCAL_MOCK) return cache.workOrders.find(wo => wo.id === id);
   const workOrders = getWorkOrders();
   return workOrders.find(wo => wo.id === id);
 };
@@ -377,11 +487,17 @@ export const getWorkOrderById = (id: string): WorkOrder | undefined => {
 // ============================================
 
 export const getKartuKendali = (): KartuKendali[] => {
+  if (!USE_LOCAL_MOCK) return cache.kartuKendali;
   const data = localStorage.getItem(STORAGE_KEYS.KARTU_KENDALI);
   return data ? JSON.parse(data) : [];
 };
 
 export const saveKartuKendali = (kartuList: KartuKendali[]) => {
+  if (!USE_LOCAL_MOCK) {
+    cache.kartuKendali = kartuList;
+    api.put('kartu-kendali', kartuList as any).catch(() => {});
+    return;
+  }
   localStorage.setItem(STORAGE_KEYS.KARTU_KENDALI, JSON.stringify(kartuList));
 };
 

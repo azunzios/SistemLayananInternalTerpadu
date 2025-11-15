@@ -25,7 +25,7 @@ import {
   Info,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getTickets, saveTickets, createNotification, getCurrentUser } from '../lib/storage';
 import type { Ticket } from '../types';
 

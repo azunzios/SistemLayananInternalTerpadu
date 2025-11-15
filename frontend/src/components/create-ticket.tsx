@@ -16,7 +16,7 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Wrench, Video, ArrowLeft, X, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { getTickets, saveTickets, generateTicketNumber, addNotification, getUsers } from '../lib/storage';
 import type { User, Ticket, TicketType, UrgencyLevel, PriorityLevel } from '../types';
 

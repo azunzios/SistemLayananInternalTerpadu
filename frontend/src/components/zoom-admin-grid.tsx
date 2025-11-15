@@ -45,7 +45,7 @@ import {
   Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { ZoomMonthlyCalendar } from './zoom-monthly-calendar';
 import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
 import { getTickets, saveTickets, createNotification } from '../lib/storage';

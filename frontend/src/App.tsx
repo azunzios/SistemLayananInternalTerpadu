@@ -1,29 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { LoginPage } from './components/login-page';
 import { MainLayout } from './components/main-layout';
-import { Wireframe } from './components/wireframe';
 import { Toaster } from './components/ui/sonner';
-import { Button } from './components/ui/button';
-import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, getRememberToken, clearRememberToken, getUsers } from './lib/storage';
-import { FileText, ArrowLeft } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner'
+import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, getRememberToken, clearRememberToken, getUsers, loadDataFromApiOnce } from './lib/storage';
 import type { User } from './types';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showWireframe, setShowWireframe] = useState(false);
 
   // Initialize app on load
   useEffect(() => {
-    // Initialize default data (creates super admin if not exists)
+    // If mock mode, seed demo data. Otherwise, load initial data from API into cache
     initializeDefaultData();
 
     // Check for current user session
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
-      setIsLoading(false);
-      return;
     }
 
     // Check for remember me token
@@ -36,8 +31,10 @@ const App: React.FC = () => {
         saveCurrentUser(rememberedUser);
       }
     }
-
-    setIsLoading(false);
+    // Always attempt to warm caches from API (no-op in mock mode)
+    loadDataFromApiOnce()
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleLogin = (user: User) => {
@@ -59,32 +56,10 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <Spinner/>
           <p className="text-gray-600">Memuat sistem...</p>
         </div>
       </div>
-    );
-  }
-
-  // Show wireframe mode
-  if (showWireframe) {
-    return (
-      <>
-        <div className="min-h-screen">
-          <div className="fixed top-4 left-4 z-50">
-            <Button 
-              onClick={() => setShowWireframe(false)}
-              variant="outline"
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Kembali ke Aplikasi
-            </Button>
-          </div>
-          <Wireframe />
-        </div>
-        <Toaster position="top-right" />
-      </>
     );
   }
 
@@ -93,16 +68,6 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         {!currentUser ? (
           <div className="relative">
-            <div className="fixed top-4 right-4 z-50">
-              <Button 
-                onClick={() => setShowWireframe(true)}
-                variant="outline"
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Lihat Wireframe
-              </Button>
-            </div>
             <LoginPage onLogin={handleLogin} />
           </div>
         ) : (
@@ -117,5 +82,4 @@ const App: React.FC = () => {
     </>
   );
 };
-
 export default App;
