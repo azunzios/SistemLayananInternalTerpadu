@@ -3,8 +3,8 @@
 ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=white&style=for-the-badge)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white&style=for-the-badge)  
 
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)]
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)]
 
 Aplikasi ini terdiri dari **Backend (Laravel)** dan **Frontend (React + Vite)**.  
 
