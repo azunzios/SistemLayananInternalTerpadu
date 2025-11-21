@@ -10,7 +10,7 @@ export type PerbaikanStatus =
   | 'in_progress'      // Sedang dikerjakan teknisi
   | 'on_hold'          // Menunggu WO (sparepart/vendor)
   | 'resolved'         // Selesai diperbaiki (oleh teknisi)
-  | 'waiting_for_user' // Menunggu konfirmasi user
+  | 'waiting_for_pegawai' // Menunggu konfirmasi pegawai
   | 'closed'           // Selesai & dikonfirmasi
   | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
 
