@@ -19,6 +19,7 @@ npm run dev
 
 buat file: env.local di folder frontend isinya gini:
 
+```
 # Backend API Configuration
 # URL ke Laravel backend
 
@@ -27,4 +28,5 @@ VITE_API=http://localhost:8000/api
 
 # API Timeout (ms) - Optional
 VITE_API_TIMEOUT=30000
+```
 
