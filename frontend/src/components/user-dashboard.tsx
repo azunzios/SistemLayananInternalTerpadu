@@ -1,65 +1,227 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import {
   Wrench,
   Video,
-  AlertCircle,
   ArrowRight,
   Sparkles,
-  Activity,
+  ArrowUpRight,
+  Loader,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getTickets } from '../lib/storage';
+import { api } from '../lib/api';
 import { UserOnboarding } from './user-onboarding';
+import { QuickBookingDialog } from './zoom-booking-dialogs/index';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';
+
+interface DashboardStats {
+  total: number;
+  in_progress: number;
+  completed: number;
+  rejected: number;
+  completion_rate: number;
+  perbaikan: number;
+  zoom: number;
+}
 
 interface UserDashboardProps {
   currentUser: User;
   onNavigate: (view: ViewType) => void;
 }
 
-export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNavigate }) => {
-  const tickets = getTickets();
-  const [showOnboarding, setShowOnboarding] = useState(false);
+const INITIAL_BOOKING_FORM = {
+  title: '',
+  purpose: '',
+  participants: '',
+  breakoutRooms: '0',
+  startTime: '',
+  endTime: '',
+};
 
-  // Check if this is first time user (no tickets created yet)
+export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNavigate }) => {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showQuickBooking, setShowQuickBooking] = useState(false);
+  const [quickBookingDate, setQuickBookingDate] = useState<Date | undefined>(undefined);
+  const [bookingForm, setBookingForm] = useState(INITIAL_BOOKING_FORM);
+  const [selectedCoHostIds, setSelectedCoHostIds] = useState<string[]>([]);
+  const [coHostQuery, setCoHostQuery] = useState('');
+  const [isSearchingCoHost, setIsSearchingCoHost] = useState(false);
+  const [coHostResults, setCoHostResults] = useState<User[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
+
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem(`onboarding_seen_${currentUser.id}`);
-    const userTickets = tickets.filter(t => t.userId === currentUser.id);
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get<{ success: boolean; stats: DashboardStats }>(
+          'tickets/stats/dashboard'
+        );
+        if (response.success && response.stats) {
+          setStats(response.stats);
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    const hasSeenOnboarding = sessionStorage.getItem(`onboarding_seen_${currentUser.id}`);
     
-    if (!hasSeenOnboarding && userTickets.length === 0) {
+    if (!hasSeenOnboarding && stats && stats.total === 0) {
       setShowOnboarding(true);
     }
-  }, [currentUser.id]);
+  }, [currentUser.id, stats]);
 
   const handleCompleteOnboarding = () => {
-    localStorage.setItem(`onboarding_seen_${currentUser.id}`, 'true');
+    sessionStorage.setItem(`onboarding_seen_${currentUser.id}`, 'true');
     setShowOnboarding(false);
   };
 
-  // Filter user's tickets
-  const myTickets = tickets.filter(t => t.userId === currentUser.id);
+  const resetQuickBookingState = () => {
+    setQuickBookingDate(undefined);
+    setBookingForm(INITIAL_BOOKING_FORM);
+    setSelectedCoHostIds([]);
+    setCoHostQuery('');
+    setCoHostResults([]);
+    setIsSubmittingQuick(false);
+  };
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    return {
-      total: myTickets.length,
-      pending: myTickets.filter(t =>
-        ['submitted', 'menunggu_review', 'pending_approval', 'menunggu_verifikasi_penyedia'].includes(t.status)
-      ).length,
-      inProgress: myTickets.filter(t =>
-        ['assigned', 'in_progress', 'on_hold', 'resolved', 'waiting_for_user', 'ditugaskan', 'diterima_teknisi', 'sedang_diagnosa', 'dalam_perbaikan', 'diproses_persiapan_pengiriman', 'dalam_pengiriman'].includes(t.status)
-      ).length,
-      completed: myTickets.filter(t => ['closed', 'selesai', 'approved'].includes(t.status)).length,
-      rejected: myTickets.filter(t => ['closed_unrepairable', 'ditolak', 'rejected', 'dibatalkan'].includes(t.status)).length,
-      perbaikan: myTickets.filter(t => t.type === 'perbaikan').length,
-      zoom: myTickets.filter(t => t.type === 'zoom_meeting').length,
+  const handleQuickBookingDialogOpenChange = (open: boolean) => {
+    setShowQuickBooking(open);
+    if (!open) {
+      resetQuickBookingState();
+    }
+  };
+
+  const handleQuickBookingCancel = () => {
+    resetQuickBookingState();
+    setShowQuickBooking(false);
+  };
+
+  const handleBookingFormChange = (changes: Partial<typeof bookingForm>) => {
+    setBookingForm(prev => ({ ...prev, ...changes }));
+  };
+
+  const handleCoHostSelect = (id: string) => {
+    setSelectedCoHostIds(prev => (prev.includes(id) ? prev : [...prev, id]));
+  };
+
+  const handleCoHostRemove = (id: string) => {
+    setSelectedCoHostIds(prev => prev.filter(existing => existing !== id));
+  };
+
+  const searchCoHosts = async () => {
+    if (coHostQuery.trim().length < 4) return;
+    setIsSearchingCoHost(true);
+    try {
+      const response: any = await api.get(`users?search=${encodeURIComponent(coHostQuery)}`).catch(() => null);
+      const raw = Array.isArray(response) ? response : response?.data || [];
+      const normalized: User[] = raw.map((record: any) => ({
+        id: String(record.id ?? ''),
+        email: String(record.email ?? ''),
+        name: String(record.name ?? ''),
+        nip: String(record.nip ?? ''),
+        jabatan: String(record.jabatan ?? ''),
+        role: (Array.isArray(record.roles) ? (record.roles[0] ?? 'pegawai') : (record.role ?? 'pegawai')) as any,
+        roles: (Array.isArray(record.roles) ? record.roles : record.role ? [record.role] : ['pegawai']) as any,
+        unitKerja: String(record.unitKerja ?? record.unit_kerja ?? ''),
+        phone: String(record.phone ?? ''),
+        avatar: record.avatar ?? undefined,
+        createdAt: String(record.createdAt ?? record.created_at ?? new Date().toISOString()),
+        isActive: Boolean(record.isActive ?? record.is_active ?? true),
+        failedLoginAttempts: Number(record.failedLoginAttempts ?? record.failed_login_attempts ?? 0),
+        lockedUntil: record.lockedUntil ?? record.locked_until ?? undefined,
+      }));
+      const pegawaiOnly = normalized.filter(user => (user.roles || []).includes('pegawai') && user.email);
+      setCoHostResults(pegawaiOnly);
+      const map = new Map(availableUsers.map(u => [String(u.id), u] as const));
+      for (const user of pegawaiOnly) {
+        map.set(String(user.id), user);
+      }
+      setAvailableUsers(Array.from(map.values()));
+    } finally {
+      setIsSearchingCoHost(false);
+    }
+  };
+
+  const handleSubmitQuickBooking = async () => {
+    if (!quickBookingDate) {
+      return;
+    }
+
+    if (!bookingForm.title.trim()) {
+      return;
+    }
+    if (!bookingForm.purpose.trim()) {
+      return;
+    }
+    if (!bookingForm.startTime) {
+      return;
+    }
+    if (!bookingForm.endTime) {
+      return;
+    }
+    if (!bookingForm.participants.trim() || parseInt(bookingForm.participants, 10) <= 0) {
+      return;
+    }
+
+    const [startHour, startMin] = bookingForm.startTime.split(':').map(Number);
+    const [endHour, endMin] = bookingForm.endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (startMinutes >= endMinutes) {
+      return;
+    }
+
+    const yyyy = quickBookingDate.getFullYear();
+    const mm = String(quickBookingDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(quickBookingDate.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const payload: any = {
+      type: 'zoom_meeting',
+      title: bookingForm.title,
+      description: bookingForm.purpose,
+      zoom_date: dateStr,
+      zoom_start_time: bookingForm.startTime,
+      zoom_end_time: bookingForm.endTime,
+      zoom_estimated_participants: parseInt(bookingForm.participants, 10),
+      zoom_breakout_rooms: parseInt(bookingForm.breakoutRooms, 10),
     };
-  }, [myTickets]);
 
-  // Quick actions
+    const hosts = selectedCoHostIds
+      .map(id => availableUsers.find(user => String(user.id) === String(id)))
+      .filter((user): user is User => Boolean(user && user.email))
+      .map(user => ({ name: user.name, email: user.email }));
+
+    if (hosts.length > 0) {
+      payload.zoom_co_hosts = hosts;
+    }
+
+    try {
+      setIsSubmittingQuick(true);
+      await api.post('tickets', payload);
+      resetQuickBookingState();
+      setShowQuickBooking(false);
+      onNavigate('my-tickets');
+    } catch (err: any) {
+      console.error('Failed to submit booking:', err);
+    } finally {
+      setIsSubmittingQuick(false);
+    }
+  };
+
   const quickActions = [
     {
       id: 'create-ticket-perbaikan',
@@ -75,11 +237,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
       description: 'Pesan ruang meeting online',
       icon: Video,
       color: 'from-purple-500 to-purple-600',
-      action: () => onNavigate('create-ticket-zoom'),
+      action: () => {
+        setShowQuickBooking(true);
+        setQuickBookingDate(new Date());
+      },
     },
   ];
-
-  const completionRate = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
 
   return (
     <>
@@ -88,106 +251,111 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
       <div className="space-y-6">
         {/* Welcome Section */}
         <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 rounded-xl p-8 text-white"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl mb-2">
-              Selamat Datang, {currentUser.name.split(' ')[0]}! 👋
-            </h1>
-            <p className="text-blue-100">
-              {currentUser.unitKerja} • {currentUser.role === 'user' ? 'Pegawai' : currentUser.role}
-            </p>
-          </div>
-          <div className="hidden md:block">
-            <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-blue-100 text-sm">Total Tiket</p>
-            <p className="text-3xl mt-1">{stats.total}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-blue-100 text-sm">Sedang Proses</p>
-            <p className="text-3xl mt-1">{stats.inProgress}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-blue-100 text-sm">Selesai</p>
-            <p className="text-3xl mt-1">{stats.completed}</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-            <p className="text-blue-100 text-sm">Completion Rate</p>
-            <p className="text-3xl mt-1">{completionRate.toFixed(0)}%</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl mb-4 flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Layanan Cepat
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {quickActions.map((action, index) => {
-            const Icon = action.icon;
-            return (
-              <motion.div
-                key={action.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card
-                  className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-blue-500"
-                  onClick={action.action}
-                >
-                  <CardContent className="p-6">
-                    <div className={`h-12 w-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mb-4`}>
-                      <Icon className="h-6 w-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold mb-2">{action.title}</h3>
-                    <p className="text-sm text-gray-500 mb-4">{action.description}</p>
-                    <Button variant="ghost" className="w-full gap-2">
-                      Buat Tiket <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Help Section */}
-      <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-dashed">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold mb-2">Butuh Bantuan?</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Jika Anda memiliki pertanyaan atau kendala dalam menggunakan sistem, silakan hubungi tim IT support kami.
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl mb-2">
+                Selamat Datang, {currentUser.name.split(' ')[0]}!
+              </h1>
+              <p className="text-blue-600">
+                {currentUser.unitKerja} • {currentUser.role === 'pegawai' ? 'Pegawai' : currentUser.role}
               </p>
-              <div className="flex gap-3">
-                <Button variant="outline" size="sm">
-                  📞 Hubungi Support
-                </Button>
-                <Button variant="outline" size="sm">
-                  📖 Panduan Pengguna
-                </Button>
-              </div>
+            </div>
+            <div className="hidden md:block">
+              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Statistics Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6" style={{fontFamily:"var(--font-logo)"}}>
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center py-8">
+                <Loader className="h-6 w-6 animate-spin text-blue-600" />
+              </div>
+            ) : stats ? (
+              <>
+                <div className="backdrop-blur-sm rounded-lg">
+                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.total}</p>
+                </div>
+                <div className="backdrop-blur-sm rounded-lg">
+                  <p className="text-blue-400 text-sm">Sedang Proses</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.in_progress}</p>
+                </div>
+                <div className="backdrop-blur-sm rounded-lg">
+                  <p className="text-blue-400 text-sm">Selesai</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
+                </div>
+                <div className="backdrop-blur-sm rounded-lg">
+                  <p className="text-blue-400 text-sm">Completion Rate</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.completion_rate.toFixed(0)}%</p>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-xl mb-4 flex items-center gap-2">
+            <ArrowUpRight className="h-5 w-5" />
+            Layanan Cepat
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <motion.div
+                  key={action.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card
+                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-blue-500"
+                    onClick={action.action}
+                  >
+                    <CardContent className="p-6">
+                      <div className={`h-12 w-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mb-4`}>
+                        <Icon className="h-6 w-6 text-white" />
+                      </div>
+                      <h3 className="font-semibold mb-2">{action.title}</h3>
+                      <p className="text-sm text-gray-500 mb-4">{action.description}</p>
+                      <Button variant="link" className="w-full gap-2">
+                        Buat Tiket <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      <QuickBookingDialog
+        open={showQuickBooking}
+        onOpenChange={handleQuickBookingDialogOpenChange}
+        bookingForm={bookingForm}
+        onBookingFormChange={handleBookingFormChange}
+        quickBookingDate={quickBookingDate}
+        onQuickBookingDateChange={setQuickBookingDate}
+        onSubmit={handleSubmitQuickBooking}
+        onCancel={handleQuickBookingCancel}
+        isSubmitting={isSubmittingQuick}
+        coHostQuery={coHostQuery}
+        onCoHostQueryChange={setCoHostQuery}
+        onSearchCoHosts={searchCoHosts}
+        isSearchingCoHost={isSearchingCoHost}
+        coHostResults={coHostResults}
+        selectedCoHostIds={selectedCoHostIds}
+        onSelectCoHost={handleCoHostSelect}
+        onRemoveCoHost={handleCoHostRemove}
+        availableUsers={availableUsers}
+      />
     </>
   );
 };

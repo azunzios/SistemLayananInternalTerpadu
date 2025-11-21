@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,14 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Wrench, Video, ArrowLeft, X, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getTickets, saveTickets, generateTicketNumber, addNotification, getUsers } from '../lib/storage';
-import type { User, Ticket, TicketType, UrgencyLevel, PriorityLevel } from '../types';
+import { api } from '../lib/api';
+import type { User, TicketType, SeverityLevel, Category } from '../types';
 
 interface CreateTicketProps {
   currentUser: User;
@@ -36,7 +35,8 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: 'P3' as PriorityLevel,
+    severity: 'normal' as SeverityLevel,
+    categoryId: '', // Required by backend
     
     // Perbaikan - New fields
     assetCode: '',      // Kode Barang
@@ -50,13 +50,47 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
     estimatedParticipants: 10,
     coHostName: '',
     breakoutRooms: 0,
-    meetingCategory: '',
     unitKerja: currentUser.unitKerja,
   });
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Asset check state
+  const [assetInfo, setAssetInfo] = useState<any>(null);
+  const [isCheckingAsset, setIsCheckingAsset] = useState(false);
+  const [assetChecked, setAssetChecked] = useState(false);
+
+  // Fetch categories on mount - hanya untuk zoom_meeting
+  useEffect(() => {
+    if (ticketType === 'zoom_meeting') {
+      const fetchCategories = async () => {
+        try {
+          setLoading(true);
+          const result = await api.get<Category[]>(`/categories/by-type/${ticketType}`);
+          const cats = Array.isArray(result) ? result : [];
+          setCategories(cats);
+          
+          // Auto-select first category if available
+          if (cats.length > 0) {
+            setFormData(prev => ({ ...prev, categoryId: String(cats[0].id) }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch categories:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchCategories();
+    } else {
+      // Perbaikan tidak butuh kategori
+      setLoading(false);
+    }
+  }, [ticketType]);
 
   const getTicketIcon = () => {
     switch (ticketType) {
@@ -80,6 +114,45 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
     }
   };
 
+  const handleAssetCheck = async () => {
+    if (!formData.assetCode.trim() || !formData.assetNUP.trim()) {
+      toast.error('Mohon isi kode barang dan NUP terlebih dahulu');
+      return;
+    }
+
+    setIsCheckingAsset(true);
+    setAssetInfo(null);
+    setAssetChecked(false);
+
+    try {
+      const assetCheck = await api.get<any>(
+        `/assets/search/by-code-nup?asset_code=${encodeURIComponent(formData.assetCode)}&asset_nup=${encodeURIComponent(formData.assetNUP)}`
+      );
+      
+      if (assetCheck && assetCheck.asset) {
+        setAssetInfo(assetCheck.asset);
+        setAssetChecked(true);
+        
+        // Auto-fill location if available
+        if (assetCheck.asset.location && !formData.assetLocation) {
+          setFormData(prev => ({ ...prev, assetLocation: assetCheck.asset.location }));
+        }
+        
+        toast.success('Barang ditemukan! Silakan lanjutkan pengajuan tiket.');
+      } else {
+        toast.error('Barang dengan kode dan NUP ini tidak ditemukan');
+        setAssetChecked(false);
+      }
+    } catch (err: any) {
+      console.error('Asset check failed:', err);
+      const errorMsg = err?.body?.message || 'Gagal memeriksa barang. Silakan coba lagi.';
+      toast.error(errorMsg);
+      setAssetChecked(false);
+    } finally {
+      setIsCheckingAsset(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -94,10 +167,21 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       return;
     }
 
+    // Kategori hanya wajib jika ada kategori yang tersedia (untuk zoom_meeting)
+    if (ticketType === 'zoom_meeting' && categories.length > 0 && !formData.categoryId) {
+      toast.error('Kategori harus dipilih');
+      return;
+    }
+
     // Type-specific validation
     if (ticketType === 'perbaikan') {
       if (!formData.assetCode || !formData.assetNUP || !formData.assetLocation) {
         toast.error('Mohon lengkapi semua field yang wajib diisi');
+        return;
+      }
+      
+      if (!assetChecked) {
+        toast.error('Mohon cek barang terlebih dahulu dengan tombol "Cek Barang"');
         return;
       }
     }
@@ -137,70 +221,66 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
 
     setIsSubmitting(true);
 
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Prepare payload for backend API
+      const payload: any = {
+        type: ticketType,
+        title: formData.title,
+        description: formData.description,
+      };
 
-    // Create ticket
-    const ticketNumber = generateTicketNumber(ticketType);
-    const newTicket: Ticket = {
-      id: `ticket_${Date.now()}`,
-      ticketNumber,
-      type: ticketType,
-      title: formData.title,
-      description: formData.description,
-      status: ticketType === 'perbaikan' ? 'submitted' : 'menunggu_review',
-      priority: formData.priority,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userEmail: currentUser.email,
-      userPhone: currentUser.phone,
-      unitKerja: currentUser.unitKerja,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      // Tambahkan categoryId hanya jika ada dan tersedia
+      if (formData.categoryId) {
+        payload.category_id = formData.categoryId;
+      }
+
+      if (ticketType === 'perbaikan') {
+        payload.asset_code = formData.assetCode;
+        payload.asset_nup = formData.assetNUP;
+        payload.asset_location = formData.assetLocation;
+        payload.severity = formData.severity;
+      } else if (ticketType === 'zoom_meeting') {
+        payload.zoom_date = formData.meetingDate;
+        payload.zoom_start_time = formData.startTime;
+        payload.zoom_end_time = formData.endTime;
+        payload.zoom_estimated_participants = formData.estimatedParticipants;
+        payload.zoom_breakout_rooms = formData.breakoutRooms;
+        // Handle co-host as array
+        if (formData.coHostName) {
+          payload.zoom_co_hosts = [
+            {
+              name: formData.coHostName,
+              email: currentUser.email, // Use current user's email as default
+            },
+          ];
+        }
+      }
+
+      // Add form data if there are attachments
+      if (attachments.length > 0) {
+        payload.form_data = {
+          attachmentCount: attachments.length,
+        };
+      }
+
+      // Send to backend API
+      const response = await api.post<any>('/tickets', payload);
+
+      toast.success(`Tiket berhasil dibuat! Nomor tiket: ${response?.ticketNumber || 'N/A'}`);
+      setIsSubmitting(false);
       
-      // Perbaikan specific fields
-      assetCode: ticketType === 'perbaikan' ? formData.assetCode : undefined,
-      assetNUP: ticketType === 'perbaikan' ? formData.assetNUP : undefined,
-      assetLocation: ticketType === 'perbaikan' ? formData.assetLocation : undefined,
-      
-      data: {
-        ...formData,
-        attachmentCount: attachments.length,
-      },
-      attachments: [],
-      timeline: [
-        {
-          id: '1',
-          timestamp: new Date().toISOString(),
-          action: 'CREATED',
-          actor: currentUser.name,
-          details: ticketType === 'perbaikan' ? 'Tiket perbaikan diajukan' : 'Tiket dibuat',
-        },
-      ],
-    };
-
-    const tickets = getTickets();
-    const updatedTickets = [...tickets, newTicket];
-    saveTickets(updatedTickets);
-
-    // Send notification to admin
-    const users = getUsers();
-    const admins = users.filter(u => u.role === 'admin_layanan');
-    admins.forEach(admin => {
-      addNotification({
-        userId: admin.id,
-        title: 'Tiket Baru',
-        message: `${currentUser.name} mengajukan tiket: ${formData.title}`,
-        type: 'info',
-        read: false,
-        link: 'tickets',
-      });
-    });
-
-    toast.success(`Tiket ${ticketNumber} berhasil dibuat!`);
-    setIsSubmitting(false);
-    onTicketCreated();
+      // Refresh ticket list by triggering callback
+      onTicketCreated();
+    } catch (error: any) {
+      console.error('Failed to create ticket:', error);
+      const errorMessage = error?.body?.message || 
+                          error?.body?.errors?.[Object.keys(error.body.errors)[0]]?.[0] ||
+                          'Gagal membuat tiket. Silakan coba lagi.';
+      toast.error(errorMessage);
+      setIsSubmitting(false);
+    }
   };
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -230,7 +310,7 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="link" size="sm" onClick={onCancel}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Kembali
           </Button>
@@ -289,21 +369,52 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                   />
                 </div>
 
+                {ticketType === 'zoom_meeting' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="category">
+                      Kategori {categories.length > 0 ? '*' : '(Opsional)'}
+                    </Label>
+                    <Select 
+                      value={formData.categoryId} 
+                      onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                      disabled={loading || categories.length === 0}
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder={
+                          loading ? "Memuat kategori..." : 
+                          categories.length === 0 ? "Tidak ada kategori" :
+                          "Pilih kategori"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={String(cat.id)}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {categories.length === 0 && !loading && (
+                      <p className="text-xs text-gray-500">Tidak ada kategori yang tersedia untuk form ini</p>
+                    )}
+                  </div>
+                )}
+
                 {ticketType === 'perbaikan' && (
                   <div className="space-y-2">
                     <Label htmlFor="priority">Prioritas *</Label>
                     <Select 
-                      value={formData.priority} 
-                      onValueChange={(value: PriorityLevel) => setFormData({ ...formData, priority: value })}
+                      value={formData.severity} 
+                      onValueChange={(value: SeverityLevel) => setFormData({ ...formData, severity: value })}
                     >
                       <SelectTrigger id="priority">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="P1">P1 - Critical (Segera, kurang dari 4 jam)</SelectItem>
-                        <SelectItem value="P2">P2 - High (1 hari kerja)</SelectItem>
-                        <SelectItem value="P3">P3 - Medium (3 hari kerja)</SelectItem>
-                        <SelectItem value="P4">P4 - Low (1 minggu)</SelectItem>
+                        <SelectItem value="critical">Critical (Segera, kurang dari 4 jam)</SelectItem>
+                        <SelectItem value="high">High (1 hari kerja)</SelectItem>
+                        <SelectItem value="normal">Normal (3 hari kerja)</SelectItem>
+                        <SelectItem value="low">Low (1 minggu)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">
@@ -323,7 +434,11 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                     <Input
                       id="assetCode"
                       value={formData.assetCode}
-                      onChange={(e) => setFormData({ ...formData, assetCode: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, assetCode: e.target.value });
+                        setAssetChecked(false);
+                        setAssetInfo(null);
+                      }}
                       placeholder="Contoh: KB-2024-001"
                       required
                     />
@@ -335,11 +450,78 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                     <Input
                       id="assetNUP"
                       value={formData.assetNUP}
-                      onChange={(e) => setFormData({ ...formData, assetNUP: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, assetNUP: e.target.value });
+                        setAssetChecked(false);
+                        setAssetInfo(null);
+                      }}
                       placeholder="Contoh: 000001"
                       required
                     />
                     <p className="text-xs text-gray-500">Nomor urut pendaftaran barang</p>
+                  </div>
+
+                  {/* Asset Check Button */}
+                  <div className="space-y-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAssetCheck}
+                      disabled={isCheckingAsset || !formData.assetCode.trim() || !formData.assetNUP.trim()}
+                      className="w-full"
+                    >
+                      {isCheckingAsset ? 'Memeriksa...' : 'Cek Barang'}
+                    </Button>
+                    
+                    {/* Asset Information Display */}
+                    {assetInfo && assetChecked && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                        <div className="flex items-center gap-2 text-green-800 font-semibold">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Barang Ditemukan
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Nama Barang:</span>
+                            <p className="font-medium">{assetInfo.asset_name || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Tipe/Kategori:</span>
+                            <p className="font-medium">{assetInfo.asset_type || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Manufaktur:</span>
+                            <p className="font-medium">{assetInfo.manufacturer || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Model:</span>
+                            <p className="font-medium">{assetInfo.model || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Kondisi:</span>
+                            <p className="font-medium">{assetInfo.condition || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Lokasi Terdaftar:</span>
+                            <p className="font-medium">{assetInfo.location || 'N/A'}</p>
+                          </div>
+                          {assetInfo.serial_number && (
+                            <div className="col-span-2">
+                              <span className="text-gray-600">Serial Number:</span>
+                              <p className="font-medium">{assetInfo.serial_number}</p>
+                            </div>
+                          )}
+                          {assetInfo.description && (
+                            <div className="col-span-2">
+                              <span className="text-gray-600">Deskripsi:</span>
+                              <p className="font-medium">{assetInfo.description}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -512,7 +694,7 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                         <span className="text-sm truncate flex-1">{file.name}</span>
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           onClick={() => removeFile(index)}
                         >

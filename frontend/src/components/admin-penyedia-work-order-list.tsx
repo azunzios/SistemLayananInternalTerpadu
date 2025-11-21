@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Package, Truck, Search, Eye, Clock, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
-import { getWorkOrders, getTickets, getUsers, updateWorkOrder, addNotification } from '../lib/storage';
+import { getWorkOrders, getTickets, getUsersSync, updateWorkOrder, addNotification } from '../lib/storage';
 import type { User, WorkOrder, WorkOrderStatus } from '../types';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -59,7 +59,7 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
   const [updateNotes, setUpdateNotes] = useState('');
 
   const tickets = getTickets();
-  const users = getUsers();
+  const users = getUsersSync();
   const allWorkOrders = getWorkOrders();
 
   // Apply filters

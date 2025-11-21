@@ -35,8 +35,15 @@ export async function apiFetch<T = unknown>(path: string, init?: RequestInit): P
   const url = resolveApiUrl(path);
   const headers = new Headers(init?.headers || {});
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
-  if (!headers.has('Content-Type') && init?.body && typeof init.body !== 'string' && !(init.body instanceof FormData)) {
+  // Ensure JSON is parsed by Laravel: set Content-Type whenever there is a body (except FormData)
+  if (!headers.has('Content-Type') && init?.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
+  }
+  
+  // Add auth token if available
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('auth_token') : null;
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const controller = new AbortController();

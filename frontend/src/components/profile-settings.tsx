@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent} from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { Alert, AlertDescription } from './ui/alert';
-import { User as UserIcon, Key, Shield, CheckCircle, Eye, EyeOff, Camera } from 'lucide-react';
+import { User as Key, CheckCircle, Eye, EyeOff, Camera } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getUsers, saveUsers, setCurrentUser as saveCurrentUser, addAuditLog } from '../lib/storage';
+import { api } from '../lib/api';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';
 
@@ -23,7 +22,6 @@ interface ProfileSettingsProps {
 export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   currentUser,
   onUserUpdate,
-  onNavigate,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
   
@@ -33,7 +31,6 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     jabatan: currentUser.jabatan,
     email: currentUser.email,
     phone: currentUser.phone,
-    unitKerja: currentUser.unitKerja,
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -45,32 +42,23 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleUpdateProfile = () => {
-    const users = getUsers();
-    const updatedUsers = users.map(u =>
-      u.id === currentUser.id
-        ? {
-            ...u,
-            ...profileData,
-          }
-        : u
-    );
-
-    saveUsers(updatedUsers);
-    const updatedUser = updatedUsers.find(u => u.id === currentUser.id);
-    
-    if (updatedUser) {
-      saveCurrentUser(updatedUser);
-      onUserUpdate(updatedUser);
-
-      addAuditLog({
-        userId: currentUser.id,
-        action: 'PROFILE_UPDATED',
-        details: 'User updated their profile',
-      });
-
-      toast.success('Profil berhasil diperbarui');
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true);
+    try {
+      const response = await api.put<{ message: string; user: User }>('/profile', profileData);
+      
+      if (response && response.user) {
+        onUserUpdate(response.user);
+        toast.success('Profil berhasil diperbarui');
+      }
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      const message = error?.body?.message || 'Gagal memperbarui profil';
+      toast.error(message);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -86,13 +74,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     return Object.values(requirements).every(req => req);
   };
 
-  const handleChangePassword = () => {
-    // Validate current password
-    if (passwordData.currentPassword !== currentUser.password) {
-      toast.error('Password saat ini tidak sesuai');
-      return;
-    }
-
+  const handleChangePassword = async () => {
     // Validate new password
     if (!validatePassword(passwordData.newPassword)) {
       toast.error('Password baru tidak memenuhi persyaratan keamanan');
@@ -111,27 +93,12 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       return;
     }
 
-    const users = getUsers();
-    const updatedUsers = users.map(u =>
-      u.id === currentUser.id
-        ? {
-            ...u,
-            password: passwordData.newPassword,
-          }
-        : u
-    );
-
-    saveUsers(updatedUsers);
-    const updatedUser = updatedUsers.find(u => u.id === currentUser.id);
-    
-    if (updatedUser) {
-      saveCurrentUser(updatedUser);
-      onUserUpdate(updatedUser);
-
-      addAuditLog({
-        userId: currentUser.id,
-        action: 'PASSWORD_CHANGED',
-        details: 'User changed their password',
+    setIsUpdating(true);
+    try {
+      await api.post('/change-password', {
+        current_password: passwordData.currentPassword,
+        new_password: passwordData.newPassword,
+        new_password_confirmation: passwordData.confirmPassword,
       });
 
       toast.success('Password berhasil diubah');
@@ -140,6 +107,12 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         newPassword: '',
         confirmPassword: '',
       });
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      const message = error?.body?.message || error?.body?.errors?.current_password?.[0] || 'Gagal mengubah password';
+      toast.error(message);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -173,7 +146,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side - Profile Card */}
         <div className="lg:col-span-1">
-          <Card>
+          <Card className="pb-4 bg-transparent border-none">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 {/* Avatar with Camera Button */}
@@ -224,7 +197,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
 
         {/* Right Side - Content */}
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="pb-4">
             <CardContent className="pt-6">
               {/* Toggle Buttons */}
               <div className="flex gap-2 mb-6">
@@ -305,8 +278,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                       <Label htmlFor="unitKerja">Unit Kerja *</Label>
                       <Input
                         id="unitKerja"
-                        value={profileData.unitKerja}
-                        onChange={(e) => setProfileData({ ...profileData, unitKerja: e.target.value })}
+                        value={currentUser.unitKerja}
                         disabled
                       />
                       <p className="text-xs text-gray-500">
@@ -328,9 +300,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   <Separator />
 
                   <div className="flex justify-end">
-                    <Button onClick={handleUpdateProfile}>
+                    <Button onClick={handleUpdateProfile} disabled={isUpdating}>
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Simpan Perubahan
+                      {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan'}
                     </Button>
                   </div>
                 </motion.div>
@@ -359,7 +331,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                         />
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
@@ -387,7 +359,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                         />
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3"
                           onClick={() => setShowNewPassword(!showNewPassword)}
@@ -415,7 +387,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                         />
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -470,9 +442,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                     >
                       Reset
                     </Button>
-                    <Button onClick={handleChangePassword}>
+                    <Button onClick={handleChangePassword} disabled={isUpdating}>
                       <Key className="h-4 w-4 mr-2" />
-                      Ubah Password
+                      {isUpdating ? 'Mengubah...' : 'Ubah Password'}
                     </Button>
                   </div>
                 </motion.div>

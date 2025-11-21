@@ -173,7 +173,7 @@ export const CreateWorkOrderDialog: React.FC<CreateWorkOrderDialogProps> = ({
                           <Button
                             type="button"
                             size="sm"
-                            variant="ghost"
+                            variant="link"
                             onClick={() => handleRemoveSparepart(index)}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />

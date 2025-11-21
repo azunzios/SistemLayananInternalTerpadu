@@ -1,36 +1,38 @@
 // type definition buat aplikasi ini
 
-export type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'user';
+export type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'pegawai';
 
 export type TicketType = 'perbaikan' | 'zoom_meeting';
 
-export type TicketStatus = 
-  // Perbaikan flow: Submitted → Assigned → In Progress → On Hold → Resolved → Waiting for User → Closed
+export type PerbaikanStatus = 
   | 'submitted'        // Tiket baru diajukan
   | 'assigned'         // Ditugaskan ke teknisi
   | 'in_progress'      // Sedang dikerjakan teknisi
   | 'on_hold'          // Menunggu WO (sparepart/vendor)
-  | 'resolved'         // Selesai diperbaiki
+  | 'resolved'         // Selesai diperbaiki (oleh teknisi)
   | 'waiting_for_user' // Menunggu konfirmasi user
   | 'closed'           // Selesai & dikonfirmasi
-  | 'closed_unrepairable' // Tidak dapat diperbaiki sama sekali
-  // Zoom meeting flow
-  | 'menunggu_review'
-  | 'approved'
-  | 'rejected'
-  | 'dibatalkan';
+  | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
 
-export type UrgencyLevel = 'normal' | 'mendesak' | 'sangat_mendesak';
+export type ZoomStatus = 
+  | 'pending_review'   // Menggantikan 'menunggu_review' & 'pending_approval'
+  | 'approved'         // Disetujui
+  | 'rejected'         // Ditolak
+  | 'cancelled'        // Menggantikan 'dibatalkan'
+  | 'completed';       // Acara zoom telah selesai
+
+export type SeverityLevel = 'low' | 'normal' | 'high' | 'critical';
+
+export type ProblemType = 'hardware' | 'software' | 'lainnya';
 
 export interface User {
   id: string;
   email: string;
-  password: string;
+  password?: string; // Optional on client; never returned in plaintext
   name: string;
   nip: string;
-  jabatan: string;
-  role: UserRole; // Deprecated - use roles instead
-  roles: UserRole[]; // Multi-role support
+  role: UserRole; // current Role saat ini
+  roles: UserRole[]; // daftar role yang tersedia untuk akun tersebut, bisa saja array isinya cuma satu, value di role akan tetap masuk di roles.
   unitKerja: string;
   phone: string;
   avatar?: string;
@@ -41,12 +43,14 @@ export interface User {
 }
 
 export interface Category {
-  id: string;
+  id: string | number;
   name: string;
-  type: TicketType;
-  fields: CategoryField[];
-  assignedRoles: UserRole[];
-  createdAt: string;
+  type: TicketType; // Menentukan kategori ini untuk 'perbaikan' or 'zoom_meeting'
+  fields?: CategoryField[]; // Optional - tidak selalu diperlukan tapi ada beberapa pertanyaan yang di (*) atau wajib dijawab 
+  assignedRoles?: UserRole[]; // Role yg menangani kategori ini 
+  isActive?: boolean;
+  description?: string;
+  createdAt?: string;
 }
 
 export interface CategoryField {
@@ -55,43 +59,6 @@ export interface CategoryField {
   type: 'text' | 'textarea' | 'number' | 'select' | 'file' | 'date' | 'email';
   required: boolean;
   options?: string[];
-}
-
-export type PriorityLevel = 'P1' | 'P2' | 'P3' | 'P4';
-export type ProblemType = 'hardware' | 'software' | 'lainnya';
-
-export interface Ticket {
-  id: string;
-  ticketNumber: string;
-  type: TicketType;
-  title: string;
-  description: string;
-  categoryId?: string;
-  status: TicketStatus;
-  priority: PriorityLevel; // P1-P4 untuk perbaikan
-  urgency?: UrgencyLevel; // Deprecated, use priority
-  userId: string;
-  userName?: string;
-  userEmail?: string;
-  userPhone?: string;
-  unitKerja?: string;
-  assignedTo?: string;
-  createdAt: string;
-  updatedAt: string;
-  data: Record<string, any>;
-  attachments?: Attachment[];
-  timeline: TimelineEvent[];
-  
-  // Perbaikan specific fields
-  assetCode?: string;      // Kode Barang
-  assetNUP?: string;        // NUP
-  assetLocation?: string;   // Lokasi
-  finalProblemType?: ProblemType; // Set by teknisi during diagnosa
-  repairable?: boolean;     // false jika closed_unrepairable
-  unrepairableReason?: string; // Alasan jika tidak dapat diperbaiki
-  
-  // Work Order reference
-  workOrderId?: string;
 }
 
 export interface Attachment {
@@ -105,26 +72,105 @@ export interface Attachment {
 export interface TimelineEvent {
   id: string;
   timestamp: string;
-  action: string;
-  actor: string;
-  details: string;
+  action: string; // e.g., 'status_changed', 'comment_added', 'assigned'
+  actor: string; // User name or ID
+  details: string; // "Status diubah dari 'Submitted' ke 'Assigned'"
   attachments?: Attachment[];
 }
 
-export interface InventoryItem {
+// 1. Dibuat BaseTicket untuk field yang sama
+interface BaseTicket {
   id: string;
-  name: string;
-  category: string;
-  stock: number;
-  quantity: number;
-  location: string;
-  condition: 'baru' | 'bekas_baik';
-  minimumStock: number;
-  minStock: number;
-  unitPrice: number;
+  ticketNumber: string;
+  type: TicketType; // Discriminator
+  title: string;
+  description: string;
+  categoryId?: string;
+  
+  // Info Pengguna (denormalized)
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  unitKerja?: string;
+  
+  assignedTo?: string; // ID Teknisi (Perbaikan) or ID Admin (Zoom)
   createdAt: string;
   updatedAt: string;
+  
+  // Dibuat non-optional, tiket baru memiliki array kosong
+  attachments: Attachment[];
+  timeline: TimelineEvent[];
+  
+  // Comments count (for list views)
+  commentsCount?: number;
 }
+
+// 2. Dibuat tipe spesifik untuk 'perbaikan'
+export interface PerbaikanTicket extends BaseTicket {
+  type: 'perbaikan';
+  status: PerbaikanStatus;
+  severity: SeverityLevel; // Menggantikan 'priority'
+  data: Record<string, any>; // Data dari dynamic form 'CategoryField'
+  
+  // Perbaikan specific fields
+  assetCode?: string;
+  assetNUP?: string;
+  assetLocation?: string;
+  finalProblemType?: ProblemType;
+  repairable?: boolean;
+  unrepairableReason?: string;
+  
+  workOrderId?: string; // Referensi ke Work Order
+}
+
+// 3. Dibuat tipe spesifik untuk 'zoom_meeting'
+export interface ZoomTicket extends BaseTicket {
+  type: 'zoom_meeting';
+  status: ZoomStatus;
+  
+  // Field spesifik Zoom (dipindah dari ZoomBooking)
+  date: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  estimatedParticipants: number;
+  coHosts: { name: string; email: string }[];
+  breakoutRooms: number;
+  
+  // Info meeting (setelah approved)
+  meetingLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  rejectionReason?: string;
+  
+  // Zoom account relationship
+  zoomAccountId?: number;
+  zoomAccount?: {
+    id: number;
+    accountId: string;
+    name: string;
+    email: string;
+    hostKey?: string;
+    color?: string;
+  };
+  
+  // Suggested account untuk admin (dari auto-assign)
+  suggestedAccountId?: number;
+}
+
+// 4. Tipe 'Ticket' utama sekarang adalah union yang type-safe
+export type Ticket = PerbaikanTicket | ZoomTicket;
+
+// BARU: Standarisasi struktur data sparepart
+export interface SparepartItem {
+  name: string;
+  quantity: number; // Standarisasi menggunakan 'quantity'
+  unit: string;
+  remarks?: string; // Standarisasi menggunakan 'remarks' (menggantikan 'notes')
+  estimatedPrice?: number;
+}
+
 
 // Work Order Types
 export type WorkOrderType = 'sparepart' | 'vendor';
@@ -133,24 +179,13 @@ export type WorkOrderStatus = 'requested' | 'in_procurement' | 'delivered' | 'co
 export interface WorkOrder {
   id: string;
   ticketId: string;
-  ticketNumber?: string; // Ticket number for reference
+  ticketNumber?: string;
   type: WorkOrderType;
   status: WorkOrderStatus;
   createdBy: string; // teknisi ID
   createdAt: string;
   updatedAt: string;
-  
-  // Simplified fields for sparepart
-  itemName?: string; // Nama item sparepart (untuk sparepart type)
-  quantity?: number; // Jumlah (untuk sparepart type)
-  
-  // Sparepart details (legacy, kept for backward compatibility)
-  spareparts?: {
-    name: string;
-    qty: number;
-    unit: string;
-    remarks?: string;
-  }[];
+  spareparts?: SparepartItem[]; // Items dalam work order
   
   // Vendor details
   vendorInfo?: {
@@ -161,7 +196,7 @@ export interface WorkOrder {
   };
   
   // Delivery/completion info
-  receivedQty?: number;
+  receivedQty?: number; // Mungkin bisa dihapus jika info ada di 'spareparts'
   receivedRemarks?: string;
   completedAt?: string;
   failureReason?: string;
@@ -189,12 +224,7 @@ export interface KartuKendaliEntry {
   vendorName?: string;
   vendorRef?: string;
   
-  spareparts?: {
-    name: string;
-    qty: number;
-    unit: string;
-  }[];
-  
+  spareparts?: SparepartItem[]; // Items yang digunakan
   remarks?: string;
   createdAt: string;
 }
@@ -202,14 +232,11 @@ export interface KartuKendaliEntry {
 export interface SparepartRequest {
   id: string;
   ticketId: string;
-  items: {
-    name: string;
-    quantity: number;
-    estimatedPrice: number;
-    notes: string;
-  }[];
+  
+  spareparts: SparepartItem[];
+  
   status: 'pending' | 'approved' | 'in_procurement' | 'ready' | 'delivered';
-  requestedBy: string;
+  requestedBy: string; // Teknisi ID
   createdAt: string;
   updatedAt: string;
   timeline: TimelineEvent[];
@@ -217,29 +244,6 @@ export interface SparepartRequest {
   actualDeliveryDate?: string;
 }
 
-export interface ZoomBooking {
-  id: string;
-  ticketNumber: string;
-  userId: string;
-  title: string;
-  description: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  estimatedParticipants: number;
-  coHosts: { name: string; email: string }[];
-  breakoutRooms: number;
-  category: string;
-  unitKerja: string;
-  status: 'pending_approval' | 'approved' | 'rejected' | 'dibatalkan' | 'completed';
-  meetingLink?: string;
-  meetingId?: string;
-  passcode?: string;
-  rejectionReason?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface AuditLog {
   id: string;
@@ -258,6 +262,6 @@ export interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
   read: boolean;
-  link?: string;
+  link?: string; // e.g., '/ticket/T-12345'
   createdAt: string;
 }

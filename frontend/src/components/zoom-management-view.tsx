@@ -5,9 +5,10 @@ import { getTickets } from '../lib/storage';
 import { ZoomAdminGrid } from './zoom-admin-grid';
 import { ZoomAccountManagement } from './zoom-account-management';
 import { ZoomTicketList } from './zoom-ticket-list';
+import type { ViewType } from './main-layout';
 
 interface ZoomManagementViewProps {
-  onNavigate?: (view: string, ticketId?: string) => void;
+  onNavigate?: (view: ViewType, ticketId?: string) => void;
   onViewTicket?: (ticketId: string) => void;
 }
 
@@ -28,9 +29,9 @@ export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNaviga
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl flex items-center gap-3">
-          <Video className="h-8 w-8 text-blue-600" />
+        <h1 className="text-3xl flex items-center gap-3 font-semibold">
           Kelola Zoom
+          <Video className="h-8 w-8 text-blue-600" />
         </h1>
         <p className="text-gray-500 mt-1">
           Manajemen booking dan akun Zoom meeting

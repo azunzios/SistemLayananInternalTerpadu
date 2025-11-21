@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
 import { Textarea } from './ui/textarea';
 import { copyToClipboard } from '../lib/clipboard';
+import { api } from '../lib/api';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from './ui/dialog';
 import {
   Video,
@@ -23,14 +23,7 @@ import {
   X,
   Copy,
   Check,
-  Activity,
-  Calendar,
-  Clock,
-  TrendingUp,
-  Settings,
   Key,
-  Link2,
-  BarChart3,
   AlertCircle,
   Shield,
   Plus,
@@ -56,81 +49,49 @@ interface ZoomAccountManagementProps {
   tickets: Ticket[];
 }
 
-const DEFAULT_ACCOUNTS: ZoomAccount[] = [
-  {
-    id: 'zoom1',
-    name: 'Akun Zoom 1',
-    email: 'zoom1@bps-ntb.go.id',
-    hostKey: '123456',
-    planType: 'Pro',
-    isActive: true,
-    description: 'Akun utama untuk meeting rutin dan keperluan umum',
-    maxParticipants: 100,
-    color: 'blue',
-  },
-  {
-    id: 'zoom2',
-    name: 'Akun Zoom 2',
-    email: 'zoom2@bps-ntb.go.id',
-    hostKey: '234567',
-    planType: 'Pro',
-    isActive: true,
-    description: 'Akun cadangan untuk meeting simultan',
-    maxParticipants: 100,
-    color: 'purple',
-  },
-  {
-    id: 'zoom3',
-    name: 'Akun Zoom 3',
-    email: 'zoom3@bps-ntb.go.id',
-    hostKey: '345678',
-    planType: 'Business',
-    isActive: true,
-    description: 'Akun untuk webinar dan meeting besar',
-    maxParticipants: 300,
-    color: 'green',
-  },
-];
-
 export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ tickets }) => {
-  const [accounts, setAccounts] = useState<ZoomAccount[]>(() => {
-    const stored = localStorage.getItem('bps_ntb_zoom_accounts');
-    if (stored) {
-      const parsedAccounts = JSON.parse(stored);
-      // Migrate old accounts format to new format
-      return parsedAccounts.map((acc: any) => ({
-        id: acc.id,
-        name: acc.name,
-        email: acc.email,
-        hostKey: acc.hostKey || '', // Use existing hostKey or empty string
-        planType: acc.planType || 'Pro', // Default to Pro if not specified
-        isActive: acc.isActive,
-        description: acc.description,
-        maxParticipants: acc.maxParticipants,
-        color: acc.color,
-      }));
-    }
-    return DEFAULT_ACCOUNTS;
-  });
+  const [accounts, setAccounts] = useState<ZoomAccount[]>([]);
 
   const [editingAccount, setEditingAccount] = useState<ZoomAccount | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<ZoomAccount | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{ hostKey?: string; planType?: string }>({});
 
-  // Save to localStorage whenever accounts change
+  // Load zoom accounts from backend on mount
   useEffect(() => {
-    localStorage.setItem('bps_ntb_zoom_accounts', JSON.stringify(accounts));
-    // Trigger custom event for same-window updates
-    window.dispatchEvent(new Event('localStorageUpdate'));
-  }, [accounts]);
+    loadAccountsFromApi();
+  }, []);
+
+  const loadAccountsFromApi = async () => {
+    try {
+      const data = await api.get<any[]>('zoom/accounts');
+      // Normalize snake_case from API to camelCase for frontend
+      const normalizedAccounts = data.map((acc: any) => ({
+        id: acc.account_id || acc.id,
+        name: acc.name,
+        email: acc.email,
+        hostKey: acc.host_key || acc.hostKey,
+        planType: acc.plan_type || acc.planType,
+        isActive: acc.is_active ?? acc.isActive ?? false,
+        description: acc.description,
+        maxParticipants: acc.max_participants || acc.maxParticipants,
+        color: acc.color,
+      }));
+      setAccounts(normalizedAccounts);
+    } catch (err) {
+      console.error('Failed to load accounts:', err);
+      toast.error('Gagal memuat akun zoom');
+    }
+  };
+
 
   const handleAddNew = () => {
     const colors = ['blue', 'purple', 'green', 'orange', 'red', 'teal', 'indigo', 'pink'];
     const newAccountNumber = accounts.length + 1;
     const colorIndex = (accounts.length) % colors.length;
-    
+
     const newAccount: ZoomAccount = {
       id: `zoom${Date.now()}`,
       name: `Akun Zoom ${newAccountNumber}`,
@@ -142,65 +103,143 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
       maxParticipants: 100,
       color: colors[colorIndex],
     };
-    
+
     setEditingAccount(newAccount);
     setIsDialogOpen(true);
   };
 
   const handleEdit = (account: ZoomAccount) => {
     setEditingAccount({ ...account });
+    setValidationErrors({});
     setIsDialogOpen(true);
   };
 
   const handleSave = () => {
     if (!editingAccount) return;
 
+    // Validasi Host Key
+    const hostKeyRegex = /^\d{6}$/;
+    const hostKeyValid = hostKeyRegex.test(editingAccount.hostKey);
+
+    // Validasi Plan Type
+    const validPlanTypes = ['Pro', 'Business', 'Enterprise'];
+    const planTypeValid = validPlanTypes.includes(editingAccount.planType);
+
+    // Set validation errors
+    const errors: { hostKey?: string; planType?: string } = {};
+    if (!hostKeyValid) {
+      errors.hostKey = 'Host Key harus 6 digit angka';
+    }
+    if (!planTypeValid) {
+      errors.planType = `Harus salah satu: ${validPlanTypes.join(', ')}`;
+    }
+
+    setValidationErrors(errors);
+
+    // If ada error, stop
+    if (!hostKeyValid || !planTypeValid) {
+      toast.error('Validasi gagal', {
+        description: 'Silakan periksa kembali data yang Anda input',
+      });
+      return;
+    }
+
     // Check if this is a new account (not in the list yet)
     const isNewAccount = !accounts.find(acc => acc.id === editingAccount.id);
-    
-    let updatedAccounts;
-    if (isNewAccount) {
-      updatedAccounts = [...accounts, editingAccount];
-      toast.success('Akun berhasil ditambahkan', {
-        description: `${editingAccount.name} telah dibuat`,
-      });
-    } else {
-      updatedAccounts = accounts.map(acc => 
-        acc.id === editingAccount.id ? editingAccount : acc
-      );
-      toast.success('Akun berhasil diperbarui', {
-        description: `${editingAccount.name} telah diupdate`,
-      });
-    }
-    
-    setAccounts(updatedAccounts);
-    setIsDialogOpen(false);
-    setEditingAccount(null);
+
+    const saveToApi = async () => {
+      try {
+        if (isNewAccount) {
+          // POST for new account
+          await api.post('zoom/accounts', {
+            account_id: editingAccount.id,
+            name: editingAccount.name,
+            email: editingAccount.email,
+            host_key: editingAccount.hostKey,
+            plan_type: editingAccount.planType,
+            max_participants: editingAccount.maxParticipants,
+            description: editingAccount.description,
+            color: editingAccount.color,
+            is_active: editingAccount.isActive,
+          });
+          toast.success('Akun berhasil ditambahkan', {
+            description: `${editingAccount.name} telah dibuat`,
+          });
+        } else {
+          // PUT for existing account - use account_id as the lookup parameter
+          await api.put(`zoom/accounts/${editingAccount.id}`, {
+            name: editingAccount.name,
+            email: editingAccount.email,
+            host_key: editingAccount.hostKey,
+            plan_type: editingAccount.planType,
+            max_participants: editingAccount.maxParticipants,
+            description: editingAccount.description,
+            color: editingAccount.color,
+            is_active: editingAccount.isActive,
+          });
+          toast.success('Akun berhasil diperbarui', {
+            description: `${editingAccount.name} telah diupdate`,
+          });
+        }
+        setAccounts(isNewAccount ? [...accounts, editingAccount] : accounts.map(acc =>
+          acc.id === editingAccount.id ? editingAccount : acc
+        ));
+        setIsDialogOpen(false);
+        setEditingAccount(null);
+        setValidationErrors({});
+      } catch (err) {
+        console.error('Failed to save account:', err);
+        toast.error('Gagal menyimpan akun');
+      }
+    };
+
+    saveToApi();
   };
 
   const handleToggleActive = (accountId: string) => {
-    const updatedAccounts = accounts.map(acc =>
-      acc.id === accountId ? { ...acc, isActive: !acc.isActive } : acc
-    );
-    setAccounts(updatedAccounts);
-    
     const account = accounts.find(acc => acc.id === accountId);
-    if (account) {
-      if (account.isActive) {
-        toast.warning(`${account.name} dinonaktifkan`, {
-          description: 'Akun tidak tersedia untuk booking',
+    if (!account) return;
+
+    const newStatus = !account.isActive;
+
+    // Save to API individually
+    const saveToggle = async () => {
+      try {
+        // Send full account data with updated is_active flag
+        await api.put(`zoom/accounts/${accountId}`, {
+          name: account.name,
+          email: account.email,
+          host_key: account.hostKey,
+          plan_type: account.planType,
+          max_participants: account.maxParticipants,
+          description: account.description,
+          color: account.color,
+          is_active: newStatus,
         });
-      } else {
-        toast.success(`${account.name} diaktifkan`, {
-          description: 'Akun sekarang tersedia untuk booking',
-        });
+
+        // Reload accounts from API to get fresh data from database
+        await loadAccountsFromApi();
+
+        if (newStatus) {
+          toast.success(`${account.name} diaktifkan`, {
+            description: 'Akun sekarang tersedia untuk booking',
+          });
+        } else {
+          toast.warning(`${account.name} dinonaktifkan`, {
+            description: 'Akun tidak tersedia untuk booking',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to update account:', err);
+        toast.error('Gagal mengupdate status akun');
       }
-    }
+    };
+    saveToggle();
   };
 
   const handleCopy = async (text: string, fieldName: string) => {
     const success = await copyToClipboard(text);
-    
+
     if (success) {
       setCopiedField(fieldName);
       toast.success('Berhasil disalin!', {
@@ -214,79 +253,88 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!accountToDelete) return;
-    const updatedAccounts = accounts.filter(acc => acc.id !== accountToDelete.id);
-    setAccounts(updatedAccounts);
-    toast.success('Akun berhasil dihapus', {
-      description: `${accountToDelete.name} telah dihapus`,
-    });
-    setShowDeleteConfirm(false);
-    setAccountToDelete(null);
+
+    try {
+      await api.delete(`zoom/accounts/${accountToDelete.id}`);
+
+      // Reload accounts from API after successful delete
+      await loadAccountsFromApi();
+
+      toast.success('Akun berhasil dihapus', {
+        description: `${accountToDelete.name} telah dihapus dari sistem`,
+      });
+      setShowDeleteConfirm(false);
+      setAccountToDelete(null);
+    } catch (err: any) {
+      console.error('Failed to delete account:', err);
+
+      // Handle specific error cases
+      if (err.response?.status === 422) {
+        const activeBookings = err.response?.data?.active_bookings || 0;
+        toast.error('Tidak dapat menghapus akun', {
+          description: `Akun masih memiliki ${activeBookings} booking aktif. Hapus semua booking terlebih dahulu.`,
+        });
+      } else {
+        toast.error('Gagal menghapus akun', {
+          description: 'Silakan coba lagi nanti',
+        });
+      }
+      setShowDeleteConfirm(false);
+      setAccountToDelete(null);
+    }
   };
 
-  // Get statistics for each account
-  const getAccountStats = (accountId: string) => {
-    const accountBookings = tickets.filter(t => t.data?.zoomAccount === accountId);
-    const today = new Date().toISOString().split('T')[0];
-    
-    return {
-      total: accountBookings.length,
-      approved: accountBookings.filter(t => t.status === 'approved').length,
-      pending: accountBookings.filter(t => 
-        t.status === 'menunggu_review' || t.status === 'pending_approval'
-      ).length,
-      todayBookings: accountBookings.filter(t => t.data?.meetingDate === today).length,
-    };
-  };
+
 
   const getColorClasses = (color: string) => {
     const colorMap: Record<string, { bg: string; border: string; text: string; light: string }> = {
-      blue: { 
-        bg: 'bg-blue-500', 
-        border: 'border-blue-300', 
+      blue: {
+        bg: 'bg-blue-500',
+        border: 'border-blue-300',
         text: 'text-blue-600',
         light: 'bg-blue-50'
       },
-      purple: { 
-        bg: 'bg-purple-500', 
-        border: 'border-purple-300', 
+      purple: {
+        bg: 'bg-purple-500',
+        border: 'border-purple-300',
         text: 'text-purple-600',
         light: 'bg-purple-50'
       },
-      green: { 
-        bg: 'bg-green-500', 
-        border: 'border-green-300', 
+      green: {
+        bg: 'bg-green-500',
+        border: 'border-green-300',
         text: 'text-green-600',
         light: 'bg-green-50'
       },
-      orange: { 
-        bg: 'bg-orange-500', 
-        border: 'border-orange-300', 
+      orange: {
+        bg: 'bg-orange-500',
+        border: 'border-orange-300',
         text: 'text-orange-600',
         light: 'bg-orange-50'
       },
-      red: { 
-        bg: 'bg-red-500', 
-        border: 'border-red-300', 
+      red: {
+        bg: 'bg-red-500',
+        border: 'border-red-300',
         text: 'text-red-600',
         light: 'bg-red-50'
       },
-      teal: { 
-        bg: 'bg-teal-500', 
-        border: 'border-teal-300', 
+      teal: {
+        bg: 'bg-teal-500',
+        border: 'border-teal-300',
         text: 'text-teal-600',
         light: 'bg-teal-50'
       },
-      indigo: { 
-        bg: 'bg-indigo-500', 
-        border: 'border-indigo-300', 
+      indigo: {
+        bg: 'bg-indigo-500',
+        border: 'border-indigo-300',
         text: 'text-indigo-600',
         light: 'bg-indigo-50'
       },
-      pink: { 
-        bg: 'bg-pink-500', 
-        border: 'border-pink-300', 
+      pink: {
+        bg: 'bg-pink-500',
+        border: 'border-pink-300',
         text: 'text-pink-600',
         light: 'bg-pink-50'
       },
@@ -299,24 +347,20 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl flex items-center gap-3">
-            <Settings className="h-6 w-6 text-blue-600" />
+          <h1 className="text-xl font-semibold flex items-center gap-2">
             Manajemen Akun Zoom
-          </h2>
-          <p className="text-gray-500 mt-1">
-            Kelola kredensial dan pengaturan akun Zoom
-          </p>
+          </h1>
+          <p className="text-sm text-muted-foreground">Kelola kredensial dan pengaturan akun Zoom</p>
         </div>
-        <Button onClick={handleAddNew}>
+        <Button onClick={handleAddNew} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Tambah Akun
         </Button>
       </div>
 
       {/* Accounts Grid */}
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
+      <div className="grid gap-4 md:grid-cols-2">
         {accounts.map((account, index) => {
-          const stats = getAccountStats(account.id);
           const colorClasses = getColorClasses(account.color);
 
           return (
@@ -326,65 +370,62 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className={`border-2 ${account.isActive ? colorClasses.border : 'border-gray-300'}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`h-14 w-14 ${colorClasses.bg} rounded-lg flex items-center justify-center ${!account.isActive && 'opacity-50'}`}>
-                        <Video className="h-7 w-7 text-white" />
+              <Card className={`pb-4 gap-0 border-2 ${account.isActive ? colorClasses.border : 'border-gray-300'}`}>
+                <CardHeader className="p-4 !pb-0 m-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className={`h-10 w-10 ${colorClasses.bg} rounded-lg flex items-center justify-center flex-shrink-0 ${!account.isActive && 'opacity-50'}`}>
+                        <Video className="h-5 w-5 text-white" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <CardTitle>{account.name}</CardTitle>
-                          <Badge variant={account.isActive ? 'default' : 'secondary'}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-base">{account.name}</CardTitle>
+                          <Badge variant={account.isActive ? 'default' : 'secondary'} className="text-xs">
                             {account.isActive ? 'Aktif' : 'Nonaktif'}
                           </Badge>
                         </div>
-                        <CardDescription className="mt-1">{account.email}</CardDescription>
-                        <p className="text-sm text-gray-600 mt-1">{account.description}</p>
+                        <CardDescription className="mt-1 text-xs truncate">{account.email}</CardDescription>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-1">{account.description}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right mr-4">
-                        <p className="text-xs text-gray-500">Status Akun</p>
+                    <div className="flex items-start gap-2 flex-shrink-0">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-500 mb-1">Status</p>
                         <Switch
                           checked={account.isActive}
                           onCheckedChange={() => handleToggleActive(account.id)}
                         />
                       </div>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleEdit(account)}
                       >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Edit className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-3">
                   {/* Account Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Spesifikasi & Credentials Section */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Spesifikasi & Keamanan
-                      </h4>
-                      
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Shield className="h-3.5 w-3.5" />
+                      Spesifikasi & Keamanan
+                    </h4>
+
                       {/* Plan Type & Max Participants */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label className="text-xs text-gray-500">Tipe Akun</Label>
-                        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="p-2.5 bg-gray-50 rounded-md border border-gray-200">
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-semibold text-gray-900">Zoom {account.planType}</p>
+                              <p className="text-sm font-semibold text-gray-900">Zoom {account.planType}</p>
                               <p className="text-xs text-gray-600 mt-0.5">
-                                Maksimal {account.maxParticipants} peserta
+                                Maks. {account.maxParticipants} peserta
                               </p>
                             </div>
-                            <Badge variant="outline" className={colorClasses.text}>
+                            <Badge variant="outline" className={`text-xs ${colorClasses.text}`}>
                               {account.planType}
                             </Badge>
                           </div>
@@ -392,104 +433,46 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
                       </div>
 
                       {/* Host Key */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         <Label className="text-xs text-gray-500 flex items-center gap-1">
                           <Key className="h-3 w-3" />
                           Host Key
                         </Label>
                         {!account.hostKey || account.hostKey.trim() === '' ? (
-                          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-md">
                             <div className="flex items-center gap-2 text-red-700">
-                              <AlertCircle className="h-4 w-4" />
-                              <p className="text-sm font-semibold">Isi Host Key</p>
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              <p className="text-xs font-semibold">Isi Host Key</p>
                             </div>
-                            <p className="text-xs text-red-600 mt-1">
-                              Host Key belum diatur untuk akun ini
+                            <p className="text-xs text-red-600 mt-0.5">
+                              Host Key belum diatur
                             </p>
                           </div>
                         ) : (
                           <div className="flex gap-2">
-                            <Input 
-                              value="••••••" 
-                              readOnly 
-                              className="font-mono bg-gray-50"
+                            <Input
+                              value="••••••"
+                              readOnly
+                              className="font-mono bg-gray-50 text-sm h-9"
                             />
                             <Button
                               variant="outline"
                               size="icon"
+                              className="h-9 w-9"
                               onClick={() => handleCopy(account.hostKey, 'Host Key')}
                             >
                               {copiedField === 'Host Key' ? (
-                                <Check className="h-4 w-4 text-green-600" />
+                                <Check className="h-3.5 w-3.5 text-green-600" />
                               ) : (
-                                <Copy className="h-4 w-4" />
+                                <Copy className="h-3.5 w-3.5" />
                               )}
                             </Button>
                           </div>
                         )}
                         <p className="text-xs text-gray-500">
-                          Klik salin untuk menyalin Host Key asli
+                          Klik salin untuk menyalin Host Key
                         </p>
                       </div>
-                    </div>
-
-                    {/* Statistics Section */}
-                    <div className="space-y-4">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4" />
-                        Statistik Penggunaan
-                      </h4>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <Card className={colorClasses.light}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Activity className={`h-4 w-4 ${colorClasses.text}`} />
-                              <p className="text-xs text-gray-600">Total Booking</p>
-                            </div>
-                            <p className={`text-2xl ${colorClasses.text}`}>
-                              {stats.total}
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-green-50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Check className="h-4 w-4 text-green-600" />
-                              <p className="text-xs text-gray-600">Disetujui</p>
-                            </div>
-                            <p className="text-2xl text-green-600">
-                              {stats.approved}
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-yellow-50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Clock className="h-4 w-4 text-yellow-600" />
-                              <p className="text-xs text-gray-600">Pending</p>
-                            </div>
-                            <p className="text-2xl text-yellow-600">
-                              {stats.pending}
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-blue-50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Calendar className="h-4 w-4 text-blue-600" />
-                              <p className="text-xs text-gray-600">Hari Ini</p>
-                            </div>
-                            <p className="text-2xl text-blue-600">
-                              {stats.todayBookings}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -507,7 +490,7 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
               Perbarui kredensial dan pengaturan akun Zoom
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingAccount && (
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -537,10 +520,17 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
                     id="edit-host-key"
                     value={editingAccount.hostKey}
                     onChange={(e) => setEditingAccount({ ...editingAccount, hostKey: e.target.value })}
-                    className="font-mono"
+                    className={`font-mono ${validationErrors.hostKey ? 'border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="Masukkan Host Key"
                   />
-                  <p className="text-xs text-gray-500">6 digit kode untuk host meeting</p>
+                  {validationErrors.hostKey ? (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.hostKey}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500">6 digit kode untuk host meeting</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-plan-type">Tipe Plan</Label>
@@ -548,9 +538,17 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
                     id="edit-plan-type"
                     value={editingAccount.planType}
                     onChange={(e) => setEditingAccount({ ...editingAccount, planType: e.target.value })}
+                    className={`${validationErrors.planType ? 'border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="Pro, Business, Enterprise"
                   />
-                  <p className="text-xs text-gray-500">Contoh: Pro, Business</p>
+                  {validationErrors.planType ? (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {validationErrors.planType}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500">Pro, Business, Enterprise</p>
+                  )}
                 </div>
               </div>
 
@@ -580,7 +578,7 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
             {/* Delete button on the left (only for existing accounts) */}
             {editingAccount && accounts.find(acc => acc.id === editingAccount.id) && (
               <div className="flex-1">
-                <Button 
+                <Button
                   variant="destructive"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -619,7 +617,7 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
               Tindakan ini tidak dapat dibatalkan. Akun akan dihapus secara permanen.
             </DialogDescription>
           </DialogHeader>
-          
+
           {accountToDelete && (
             <div className="space-y-4 py-4">
               {/* Warning Box */}
@@ -655,8 +653,8 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
           )}
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowDeleteConfirm(false);
                 setAccountToDelete(null);
@@ -665,7 +663,7 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
               <X className="h-4 w-4 mr-2" />
               Batal
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleDelete}
             >

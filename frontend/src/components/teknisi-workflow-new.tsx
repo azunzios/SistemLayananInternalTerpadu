@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { getTickets, saveTickets, addNotification, getUsers, createWorkOrder } from '../lib/storage';
+import { getTickets, saveTickets, addNotification, getUsersSync, createWorkOrder } from '../lib/storage';
 import type { Ticket, TicketStatus, User, WorkOrder, WorkOrderType, ProblemType } from '../types';
 
 interface TeknisiWorkflowProps {
@@ -60,7 +60,7 @@ export const TeknisiWorkflow: React.FC<TeknisiWorkflowProps> = ({
   currentUser,
   onUpdate,
 }) => {
-  const users = getUsers();
+  const users = getUsersSync();
   
   // Accept/Reject Dialog
   const [showAcceptDialog, setShowAcceptDialog] = useState(false);
@@ -898,7 +898,7 @@ export const TeknisiWorkflow: React.FC<TeknisiWorkflowProps> = ({
                           {sparepartItems.length > 1 && (
                             <Button
                               size="sm"
-                              variant="ghost"
+                              variant="link"
                               onClick={() => removeSparepartItem(index)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >

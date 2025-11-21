@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'zoom_attachments' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/' . env('ZOOM_ATTACHMENTS_PATH', 'zoom_attachments')),
+            'url' => env('APP_URL').'/storage/' . env('ZOOM_ATTACHMENTS_PATH', 'zoom_attachments'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

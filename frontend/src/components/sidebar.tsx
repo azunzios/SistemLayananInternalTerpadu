@@ -1,24 +1,18 @@
 import React from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
 import { ScrollArea } from './ui/scroll-area';
 import {
   LayoutDashboard,
   TicketIcon,
-  Package,
   Wrench,
   Video,
   Users,
   BarChart3,
-  FolderKanban,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Building,
+  FolderKanban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { User, UserRole } from '../types';
+import type { User} from '../types';
 import type { ViewType } from './main-layout';
 import { getTickets, getNotifications, getActiveRole, getWorkOrders } from '../lib/storage';
 import {
@@ -50,33 +44,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentView,
   onNavigate,
   collapsed,
-  onToggleCollapse,
 }) => {
   const activeRole = getActiveRole(currentUser.id) || currentUser.role;
   const menuItems = getMenuItemsForRole(activeRole, currentUser);
-
-  const getRoleLabel = (role: UserRole) => {
-    switch (role) {
-      case 'super_admin': return 'Super Admin';
-      case 'admin_layanan': return 'Admin Layanan';
-      case 'admin_penyedia': return 'Admin Penyedia';
-      case 'teknisi': return 'Teknisi';
-      case 'user': return 'Pegawai';
-      default: return role;
-    }
-  };
 
   return (
     <motion.aside
       initial={false}
       animate={{
-        width: collapsed ? '72px' : '256px',
+        width: collapsed ? '72px' : '272px',
       }}
       transition={{
         duration: 0.3,
         ease: [0.4, 0, 0.2, 1],
       }}
-      className="bg-gradient-to-b from-slate-800 to-slate-900 text-white flex flex-col shadow-xl"
+      className="bg-[#f0f4f4f9] flex flex-col shadow-xl"
     >
       {/* Navigation Menu */}
       <ScrollArea className={`flex-1 py-4 ${collapsed ? 'px-3' : 'px-3'}`}>
@@ -117,11 +99,11 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
   const buttonContent = (
     <Button
-      variant="ghost"
+      variant="link"
       className={`w-full ${collapsed ? 'h-11 p-2 justify-center' : 'h-11 justify-start px-4'} ${
         isActive
-          ? 'bg-slate-700 text-white hover:bg-slate-600'
-          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+          ? 'bg-slate-700 text-white hover:text-[#0842A0] hover:bg-[#D3E3FD]'
+          : 'text-[#4444746] hover:text-[#0842A0] hover:bg-[#D3E3FD]'
       } transition-colors`}
       onClick={onClick}
     >
@@ -140,7 +122,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
                 className={`ml-2 flex-shrink-0 text-xs ${
                   isActive 
                     ? 'bg-white text-slate-900' 
-                    : 'bg-cyan-500 text-white'
+                    : 'bg-cyan-500 text-[#444746]'
                 }`}
               >
                 {item.badge}
@@ -175,7 +157,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   return <div>{buttonContent}</div>;
 };
 
-type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'user';
+type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'pegawai';
 
 const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
   const tickets = getTickets();
@@ -197,7 +179,6 @@ const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
   }).length;
 
   const myTicketsCount = tickets.filter(t => t.userId === currentUser.id).length;
-  const unreadNotifications = notifications.filter(n => !n.read).length;
   
   // Work order counts by role
   let workOrdersCount = 0;
@@ -220,26 +201,26 @@ const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      roles: ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'user'],
+      roles: ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'pegawai'],
     },
     {
       id: 'create-ticket-perbaikan',
       label: 'Perbaikan Barang',
       icon: Wrench,
-      roles: ['user'],
+      roles: ['pegawai'],
     },
     {
       id: 'zoom-booking',
       label: 'Booking Zoom',
       icon: Video,
-      roles: ['user'],
+      roles: ['pegawai'],
     },
     {
       id: 'my-tickets',
       label: 'Tiket Saya',
       icon: TicketIcon,
       badge: myTicketsCount,
-      roles: ['user', 'teknisi'],
+      roles: ['pegawai', 'teknisi'],
     },
     {
       id: 'tickets',
@@ -269,7 +250,7 @@ const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
     },
     {
       id: 'reports',
-      label: 'Laporan dan Kartu Kendali',
+      label: 'Laporan & K. Kendali',
       icon: BarChart3,
       roles: ['super_admin', 'admin_penyedia'],
     },

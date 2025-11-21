@@ -2,13 +2,10 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Users,
   TicketIcon,
   Activity,
-  TrendingUp,
-  TrendingDown,
   Shield,
   Database,
   BarChart3,
@@ -16,8 +13,6 @@ import {
   CheckCircle,
   Clock,
   Package,
-  Wrench,
-  Video,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -35,7 +30,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { getTickets, getUsers, getInventory, getAuditLogs } from '../lib/storage';
+import { getTickets, getUsersSync, getAuditLogs } from '../lib/storage';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';
 
@@ -47,12 +42,10 @@ interface SuperAdminDashboardProps {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
-  currentUser,
   onNavigate,
 }) => {
   const tickets = getTickets();
-  const users = getUsers();
-  const inventory = getInventory();
+  const users = getUsersSync();
   const auditLogs = getAuditLogs();
 
   // System Statistics
@@ -70,13 +63,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       ).length,
       completedTickets: tickets.filter(t => t.status === 'selesai').length,
       rejectedTickets: tickets.filter(t => ['ditolak', 'rejected'].includes(t.status)).length,
-      inventoryItems: inventory.length,
-      lowStockItems: inventory.filter(i => i.quantity <= i.minStock).length,
       ticketsLast7Days: tickets.filter(t => new Date(t.createdAt) >= last7Days).length,
       ticketsLast30Days: tickets.filter(t => new Date(t.createdAt) >= last30Days).length,
       avgResolutionTime: calculateAvgResolutionTime(tickets),
     };
-  }, [tickets, users, inventory]);
+  }, [tickets, users]);
 
   function calculateAvgResolutionTime(tickets: any[]) {
     const completed = tickets.filter(t => t.status === 'selesai');
@@ -125,7 +116,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       { name: 'Admin Layanan', value: users.filter(u => u.role === 'admin_layanan').length },
       { name: 'Admin Penyedia', value: users.filter(u => u.role === 'admin_penyedia').length },
       { name: 'Teknisi', value: users.filter(u => u.role === 'teknisi').length },
-      { name: 'Pegawai', value: users.filter(u => u.role === 'user').length },
+      { name: 'Pegawai', value: users.filter(u => u.role === 'pegawai').length },
     ];
   }, [users]);
 
@@ -370,10 +361,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
               <TicketIcon className="h-4 w-4" />
               View All Tickets
             </Button>
-            <Button className="w-full justify-start gap-2" variant="outline" onClick={() => onNavigate('inventory')}>
-              <Package className="h-4 w-4" />
-              Inventory Management
-            </Button>
             <Button className="w-full justify-start gap-2" variant="outline" onClick={() => onNavigate('reports')}>
               <BarChart3 className="h-4 w-4" />
               System Reports
@@ -387,21 +374,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             <CardTitle>System Alerts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {stats.lowStockItems > 0 && (
-              <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-yellow-900">Low Stock Alert</p>
-                  <p className="text-xs text-yellow-700">
-                    {stats.lowStockItems} item(s) perlu restock
-                  </p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => onNavigate('inventory')}>
-                  View
-                </Button>
-              </div>
-            )}
-
             {stats.pendingTickets > 10 && (
               <div className="flex items-center gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                 <Clock className="h-5 w-5 text-orange-600 flex-shrink-0" />

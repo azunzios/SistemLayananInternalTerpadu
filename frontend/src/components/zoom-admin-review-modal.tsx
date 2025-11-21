@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { api } from '../lib/api';
 import {
   Select,
   SelectContent,
@@ -23,42 +24,176 @@ import {
   Send,
   Ban,
   Info,
+  Users,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getTickets, saveTickets, createNotification, getCurrentUser } from '../lib/storage';
-import type { Ticket } from '../types';
+import { getCurrentUser } from '../lib/storage';
+import type { Ticket, ZoomTicket } from '../types';
+
+interface ZoomAccount {
+  id: number;
+  account_id: string;
+  name: string;
+  host_key: string;
+  email: string;
+  is_active: boolean;
+  color?: string;
+}
+
+interface CoHost {
+  name: string;
+  email: string;
+}
 
 interface ZoomAdminReviewModalProps {
-  booking: Ticket;
+  booking: ZoomTicket;
   onClose: () => void;
   onUpdate: () => void;
 }
+
+const normalizeCoHosts = (value: unknown): CoHost[] => {
+  if (!value) return [];
+  const material = (() => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return [];
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // free-form strings fall through
+      }
+      return trimmed
+        .split(/[\r\n;,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+    }
+    if (typeof value === 'object' && value !== null) {
+      const record = value as Record<string, unknown>;
+      if (Array.isArray(record.data)) return record.data;
+      if (Array.isArray(record.coHosts)) return record.coHosts;
+      if (Array.isArray(record.co_hosts)) return record.co_hosts;
+    }
+    return [];
+  })();
+
+  return material
+    .map((item, index) => {
+      if (!item) return null;
+      if (typeof item === 'string') {
+        const entry = item.trim();
+        if (!entry) return null;
+        const emailMatch = entry.match(/<([^>]+)>/);
+        const email = emailMatch?.[1] || (entry.includes('@') ? entry : '');
+        const name = email
+          ? entry.replace(emailMatch ? `<${email}>` : email, '').trim().replace(/[\s,-]+$/, '')
+          : entry;
+        return {
+          name: name || `Co-Host ${index + 1}`,
+          email: email || '',
+        };
+      }
+      const record = item as Record<string, unknown>;
+      return {
+        name:
+          (record.name as string) ||
+          (record.fullName as string) ||
+          (record.full_name as string) ||
+          (record.username as string) ||
+          (record.email as string) ||
+          `Co-Host ${index + 1}`,
+        email: (record.email as string) || (record.mail as string) || '',
+      };
+    })
+    .filter((host): host is CoHost => Boolean(host && (host.name || host.email)));
+};
+
+const resolveZoomAccountSelection = (zoomAcc : ZoomAccount): string => {
+  const source = zoomAcc;
+  return source.id;
+};
 
 export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
   booking,
   onClose,
   onUpdate,
 }) => {
-  const currentUser = getCurrentUser();
-  const [selectedAccount, setSelectedAccount] = useState<string>(booking.data?.zoomAccount || '');
-  const [hostkey, setHostkey] = useState<string>(booking.data?.hostkey || '');
-  const [meetingLink, setMeetingLink] = useState<string>(booking.data?.meetingLink || '');
-  const [passcode, setPasscode] = useState<string>(booking.data?.passcode || '');
+  const [zoomAccounts, setZoomAccounts] = useState<ZoomAccount[]>([]);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
+  const suggestedAccountId = (booking as any).zoomAccountId || (booking as any).zoom_account_id;
+  const [selectedAccount, setSelectedAccount] = useState<string>(() => {
+    // Use suggested account if available
+    if (suggestedAccountId) return String(suggestedAccountId);
+    const resolved = resolveZoomAccountSelection(booking as any);
+    return resolved || '';
+  });
+  const [hostkey, setHostkey] = useState<string>('');
+  const [meetingLink, setMeetingLink] = useState<string>(booking.meetingLink || '');
+  const [passcode, setPasscode] = useState<string>(booking.passcode || '');
+  const [coHosts, setCoHosts] = useState<CoHost[]>(() =>
+    normalizeCoHosts(
+      (booking as any).coHosts ??
+        (booking as any).co_hosts ??
+        (booking as any).zoom_co_hosts
+    )
+  );
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [conflictWarning, setConflictWarning] = useState<string>('');
 
-  // Load zoom accounts
-  const [zoomAccounts, setZoomAccounts] = useState<any[]>([]);
-
+  // When component mounts or booking changes, populate data from booking props
   useEffect(() => {
-    const stored = localStorage.getItem('bps_ntb_zoom_accounts');
-    if (stored) {
-      const accounts = JSON.parse(stored);
-      setZoomAccounts(accounts);
+    setMeetingLink(booking.meetingLink || '');
+    setPasscode(booking.passcode || '');
+    setSelectedAccount(resolveZoomAccountSelection(booking));
+    setCoHosts(
+      normalizeCoHosts(
+        (booking as any).coHosts ??
+          (booking as any).co_hosts ??
+          (booking as any).zoom_co_hosts
+      )
+    );
+    setRejectionReason('');
+  }, [booking]); // Refresh on any booking prop change
+
+  // Load zoom accounts only when status is pending
+  useEffect(() => {
+    const isPending = booking.status === 'pending_review' || booking.status === 'menunggu_review';
+    
+    if (!isPending) {
+      return; // Don't load if not pending
     }
-  }, []);
+
+    const loadZoomAccounts = async () => {
+      try {
+        setAccountsError(null);
+        const response = await api.get('zoom/accounts');
+        if (Array.isArray(response)) {
+          setZoomAccounts(response);
+          console.log('Loaded zoom accounts from API:', response);
+        }
+      } catch (err: any) {
+        const errorMsg = err?.body?.message || err?.message || 'Gagal memuat data akun Zoom';
+        setAccountsError(errorMsg);
+        console.error('Failed to load zoom accounts:', err);
+      }
+    };
+
+    loadZoomAccounts();
+  }, [booking.status]); // Only depend on booking status
+
+  // Auto-fetch host key when account is selected
+  useEffect(() => {
+    if (selectedAccount) {
+      const account = zoomAccounts.find(acc => acc.id.toString() === selectedAccount);
+      if (account) {
+        setHostkey(account.host_key);
+      }
+    }
+  }, [selectedAccount, zoomAccounts]);
+
+  const [conflictWarning, setConflictWarning] = useState<string>('');
 
   // Check for conflicts when account is selected
   useEffect(() => {
@@ -67,50 +202,71 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
       return;
     }
 
-    const allTickets = getTickets();
-    const dateStr = booking.data?.meetingDate;
-    const startTime = booking.data?.startTime;
-    const endTime = booking.data?.endTime;
+    const checkConflicts = async () => {
+      try {
+        const dateStr = booking.date;
+        const startTime = booking.startTime;
+        const endTime = booking.endTime;
 
-    // Find conflicts: same account, same date, overlapping time, approved status
-    const conflicts = allTickets.filter(t => {
-      if (t.id === booking.id) return false; // Skip current booking
-      if (t.type !== 'zoom_meeting') return false;
-      if (t.data?.zoomAccount !== selectedAccount) return false;
-      if (t.data?.meetingDate !== dateStr) return false;
-      if (t.status !== 'approved') return false; // Only check approved bookings
+        // Get zoom bookings for the same date from backend
+        const response = await api.get(`tickets?type=zoom_meeting&meeting_date=${dateStr}`);
+        const allTickets = Array.isArray(response) ? response : response?.data || [];
+        
+        // Find conflicts: same account, same date, overlapping time, approved status
+        const conflicts = allTickets.filter((t: any) => {
+          if (t.id === booking.id) return false; // Skip current booking
+          if (t.zoom_account_id !== selectedAccount) return false;
+          if (t.status !== 'approved') return false; // Only check approved bookings
 
-      // Check time overlap
-      const tStart = t.data.startTime;
-      const tEnd = t.data.endTime;
+          // Check time overlap
+          const tStart = t.startTime;
+          const tEnd = t.endTime;
 
-      // Convert to minutes for easier comparison
-      const toMinutes = (time: string) => {
-        const [h, m] = time.split(':').map(Number);
-        return h * 60 + m;
-      };
+          // Convert to minutes for easier comparison
+          const toMinutes = (time: string) => {
+            const [h, m] = time.split(':').map(Number);
+            return h * 60 + m;
+          };
 
-      const bookingStart = toMinutes(startTime);
-      const bookingEnd = toMinutes(endTime);
-      const tStartMin = toMinutes(tStart);
-      const tEndMin = toMinutes(tEnd);
+          const bookingStart = toMinutes(startTime);
+          const bookingEnd = toMinutes(endTime);
+          const tStartMin = toMinutes(tStart);
+          const tEndMin = toMinutes(tEnd);
 
-      // Check overlap: (StartA < EndB) and (EndA > StartB)
-      return (bookingStart < tEndMin) && (bookingEnd > tStartMin);
-    });
+          // Check overlap: (StartA < EndB) and (EndA > StartB)
+          return (bookingStart < tEndMin) && (bookingEnd > tStartMin);
+        });
 
-    if (conflicts.length > 0) {
-      setConflictWarning(
-        `⚠️ Akun ini sudah terpakai pada jam ${conflicts[0].data.startTime} - ${conflicts[0].data.endTime} oleh ${conflicts[0].userName}`
-      );
-    } else {
-      setConflictWarning('');
-    }
-  }, [selectedAccount, booking]);
+        if (conflicts.length > 0) {
+          setConflictWarning(
+            `⚠️ Akun ini sudah terpakai pada jam ${conflicts[0].startTime} - ${conflicts[0].endTime} oleh ${conflicts[0].userName}`
+          );
+        } else {
+          setConflictWarning('');
+        }
+      } catch (err) {
+        console.error('Failed to check conflicts:', err);
+      }
+    };
+
+    checkConflicts();
+  }, [selectedAccount, booking.date, booking.startTime, booking.endTime, booking.id]); // Depend on booking fields directly
 
   // Validate hostkey (must be 6 digits)
   const isHostkeyValid = () => {
     return /^\d{6}$/.test(hostkey);
+  };
+
+  // Extract or generate zoom meeting ID from meeting link
+  const extractZoomMeetingId = (link: string): string | null => {
+    // Try to match zoom link patterns: https://zoom.us/j/{id} or similar
+    const match = link.match(/\/j\/(\d+)/);
+    if (match) {
+      return match[1];
+    }
+    // If not found in URL, generate ID from timestamp
+    // This allows flexible link formats as long as they're valid URLs
+    return Date.now().toString().slice(-9);
   };
 
   // Handle Approve
@@ -131,6 +287,24 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
       return;
     }
 
+    // Validate URL format: must have https:// and a domain
+    try {
+      const url = new URL(meetingLink);
+      if (!url.protocol.startsWith('https')) {
+        toast.error('Link Meeting harus menggunakan HTTPS');
+        return;
+      }
+    } catch (err) {
+      toast.error('Format link tidak valid. Pastikan berupa URL lengkap (https://...)');
+      return;
+    }
+
+    const zoomMeetingId = extractZoomMeetingId(meetingLink);
+    if (!zoomMeetingId) {
+      toast.error('Gagal memproses link Zoom');
+      return;
+    }
+
     if (conflictWarning) {
       toast.error('Tidak dapat approve: terdapat conflict dengan booking lain');
       return;
@@ -139,58 +313,21 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
     setIsProcessing(true);
 
     try {
-      const allTickets = getTickets();
-      const ticketIndex = allTickets.findIndex(t => t.id === booking.id);
-
-      if (ticketIndex === -1) {
-        toast.error('Ticket tidak ditemukan');
-        return;
-      }
-
-      // Update ticket
-      const updatedTicket = {
-        ...allTickets[ticketIndex],
-        status: 'approved',
-        data: {
-          ...allTickets[ticketIndex].data,
-          zoomAccount: selectedAccount,
-          hostkey: hostkey,
-          meetingLink: meetingLink,
-          passcode: passcode,
-        },
-        timeline: [
-          ...allTickets[ticketIndex].timeline,
-          {
-            timestamp: new Date().toISOString(),
-            action: 'approved',
-            actor: currentUser?.name || 'Admin',
-            description: `Booking disetujui dan diberikan akun ${selectedAccount}`,
-          },
-        ],
-      };
-
-      allTickets[ticketIndex] = updatedTicket;
-      saveTickets(allTickets);
-
-      // Create notification for user
-      const accountName = zoomAccounts.find(a => a.id === selectedAccount)?.name || selectedAccount;
-      createNotification({
-        userId: booking.userId,
-        type: 'info',
-        title: 'Booking Zoom Disetujui',
-        message: `Booking Zoom Anda "${booking.title}" telah disetujui dengan ${accountName}. Link: ${meetingLink}, Passcode: ${passcode}, Hostkey: ${hostkey}`,
-        metadata: {
-          ticketId: booking.id,
-          ticketNumber: booking.ticketNumber,
-        },
+      // Use approve-zoom endpoint with correct payload matching backend validation
+      await api.patch(`tickets/${booking.id}/approve-zoom`, {
+        zoom_meeting_link: meetingLink,
+        zoom_meeting_id: zoomMeetingId,
+        zoom_passcode: passcode,
+        zoom_account_id: selectedAccount ? parseInt(selectedAccount, 10) : null,
       });
 
-      toast.success('Booking berhasil disetujui dan notifikasi dikirim ke user');
+      toast.success('Booking berhasil disetujui');
       onUpdate();
       onClose();
-    } catch (error) {
-      toast.error('Gagal menyetujui booking');
-      console.error(error);
+    } catch (error: any) {
+      const errorMsg = error?.body?.message || error?.message || 'Gagal menyetujui booking';
+      toast.error(errorMsg);
+      console.error('Error approving booking:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -204,55 +341,18 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
     }
 
     setIsProcessing(true);
-
     try {
-      const allTickets = getTickets();
-      const ticketIndex = allTickets.findIndex(t => t.id === booking.id);
-
-      if (ticketIndex === -1) {
-        toast.error('Ticket tidak ditemukan');
-        return;
-      }
-
-      // Update ticket
-      const updatedTicket = {
-        ...allTickets[ticketIndex],
-        status: 'ditolak',
-        data: {
-          ...allTickets[ticketIndex].data,
-          rejectionReason: rejectionReason,
-        },
-        timeline: [
-          ...allTickets[ticketIndex].timeline,
-          {
-            timestamp: new Date().toISOString(),
-            action: 'ditolak',
-            actor: currentUser?.name || 'Admin',
-            description: `Booking ditolak: ${rejectionReason}`,
-          },
-        ],
-      };
-
-      allTickets[ticketIndex] = updatedTicket;
-      saveTickets(allTickets);
-
-      // Create notification for user
-      createNotification({
-        userId: booking.userId,
-        type: 'error',
-        title: 'Booking Zoom Ditolak',
-        message: `Booking Zoom Anda "${booking.title}" ditolak. Alasan: ${rejectionReason}`,
-        metadata: {
-          ticketId: booking.id,
-          ticketNumber: booking.ticketNumber,
-        },
+      // Use reject-zoom endpoint
+      await api.patch(`tickets/${booking.id}/reject-zoom`, {
+        reason: rejectionReason,
       });
 
-      toast.success('Booking ditolak dan notifikasi dikirim ke user');
+      toast.success('Booking ditolak');
       onUpdate();
       onClose();
-    } catch (error) {
-      toast.error('Gagal menolak booking');
+    } catch (error: any) {
+      const errorMsg = error?.body?.message || 'Gagal menolak booking';
+      toast.error(errorMsg);
       console.error(error);
     } finally {
       setIsProcessing(false);
@@ -295,9 +395,9 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
   const statusStyle = getStatusStyle(booking.status);
   const StatusIcon = statusStyle.icon;
-  const isPending = booking.status === 'menunggu_review' || booking.status === 'pending_approval';
+  const isPending = booking.status === 'pending_review' || booking.status === 'menunggu_review';
   const isApproved = booking.status === 'approved';
-  const isRejected = booking.status === 'ditolak';
+  const isRejected = booking.status === 'rejected';
 
   return (
     <motion.div
@@ -334,6 +434,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+
           {/* Booking Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
             <h4 className="font-semibold text-blue-900 flex items-center gap-2">
@@ -342,6 +443,11 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
             </h4>
             
             <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-blue-700">Nomor Tiket</p>
+                <p className="font-semibold text-blue-900 font-mono">{booking.ticketNumber}</p>
+              </div>
+              
               <div>
                 <p className="text-blue-700">Judul</p>
                 <p className="font-semibold text-blue-900">{booking.title}</p>
@@ -355,7 +461,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
               <div>
                 <p className="text-blue-700">Tanggal</p>
                 <p className="font-semibold text-blue-900">
-                  {new Date(booking.data.meetingDate).toLocaleDateString('id-ID', {
+                  {new Date(booking.date).toLocaleDateString('id-ID', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -367,11 +473,27 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
               <div>
                 <p className="text-blue-700">Waktu</p>
                 <p className="font-semibold text-blue-900">
-                  {booking.data.startTime} - {booking.data.endTime}
+                  {booking.startTime} - {booking.endTime}
                 </p>
               </div>
+                        {/* Co-Hosts Section */}
+          {coHosts.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+              <Label className="flex items-center gap-2 text-blue-900 font-semibold">
+                <Users className="h-4 w-4" />
+                Co-Hosts
+              </Label>
+              <div className="space-y-2">
+                {coHosts.map((host, idx) => (
+                  <div key={idx} className="text-sm bg-blue-100 rounded p-2">
+                    <p className="font-medium text-gray-900">{host.name}</p>
+                    <p className="text-gray-600 text-xs">{host.email}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-
+          )}
+            </div>
             {booking.description && (
               <div>
                 <p className="text-blue-700 text-sm">Deskripsi</p>
@@ -406,112 +528,129 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
             </div>
           )}
 
-          {/* Assignment Form */}
+          {/* Assignment Form - Only show when status is pending */}
           {isPending && (
             <>
               <div className="space-y-4">
                 <h4 className="font-semibold text-gray-900">Assign Akun Zoom</h4>
                 
+                {/* Accounts Loading Error */}
+                {accountsError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-red-900 text-sm">Gagal memuat akun Zoom</p>
+                      <p className="text-red-700 text-sm mt-1">{accountsError}</p>
+                      <p className="text-red-600 text-xs mt-2">Silakan minta admin untuk memeriksa koneksi database atau konfigurasi API.</p>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Account Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="account">Pilih Akun Zoom *</Label>
-                  <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                    <SelectTrigger id="account">
-                      <SelectValue placeholder="Pilih akun zoom..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zoomAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full bg-${account.color}-500`} />
-                            {account.name}
-                            {!account.isActive && (
-                              <Badge variant="secondary" className="text-xs ml-1">Nonaktif</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {/* Conflict Warning */}
-                  {conflictWarning && (
-                    <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                      <span>{conflictWarning}</span>
+                {!accountsError && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="account">Pilih Akun Zoom *</Label>
+                    <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                      <SelectTrigger id="account">
+                        <SelectValue placeholder={zoomAccounts.length === 0 ? "Tidak ada akun tersedia" : "Pilih akun zoom..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {zoomAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <span>{account.name}</span>
+                              {!account.is_active && (
+                                <Badge variant="secondary" className="text-xs ml-1">Nonaktif</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Conflict Warning */}
+                    {conflictWarning && (
+                      <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span>{conflictWarning}</span>
+                      </div>
+                    )}
+                    
+                    {selectedAccount && !conflictWarning && (
+                      <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-700 flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span>Akun tersedia untuk waktu yang dipilih</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hostkey Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="hostkey">Hostkey (6 Digit) *</Label>
+                    <div className={`relative rounded-md overflow-hidden ${hostkey ? 'bg-orange-100 border border-orange-300' : 'bg-gray-50'}`}>
+                      <Key className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${hostkey ? 'text-orange-600' : 'text-gray-400'}`} />
+                      <Input
+                        id="hostkey"
+                        type="text"
+                        placeholder="123456"
+                        maxLength={6}
+                        value={hostkey}
+                        onChange={(e) => setHostkey(e.target.value.replace(/\D/g, ''))}
+                        className={`pl-10 border-0 ${hostkey ? 'bg-orange-100 text-orange-900 font-semibold placeholder-orange-500' : 'bg-white'}`}
+                        readOnly
+                      />
                     </div>
-                  )}
-                  
-                  {selectedAccount && !conflictWarning && (
-                    <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-700 flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                      <span>Akun tersedia untuk waktu yang dipilih</span>
+                    <p className="text-xs text-gray-500">Otomatis terisi dari akun yang dipilih</p>
+                    {hostkey && !isHostkeyValid() && (
+                      <p className="text-xs text-red-600">Hostkey harus 6 digit angka</p>
+                    )}
+                  </div>
+
+                  {/* Meeting Link Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="link">Link Meeting Zoom *</Label>
+                    <div className="relative">
+                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="link"
+                        type="url"
+                        placeholder="https://zoom.us/j/..."
+                        value={meetingLink}
+                        onChange={(e) => setMeetingLink(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
-                  )}
-                </div>
-
-                {/* Hostkey Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="hostkey">Hostkey (6 Digit) *</Label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="hostkey"
-                      type="text"
-                      placeholder="123456"
-                      maxLength={6}
-                      value={hostkey}
-                      onChange={(e) => setHostkey(e.target.value.replace(/\D/g, ''))}
-                      className="pl-10"
-                    />
                   </div>
-                  {hostkey && !isHostkeyValid() && (
-                    <p className="text-xs text-red-600">Hostkey harus 6 digit angka</p>
-                  )}
-                </div>
 
-                {/* Meeting Link Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="link">Link Meeting Zoom *</Label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="link"
-                      type="url"
-                      placeholder="https://zoom.us/j/..."
-                      value={meetingLink}
-                      onChange={(e) => setMeetingLink(e.target.value)}
-                      className="pl-10"
-                    />
+                  {/* Passcode Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="passcode">Passcode *</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="passcode"
+                        type="text"
+                        placeholder="Masukkan passcode..."
+                        value={passcode}
+                        onChange={(e) => setPasscode(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Claim Host Instructions */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+                    <p className="font-semibold mb-1">💡 Instruksi Claim Host untuk User:</p>
+                    <ol className="list-decimal list-inside space-y-1 ml-2">
+                      <li>Join meeting menggunakan link di atas</li>
+                      <li>Klik "Claim Host" di bagian bawah layar Zoom</li>
+                      <li>Masukkan Hostkey: <strong>{hostkey || '______'}</strong></li>
+                      <li>Anda akan menjadi Host meeting</li>
+                    </ol>
                   </div>
                 </div>
-
-                {/* Passcode Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="passcode">Passcode *</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="passcode"
-                      type="text"
-                      placeholder="Masukkan passcode..."
-                      value={passcode}
-                      onChange={(e) => setPasscode(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Claim Host Instructions */}
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
-                  <p className="font-semibold mb-1">💡 Instruksi Claim Host untuk User:</p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Join meeting menggunakan link di atas</li>
-                    <li>Klik "Claim Host" di bagian bawah layar Zoom</li>
-                    <li>Masukkan Hostkey: <strong>{hostkey || '______'}</strong></li>
-                    <li>Anda akan menjadi Host meeting</li>
-                  </ol>
-                </div>
+                )}
               </div>
 
               {/* Action Buttons - Approve */}
@@ -585,28 +724,24 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
                   <div>
                     <p className="text-green-700">Akun Zoom</p>
                     <p className="font-semibold text-green-900">
-                      {zoomAccounts.find(a => a.id === booking.data?.zoomAccount)?.name || booking.data?.zoomAccount}
+                      {booking.zoomAccount?.name || '-'}
                     </p>
                   </div>
                   <div>
                     <p className="text-green-700">Link Meeting</p>
                     <a 
-                      href={booking.data?.meetingLink} 
+                      href={booking.meetingLink || ''} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="font-semibold text-blue-600 hover:underline flex items-center gap-1"
                     >
-                      {booking.data?.meetingLink}
-                      <ExternalLink className="h-3 w-3" />
+                      {booking.meetingLink || '-'}
+                      {booking.meetingLink && <ExternalLink className="h-3 w-3" />}
                     </a>
                   </div>
                   <div>
                     <p className="text-green-700">Passcode</p>
-                    <p className="font-semibold text-green-900">{booking.data?.passcode}</p>
-                  </div>
-                  <div>
-                    <p className="text-green-700">Hostkey</p>
-                    <p className="font-semibold text-green-900">{booking.data?.hostkey}</p>
+                    <p className="font-semibold text-green-900">{booking.passcode || '-'}</p>
                   </div>
                 </div>
               )}
@@ -614,7 +749,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
               {isRejected && (
                 <div className="text-sm">
                   <p className="text-red-700">Alasan Penolakan</p>
-                  <p className="text-red-900">{booking.data?.rejectionReason || 'Tidak ada alasan'}</p>
+                  <p className="text-red-900">{booking.rejectionReason || 'Tidak ada alasan'}</p>
                 </div>
               )}
             </div>

@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getWorkOrders, updateWorkOrder, getTickets, saveTickets, addNotification, getUsers } from '../lib/storage';
+import { getWorkOrders, updateWorkOrder, getTickets, saveTickets, addNotification, getUsersSync } from '../lib/storage';
 import type { WorkOrder, WorkOrderStatus, User } from '../types';
 
 interface WorkOrderListProps {
@@ -169,7 +169,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
         saveTickets(updatedTickets);
 
         // Notify teknisi
-        const users = getUsers();
+        const users = getUsersSync();
         const ticket = tickets.find(t => t.id === selectedWO.ticketId);
         if (ticket && ticket.assignedTo) {
           addNotification({

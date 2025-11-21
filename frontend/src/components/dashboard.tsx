@@ -32,8 +32,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ currentUser, onNavigate, o
     case 'teknisi':
       return <TeknisiDashboard currentUser={currentUser} onNavigate={onNavigate} />;
     
-    case 'user':
+    case 'pegawai':
     default:
-      return <UserDashboard currentUser={currentUser} onNavigate={onNavigate} onViewTicket={onViewTicket} />;
+      return <UserDashboard currentUser={currentUser} onNavigate={onNavigate} />;
   }
 };

@@ -8,13 +8,13 @@ import { TicketDetail } from './ticket-detail';
 import { ZoomBooking } from './zoom-booking';
 import { ZoomManagementView } from './zoom-management-view';
 import { UserManagement } from './user-management';
-import { InventoryManagement } from './inventory-management';
+
 import { ProfileSettings } from './profile-settings';
 import { ReportsView } from './reports-view';
 import { WorkOrderList } from './work-order-list';
 import { TeknisiWorkOrderList } from './teknisi-work-order-list';
 import { MyTicketsView } from './my-tickets-view';
-import { getActiveRole } from '../lib/storage';
+import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '../lib/storage';
 import type { User } from '../types';
 
 interface MainLayoutProps {
@@ -33,17 +33,60 @@ export type ViewType =
   | 'zoom-booking'
   | 'zoom-management'
   | 'users'
-  | 'inventory'
   | 'work-orders'
   | 'reports'
   | 'profile'
   | 'settings';
 
+/**
+ * Menentukan default view berdasarkan role pengguna
+ */
+export const getDefaultViewForRole = (role: string): ViewType => {
+  switch (role) {
+    case 'super_admin':
+      return 'dashboard'; // Super admin lihat dashboard dengan overview semua
+    
+    case 'admin_layanan':
+      return 'tickets'; // Admin layanan langsung ke daftar tiket untuk review
+    
+    case 'admin_penyedia':
+      return 'work-orders'; // Admin penyedia langsung ke work orders
+    
+    case 'teknisi':
+      return 'tickets'; // Teknisi lihat tiket yang assigned ke dia
+    
+    case 'pegawai':
+    default:
+      return 'my-tickets'; // Pegawai lihat tiket miliknya
+  }
+};
+
 export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, onUserUpdate }) => {
-  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+  // Set initial view berdasarkan role
+  const [currentView, setCurrentView] = useState<ViewType>(getDefaultViewForRole(currentUser.role));
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Centralized refresh: on refreshKey change, update tickets cache once
+  React.useEffect(() => {
+    if (refreshKey > 0) {
+      (async () => {
+        try {
+          await refreshTicketsFromApi();
+        } catch (e) {
+          console.warn('⚠️ Failed to refresh tickets in MainLayout:', e);
+        }
+      })();
+    }
+  }, [refreshKey]);
+
+  React.useEffect(() => {
+    const roleToLoad = getActiveRole(currentUser.id) || currentUser.role;
+    loadDataFromApiOnce(roleToLoad).catch(err => {
+      console.warn('⚠️ Failed to preload datasets for active role', err);
+    });
+  }, [currentUser.id, currentUser.role]);
 
   const handleNavigate = (view: ViewType, ticketId?: string) => {
     setCurrentView(view);
@@ -53,9 +96,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   };
 
   const handleRoleSwitch = () => {
-    // Force re-render when role is switched
+    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    loadDataFromApiOnce(activeRole).catch(err => {
+      console.warn('⚠️ Failed to load datasets for active role', err);
+    });
     setRefreshKey(prev => prev + 1);
-    setCurrentView('dashboard');
+    setCurrentView(getDefaultViewForRole(activeRole));
     setSelectedTicketId(null);
   };
 
@@ -65,8 +111,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   };
 
   const handleBackToList = () => {
-    setCurrentView(currentUser.role === 'user' ? 'my-tickets' : 'tickets');
+    setCurrentView(currentUser.role === 'pegawai' ? 'my-tickets' : 'tickets');
     setSelectedTicketId(null);
+  };
+
+  const handleCreateTicket = (ticketType: 'perbaikan' | 'zoom_meeting') => {
+    const view = ticketType === 'perbaikan' ? 'create-ticket-perbaikan' : 'create-ticket-zoom';
+    handleNavigate(view);
   };
 
   const renderContent = () => {
@@ -82,7 +133,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           <CreateTicket
             currentUser={currentUser}
             ticketType="perbaikan"
-            onTicketCreated={() => handleNavigate('my-tickets')}
+            onTicketCreated={() => {
+              setRefreshKey(prev => prev + 1);
+              handleNavigate('my-tickets');
+            }}
             onCancel={() => handleNavigate('dashboard')}
           />
         );
@@ -92,7 +146,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           <CreateTicket
             currentUser={currentUser}
             ticketType="zoom_meeting"
-            onTicketCreated={() => handleNavigate('my-tickets')}
+            onTicketCreated={() => {
+              setRefreshKey(prev => prev + 1);
+              handleNavigate('my-tickets');
+            }}
             onCancel={() => handleNavigate('dashboard')}
           />
         );
@@ -134,6 +191,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
             currentUser={currentUser}
             isManagement={false}
             onNavigate={handleNavigate}
+            onViewTicket={handleViewTicketDetail}
           />
         );
 
@@ -152,14 +210,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           return null;
         }
         return <UserManagement currentUser={currentUser} />;
-
-      case 'inventory':
-        // Only Super Admin can access Inventory
-        if (activeRole !== 'super_admin') {
-          handleNavigate('dashboard');
-          return null;
-        }
-        return <InventoryManagement currentUser={currentUser} />;
 
       case 'work-orders':
         // Hanya Teknisi dan Admin Penyedia yang bisa akses Work Order
@@ -219,7 +269,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
         />
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-scroll [scrollbar-gutter:stable]">
           <div className="container mx-auto p-6">
             {renderContent()}
           </div>

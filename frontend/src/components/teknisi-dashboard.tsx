@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { getTickets, getUsers } from '../lib/storage';
+import { getTickets, getUsersSync } from '../lib/storage';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';
 
@@ -30,7 +30,7 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
   onNavigate,
 }) => {
   const tickets = getTickets();
-  const users = getUsers();
+  const users = getUsersSync();
 
   // Filter tickets assigned to this technician
   const myTickets = tickets.filter(t => 

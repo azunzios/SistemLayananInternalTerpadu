@@ -53,7 +53,7 @@ export const RoleSwitcherDialog: React.FC<RoleSwitcherDialogProps> = ({
           label: 'Admin Penyedia',
           icon: Package,
           color: 'green',
-          description: 'Mengelola inventory dan pengadaan',
+          description: 'Mengelola pengadaan dan work order',
         };
       case 'teknisi':
         return {
@@ -62,7 +62,7 @@ export const RoleSwitcherDialog: React.FC<RoleSwitcherDialogProps> = ({
           color: 'orange',
           description: 'Menangani perbaikan barang',
         };
-      case 'user':
+      case 'pegawai':
         return {
           label: 'Pegawai',
           icon: User,

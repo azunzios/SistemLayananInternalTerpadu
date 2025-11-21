@@ -3,11 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Input } from './ui/input';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Download, FileText, TrendingUp, Package, ShoppingCart, Truck, Search, FileSpreadsheet, Calendar } from 'lucide-react';
-import { getTickets, getUsers, getZoomBookings, getWorkOrders } from '../lib/storage';
+import { Download, FileText, Package, ShoppingCart, Truck, Search} from 'lucide-react';
+import { getTickets, getWorkOrders } from '../lib/storage';
 import type { User } from '../types';
 
 interface ReportsViewProps {
@@ -18,12 +17,9 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
   const tickets = getTickets();
-  const users = getUsers();
-  const zoomBookings = getZoomBookings();
   const workOrders = getWorkOrders();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTicketFilter, setSelectedTicketFilter] = useState<string>('all');
 
   // Admin Penyedia only sees procurement-related data
   const isAdminPenyedia = currentUser.role === 'admin_penyedia';
@@ -38,7 +34,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
     const grouped = new Map<string, typeof completedWorkOrders>();
     
     completedWorkOrders.forEach(wo => {
-      const ticketNumber = wo.ticketNumber;
+      const ticketNumber = wo.ticketNumber || '';
       if (!grouped.has(ticketNumber)) {
         grouped.set(ticketNumber, []);
       }
@@ -46,8 +42,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
     });
     
     return Array.from(grouped.entries()).map(([ticketNumber, orders]) => {
-      // Get ticket details
-      const ticket = tickets.find(t => t.ticketNumber === ticketNumber);
+      // Get ticket details - only perbaikan tickets have work orders
+      const ticket = tickets.find(t => t.ticketNumber === ticketNumber && t.type === 'perbaikan');
       return {
         ticketNumber,
         ticket,
@@ -64,19 +60,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
     if (searchQuery) {
       filtered = filtered.filter(item => 
         item.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.ticket?.data?.itemName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.ticket?.data?.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.ticket?.data?.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.ticket?.assetLocation?.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.ticket?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
       );
-    }
-
-    if (selectedTicketFilter !== 'all') {
-      filtered = filtered.filter(item => item.ticketNumber === selectedTicketFilter);
     }
     
     return filtered;
-  }, [workOrdersByTicket, searchQuery, selectedTicketFilter]);
+  }, [workOrdersByTicket, searchQuery]);
 
   // Ticket statistics for reports
   const ticketStats = useMemo(() => {
@@ -149,18 +138,24 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
     // Create CSV content
     const headers = ['No Tiket', 'Tanggal', 'Type', 'NUP BMN', 'Merk', 'Ruang', 'Nama Barang', 'Work Order', 'Banyaknya', 'Satuan'];
     const rows = filteredWorkOrders.flatMap(item => 
-      item.workOrders.map(wo => [
-        item.ticketNumber,
-        new Date(wo.updatedAt || wo.createdAt).toLocaleDateString('id-ID'),
-        item.ticket?.data?.itemType || item.ticket?.category || '-',
-        item.ticket?.data?.nupBmn || item.ticket?.assetNUP || '-',
-        item.ticket?.data?.brand || '-',
-        item.ticket?.data?.location || item.ticket?.assetLocation || '-',
-        item.ticket?.data?.itemName || item.ticket?.title || '-',
-        wo.type === 'sparepart' ? wo.itemName : (wo.vendorInfo?.description || 'Service Vendor'),
-        wo.type === 'sparepart' ? wo.quantity : '1',
-        wo.type === 'sparepart' ? 'Unit' : 'Service',
-      ])
+      item.workOrders.map(wo => {
+        const perbaikanTicket = item.ticket?.type === 'perbaikan' ? item.ticket : null;
+        const sparepartName = wo.spareparts?.[0]?.name || 'Service Vendor';
+        const sparepartQty = wo.spareparts?.[0]?.quantity || 1;
+        
+        return [
+          item.ticketNumber,
+          new Date(wo.updatedAt || wo.createdAt).toLocaleDateString('id-ID'),
+          perbaikanTicket?.data?.itemType || '-',
+          perbaikanTicket?.assetNUP || '-',
+          perbaikanTicket?.data?.brand || '-',
+          perbaikanTicket?.assetLocation || '-',
+          perbaikanTicket?.title || '-',
+          wo.type === 'sparepart' ? sparepartName : (wo.vendorInfo?.description || 'Service Vendor'),
+          wo.type === 'sparepart' ? sparepartQty : '1',
+          wo.type === 'sparepart' ? 'Unit' : 'Service',
+        ];
+      })
     );
 
     const csvContent = [
@@ -314,23 +309,31 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 mb-1">Type</p>
-                            <p className="text-sm font-medium">{item.ticket?.data?.itemType || '-'}</p>
+                            <p className="text-sm font-medium">
+                              {item.ticket?.type === 'perbaikan' ? item.ticket?.data?.itemType || '-' : '-'}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 mb-1">NUP BMN</p>
-                            <p className="text-sm font-medium font-mono">{item.ticket?.data?.nupBmn || item.ticket?.assetNUP || '-'}</p>
+                            <p className="text-sm font-medium font-mono">
+                              {item.ticket?.type === 'perbaikan' ? item.ticket?.assetNUP || '-' : '-'}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 mb-1">Merk</p>
-                            <p className="text-sm font-medium">{item.ticket?.data?.brand || '-'}</p>
+                            <p className="text-sm font-medium">
+                              {item.ticket?.type === 'perbaikan' ? item.ticket?.data?.brand || '-' : '-'}
+                            </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 mb-1">Ruang</p>
-                            <p className="text-sm font-medium">{item.ticket?.data?.location || item.ticket?.assetLocation || '-'}</p>
+                            <p className="text-sm font-medium">
+                              {item.ticket?.type === 'perbaikan' ? item.ticket?.assetLocation || '-' : '-'}
+                            </p>
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs text-gray-500 mb-1">Nama Barang</p>
-                            <p className="text-sm font-semibold">{item.ticket?.data?.itemName || item.ticket?.title || '-'}</p>
+                            <p className="text-sm font-semibold">{item.ticket?.title || '-'}</p>
                           </div>
                         </div>
 
@@ -338,28 +341,31 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
                         <div>
                           <p className="text-xs text-gray-500 mb-3">Work Order / Sparepart:</p>
                           <div className="space-y-2">
-                            {item.workOrders.map((wo, idx) => (
-                              <div key={`${wo.id || idx}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <Badge variant={wo.type === 'sparepart' ? 'default' : 'secondary'}>
-                                    {wo.type === 'sparepart' ? 'Sparepart' : 'Vendor'}
-                                  </Badge>
-                                  <span className="font-medium">
-                                    {wo.type === 'sparepart' 
-                                      ? wo.itemName 
-                                      : (wo.vendorInfo?.description || 'Service Vendor')}
-                                  </span>
+                            {item.workOrders.map((wo, idx) => {
+                              const sparepartName = wo.spareparts?.[0]?.name || (wo.vendorInfo?.description || 'Service Vendor');
+                              const sparepartQty = wo.spareparts?.[0]?.quantity || 1;
+                              
+                              return (
+                                <div key={`${wo.id || idx}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant={wo.type === 'sparepart' ? 'default' : 'secondary'}>
+                                      {wo.type === 'sparepart' ? 'Sparepart' : 'Vendor'}
+                                    </Badge>
+                                    <span className="font-medium">
+                                      {sparepartName}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-sm text-gray-500">
+                                      Qty: <span className="font-semibold text-gray-900">{wo.type === 'sparepart' ? sparepartQty : '1'}</span>
+                                    </span>
+                                    <span className="text-sm text-gray-500 min-w-[60px]">
+                                      {wo.type === 'sparepart' ? 'Unit' : 'Service'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                  <span className="text-sm text-gray-500">
-                                    Qty: <span className="font-semibold text-gray-900">{wo.type === 'sparepart' ? wo.quantity : '1'}</span>
-                                  </span>
-                                  <span className="text-sm text-gray-500 min-w-[60px]">
-                                    {wo.type === 'sparepart' ? 'Unit' : 'Service'}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       </CardContent>
@@ -425,7 +431,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {statusChartData.map((entry, index) => (
+                      {statusChartData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -452,7 +458,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ currentUser }) => {
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="value" fill="#3b82f6">
-                      {typeChartData.map((entry, index) => (
+                      {typeChartData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Bar>

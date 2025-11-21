@@ -3,30 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { CheckCircle, Circle, Clock, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
-import type { Ticket, TicketType, TicketStatus } from '../types';
+import type { Ticket, TicketType, PerbaikanStatus, ZoomStatus } from '../types';
 
 interface TicketProgressTrackerProps {
   ticket: Ticket;
 }
 
 export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ticket }) => {
-  const getWorkflowSteps = (type: TicketType): { label: string; statuses: TicketStatus[] }[] => {
+  const getWorkflowSteps = (type: TicketType): { label: string; statuses: (PerbaikanStatus | ZoomStatus)[] }[] => {
     switch (type) {
       case 'perbaikan':
         return [
-          { label: 'Tiket Dibuat', statuses: ['submitted', 'menunggu_review'] },
-          { label: 'Assignment Teknisi', statuses: ['assigned', 'ditugaskan', 'disetujui'] },
-          { label: 'Dalam Penanganan', statuses: ['in_progress', 'diterima_teknisi', 'sedang_diagnosa'] },
-          { label: 'Perbaikan', statuses: ['dalam_perbaikan', 'menunggu_sparepart'] },
-          { label: 'Menunggu Konfirmasi', statuses: ['resolved', 'selesai_diperbaiki'] },
-          { label: 'Selesai', statuses: ['closed', 'selesai'] },
+          { label: 'Tiket Dibuat', statuses: ['submitted'] },
+          { label: 'Assignment Teknisi', statuses: ['assigned'] },
+          { label: 'Dalam Penanganan', statuses: ['in_progress'] },
+          { label: 'Menunggu Sparepart/Vendor', statuses: ['on_hold'] },
+          { label: 'Menunggu Konfirmasi', statuses: ['resolved', 'waiting_for_user'] },
+          { label: 'Selesai', statuses: ['closed'] },
         ];
       
       case 'zoom_meeting':
         return [
-          { label: 'Pengajuan Tiket', statuses: ['submitted', 'menunggu_review', 'pending_approval'] },
+          { label: 'Pengajuan Tiket', statuses: ['pending_review'] },
           { label: 'Disetujui & Link Ready', statuses: ['approved'] },
-          { label: 'Meeting Selesai', statuses: ['closed', 'selesai'] },
+          { label: 'Meeting Selesai', statuses: ['completed'] },
         ];
       
       default:
@@ -46,22 +46,32 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
   };
 
   const currentStepIndex = getCurrentStepIndex();
-  const isRejected = ['ditolak', 'rejected', 'dibatalkan', 'tidak_dapat_diperbaiki', 'closed_unrepairable'].includes(ticket.status);
+  const isRejected = ticket.type === 'perbaikan' 
+    ? ticket.status === 'closed_unrepairable'
+    : ticket.type === 'zoom_meeting' 
+    ? ['rejected', 'cancelled'].includes(ticket.status)
+    : false;
+
+  const isCompleted = ticket.type === 'perbaikan'
+    ? ticket.status === 'closed'
+    : ticket.type === 'zoom_meeting'
+    ? ticket.status === 'completed'
+    : false;
 
   return (
-    <Card>
+    <Card className="pb-4">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Progress Tiket</CardTitle>
-          <Badge variant={isRejected ? 'destructive' : ['closed', 'selesai'].includes(ticket.status) ? 'default' : 'secondary'}>
-            {isRejected ? 'Ditolak/Dibatalkan' : ['closed', 'selesai'].includes(ticket.status) ? 'Selesai' : 'Dalam Proses'}
+          <Badge variant={isRejected ? 'destructive' : isCompleted ? 'default' : 'secondary'}>
+            {isRejected ? 'Ditolak/Dibatalkan' : isCompleted ? 'Selesai' : 'Dalam Proses'}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {steps.map((step, index) => {
-            const isCompleted = index < currentStepIndex || (index === currentStepIndex && ['closed', 'selesai'].includes(ticket.status));
+            const isStepCompleted = index < currentStepIndex || (index === currentStepIndex && isCompleted);
             const isCurrent = index === currentStepIndex && !isRejected;
             const isUpcoming = index > currentStepIndex;
 
@@ -78,11 +88,11 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
                   <div
                     className={`
                       h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0
-                      ${isCompleted ? 'bg-green-100' : isCurrent ? 'bg-blue-100' : 'bg-gray-100'}
+                      ${isStepCompleted ? 'bg-green-100' : isCurrent ? 'bg-blue-100' : 'bg-gray-100'}
                       ${isRejected && isCurrent ? 'bg-red-100' : ''}
                     `}
                   >
-                    {isCompleted ? (
+                    {isStepCompleted ? (
                       <CheckCircle className="h-5 w-5 text-green-600" />
                     ) : isCurrent ? (
                       isRejected ? (
@@ -98,7 +108,7 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
                     <div
                       className={`
                         w-0.5 h-12 my-1
-                        ${isCompleted ? 'bg-green-300' : 'bg-gray-200'}
+                        ${isStepCompleted ? 'bg-green-300' : 'bg-gray-200'}
                       `}
                     />
                   )}
@@ -111,14 +121,14 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
                       <h4
                         className={`
                           font-medium
-                          ${isCompleted ? 'text-green-900' : isCurrent ? 'text-blue-900' : 'text-gray-500'}
+                          ${isStepCompleted ? 'text-green-900' : isCurrent ? 'text-blue-900' : 'text-gray-500'}
                           ${isRejected && isCurrent ? 'text-red-900' : ''}
                         `}
                       >
                         {step.label}
                       </h4>
                       <p className="text-xs text-gray-500 mt-1">
-                        {isCompleted && '✓ Selesai'}
+                        {isStepCompleted && '✓ Selesai'}
                         {isCurrent && !isRejected && '⏳ Sedang diproses'}
                         {isCurrent && isRejected && '✗ Ditolak'}
                         {isUpcoming && '⏺ Menunggu'}
@@ -132,9 +142,11 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
                       {ticket.timeline
                         .slice(-2) // Show last 2 events
                         .reverse()
-                        .map((event, idx) => (
+                        .map((event) => (
                           <div key={event.id} className="text-xs p-2 bg-gray-50 rounded">
-                            <p className="font-medium text-gray-700">{event.actor}</p>
+                            <p className="font-medium text-gray-700">
+                              {event.actor}
+                            </p>
                             <p className="text-gray-600">{event.details}</p>
                             <p className="text-gray-400 mt-1">
                               {new Date(event.timestamp).toLocaleString('id-ID')}
@@ -168,11 +180,11 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({ ti
         </div>
 
         {/* Estimated Completion */}
-        {!isRejected && !['closed', 'selesai'].includes(ticket.status) && (
+        {!isRejected && !isCompleted && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-900">
               <strong>💡 Info:</strong> Anda akan menerima notifikasi setiap kali ada update pada tiket ini.
-              {ticket.urgency === 'sangat_mendesak' && ' Tiket Anda sedang diprioritaskan.'}
+              {ticket.type === 'perbaikan' && ticket.severity === 'critical' && ' Tiket Anda sedang diprioritaskan.'}
             </p>
           </div>
         )}

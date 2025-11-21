@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
   const hasMultipleRoles = availableRoles.length > 1;
 
   const handleMarkAsRead = (notificationId: string) => {
-    const allNotifications = JSON.parse(localStorage.getItem('bps_ntb_notifications') || '[]');
+    const allNotifications = getNotifications(currentUser.id);
     const updated = allNotifications.map((n: any) =>
       n.id === notificationId ? { ...n, read: true } : n
     );
@@ -77,10 +77,8 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
   };
 
   const handleMarkAllAsRead = () => {
-    const allNotifications = JSON.parse(localStorage.getItem('bps_ntb_notifications') || '[]');
-    const updated = allNotifications.map((n: any) =>
-      n.userId === currentUser.id ? { ...n, read: true } : n
-    );
+    const allNotifications = getNotifications(currentUser.id);
+    const updated = allNotifications.map((n: any) => ({ ...n, read: true }));
     saveNotifications(updated);
     toast.success('Semua notifikasi ditandai sebagai dibaca');
     setNotificationsOpen(false);
@@ -146,10 +144,10 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             {/* Hamburger button container - sama dengan sidebar collapsed width (72px) */}
             <div className="w-[72px] px-3 flex items-center justify-center h-full">
               <Button
-                variant="ghost"
+                variant="link"
                 size="sm"
                 onClick={onToggleSidebar}
-                className="h-11 w-11 p-0 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="h-11 w-11 p-0 text-gray-700 hover:bg-blue-100 rounded-lg"
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -158,13 +156,13 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             <div className="w-px self-stretch bg-gray-200" />
             {/* App Name and Badge */}
             <div className="flex items-center gap-3 ml-4">
-              <div className="h-9 w-9 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                <Building className="h-5 w-5 text-white" />
+              <div className="h-9 w-9 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                <img src="/logo.svg" alt="BPS NTB logo" className="object-contain" />
               </div>
               <div className="flex items-center gap-2">
                 <div>
-                  <h1 className="text-gray-900 leading-tight">BPS NTB</h1>
-                  <p className="text-xs text-gray-500 leading-tight">Ticketing System</p>
+                  <h1 className="text-gray-900 leading-tight" style={{fontFamily: "var(--font-logo)"}}>SIGAP-TI</h1>
+                  <p className="text-xs text-gray-500 leading-tight" style={{fontFamily: "var(--font-logo)"}}>BPS Provinsi Nusa Tenggara Barat</p>
                 </div>
                 <Badge variant="secondary" className="ml-2 bg-cyan-50 text-cyan-700 border-0 hover:bg-cyan-50">
                   {activeRole === 'super_admin' ? 'SUPER ADMIN' : 
@@ -200,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
                     <h3 className="font-semibold">Notifikasi</h3>
                     {unreadCount > 0 && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={handleMarkAllAsRead}
                       >
@@ -265,7 +263,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 h-9 px-2.5">
+                <Button variant="ghost" size="sm" className="gap-2 h-9 px-2.5 hover:bg-transparent">
                   <div className="h-7 w-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm">
                     {currentUser.name.charAt(0).toUpperCase()}
                   </div>

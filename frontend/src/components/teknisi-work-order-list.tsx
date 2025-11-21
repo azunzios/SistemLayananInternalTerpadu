@@ -325,7 +325,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                         <TableCell>
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="link"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleViewDetail(wo.id);

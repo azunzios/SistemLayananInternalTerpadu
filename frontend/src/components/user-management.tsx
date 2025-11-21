@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -41,7 +41,7 @@ import { Switch } from './ui/switch';
 import { Users, Search, Edit, Trash2, Plus, Shield, UserCheck, UserX } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getUsers, saveUsers, addAuditLog, addNotification } from '../lib/storage';
+import { getUsers, getUsersSync, saveUsers, addAuditLog, addNotification } from '../lib/storage';
 import type { User, UserRole } from '../types';
 
 interface UserManagementProps {
@@ -68,7 +68,14 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     );
   }
 
-  const [users, setUsers] = useState<User[]>(getUsers());
+  const [users, setUsers] = useState<User[]>(getUsersSync());
+    useEffect(() => {
+      getUsers()
+        .then(fetched => setUsers(fetched))
+        .catch(err => {
+          console.warn('⚠️ Failed to fetch users for management view', err);
+        });
+    }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -81,7 +88,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     nip: '',
     jabatan: '',
     email: '',
-    role: 'user' as UserRole,
+    role: 'pegawai' as UserRole,
     unitKerja: '',
     phone: '',
     isActive: true,
@@ -92,7 +99,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     jabatan: '',
     email: '',
     password: '',
-    role: 'user' as UserRole,
+    role: 'pegawai' as UserRole,
     unitKerja: '',
     phone: '',
   });
@@ -269,7 +276,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       jabatan: '',
       email: '',
       password: '',
-      role: 'user',
+      role: 'pegawai',
       unitKerja: '',
       phone: '',
     });
@@ -281,7 +288,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       admin_layanan: { variant: 'default', label: 'Admin Layanan' },
       admin_penyedia: { variant: 'default', label: 'Admin Penyedia' },
       teknisi: { variant: 'secondary', label: 'Teknisi' },
-      user: { variant: 'outline', label: 'Pegawai' },
+      pegawai: { variant: 'outline', label: 'Pegawai' },
     };
 
     const roleConfig = config[role];
@@ -343,7 +350,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                   <SelectItem value="admin_layanan">Admin Layanan</SelectItem>
                   <SelectItem value="admin_penyedia">Admin Penyedia</SelectItem>
                   <SelectItem value="teknisi">Teknisi</SelectItem>
-                  <SelectItem value="user">Pegawai</SelectItem>
+                  <SelectItem value="pegawai">Pegawai</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -442,7 +449,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                           />
                         )}
                         <Button
-                          variant="ghost"
+                          variant="link"
                           size="sm"
                           onClick={() => openEditDialog(user)}
                         >
@@ -450,7 +457,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                         </Button>
                         {currentUser.role === 'super_admin' && user.id !== currentUser.id && (
                           <Button
-                            variant="ghost"
+                            variant="link"
                             size="sm"
                             onClick={() => {
                               setSelectedUser(user);
@@ -541,7 +548,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Pegawai</SelectItem>
+                  <SelectItem value="pegawai">Pegawai</SelectItem>
                   <SelectItem value="teknisi">Teknisi</SelectItem>
                   <SelectItem value="admin_penyedia">Admin Penyedia</SelectItem>
                   <SelectItem value="admin_layanan">Admin Layanan</SelectItem>
@@ -636,7 +643,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">Pegawai</SelectItem>
+                    <SelectItem value="pegawai">Pegawai</SelectItem>
                     <SelectItem value="teknisi">Teknisi</SelectItem>
                     <SelectItem value="admin_penyedia">Admin Penyedia</SelectItem>
                     <SelectItem value="admin_layanan">Admin Layanan</SelectItem>

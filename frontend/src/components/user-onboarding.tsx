@@ -229,7 +229,7 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
   const Icon = currentStepData.icon;
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onComplete(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-4 mb-4">

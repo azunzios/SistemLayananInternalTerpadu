@@ -142,7 +142,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     try {
-      const users = getUsers();
+      const users = await getUsers();
       
       // Check if email already exists
       const userExists = users.some(user => 
@@ -155,7 +155,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
         return;
       }
 
-      // Create new user with default 'user' role
+      // Create new user with default 'pegawai' role
       const newUser: User = {
         id: `user_${Date.now()}`,
         email: formData.email.toLowerCase(),
@@ -163,7 +163,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
         name: formData.name,
         nip: formData.nip,
         jabatan: formData.jabatan,
-        role: 'user', // Default role for self-registration
+        role: 'pegawai', // Default role for self-registration
         unitKerja: formData.unitKerja,
         phone: formData.phone,
         createdAt: new Date().toISOString(),
@@ -356,7 +356,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
                     />
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="link"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
@@ -409,7 +409,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
                     />
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="link"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -436,7 +436,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
               </Button>
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant="link" 
                 className="w-full"
                 onClick={onBackToLogin}
               >

@@ -3,7 +3,7 @@ import { LoginPage } from './components/login-page';
 import { MainLayout } from './components/main-layout';
 import { Toaster } from './components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner'
-import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, getRememberToken, clearRememberToken, getUsers, loadDataFromApiOnce } from './lib/storage';
+import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce } from './lib/storage';
 import type { User } from './types';
 
 const App: React.FC = () => {
@@ -12,33 +12,27 @@ const App: React.FC = () => {
 
   // Initialize app on load
   useEffect(() => {
-    // If mock mode, seed demo data. Otherwise, load initial data from API into cache
+    // If mock mode, seed demo data
     initializeDefaultData();
 
     // Check for current user session
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
+      // Load API data only if user is already logged in
+      loadDataFromApiOnce(user.role ?? 'pegawai')
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
+    } else {
+      // No user logged in yet
+      setIsLoading(false);
     }
-
-    // Check for remember me token
-    const rememberToken = getRememberToken();
-    if (rememberToken) {
-      const users = getUsers();
-      const rememberedUser = users.find(u => u.id === rememberToken);
-      if (rememberedUser) {
-        setCurrentUser(rememberedUser);
-        saveCurrentUser(rememberedUser);
-      }
-    }
-    // Always attempt to warm caches from API (no-op in mock mode)
-    loadDataFromApiOnce()
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
   }, []);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    // Load API data after successful login
+    loadDataFromApiOnce(user.role ?? 'pegawai').catch(() => {});
   };
 
   const handleLogout = () => {
@@ -55,10 +49,8 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
           <Spinner/>
-          <p className="text-gray-600">Memuat sistem...</p>
-        </div>
+          <p className="text-gray-600 m-2">Memuat sistem ...</p>
       </div>
     );
   }

@@ -3,14 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { motion } from 'motion/react';
 import { CheckCircle, Clock, XCircle, PowerOff } from 'lucide-react';
-import type { Ticket } from '../types';
-
-interface ZoomMonthlyCalendarProps {
-  tickets: Ticket[];
-  selectedDate: Date;
-  onDateChange: (date: Date) => void;
-  onBookingClick: (booking: Ticket) => void;
-}
+import { api } from '../lib/api';
 
 // Color mapping
 const COLOR_MAP: Record<string, { dotColor: string }> = {
@@ -26,107 +19,145 @@ const COLOR_MAP: Record<string, { dotColor: string }> = {
 
 const WEEKDAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
+const formatLocalDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+interface ZoomMonthlyCalendarProps {
+  tickets: ZoomCalendarEntry[];
+  selectedDate: Date;
+}
+
+type ZoomCalendarEntry = {
+  id: string | number;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  title?: string;
+  userName?: string;
+  zoomAccountId?: string | number | null;
+  zoomAccountKey?: string | number | null;
+  zoomAccount?: {
+    id?: string | number;
+    accountId?: string;
+    name?: string;
+    is_active?: boolean;
+    isActive?: boolean;
+  };
+};
+
+type ZoomAccountMeta = {
+  id: string | number;
+  accountId?: string | number | null;
+  name: string;
+  isActive: boolean;
+  dotColor: string;
+};
+
+const STATUS_META: Record<string, { icon: typeof CheckCircle; label: string; color: string }> = {
+  approved: { icon: CheckCircle, label: 'Disetujui', color: 'text-green-600' },
+  menunggu_review: { icon: Clock, label: 'Menunggu Review', color: 'text-yellow-600' },
+  pending_review: { icon: Clock, label: 'Pending Review', color: 'text-yellow-600' },
+  pending_approval: { icon: Clock, label: 'Pending Approval', color: 'text-yellow-600' },
+  ditolak: { icon: XCircle, label: 'Ditolak', color: 'text-red-600' },
+  rejected: { icon: XCircle, label: 'Ditolak', color: 'text-red-600' },
+};
+
+const getStatusMeta = (status?: string) => {
+  if (!status) {
+    return { icon: Clock, label: 'Tidak diketahui', color: 'text-gray-500' };
+  }
+  return STATUS_META[status] ?? { icon: Clock, label: status, color: 'text-gray-500' };
+};
+
 export const ZoomMonthlyCalendar: React.FC<ZoomMonthlyCalendarProps> = ({
   tickets,
   selectedDate,
-  onDateChange,
-  onBookingClick,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
-  
-  // Load zoom accounts from localStorage - SHOW ALL accounts (both active and inactive)
-  const [zoomAccounts, setZoomAccounts] = useState<any[]>(() => {
-    const stored = localStorage.getItem('bps_ntb_zoom_accounts');
-    if (stored) {
-      const accounts = JSON.parse(stored);
-      return accounts.map((acc: any, index: number) => {
-        const colorConfig = COLOR_MAP[acc.color] || COLOR_MAP.blue;
-        return {
-          id: acc.id,
-          name: acc.name,
-          isActive: acc.isActive,
-          dotColor: colorConfig.dotColor,
-        };
-      });
-    }
-    // Fallback
-    return [
-      { id: 'zoom1', name: 'Zoom 1', isActive: true, dotColor: 'bg-blue-600' },
-      { id: 'zoom2', name: 'Zoom 2', isActive: true, dotColor: 'bg-purple-600' },
-      { id: 'zoom3', name: 'Zoom 3', isActive: true, dotColor: 'bg-green-600' },
-    ];
-  });
+  const [zoomAccounts, setZoomAccounts] = useState<ZoomAccountMeta[]>(() => [
+    { id: 'zoom1', accountId: 'zoom1', name: 'Zoom 1', isActive: true, dotColor: 'bg-blue-600' },
+    { id: 'zoom2', accountId: 'zoom2', name: 'Zoom 2', isActive: true, dotColor: 'bg-purple-600' },
+    { id: 'zoom3', accountId: 'zoom3', name: 'Zoom 3', isActive: true, dotColor: 'bg-green-600' },
+  ]);
 
-  // Update zoom accounts when localStorage changes
   useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem('bps_ntb_zoom_accounts');
-      if (stored) {
-        const accounts = JSON.parse(stored);
-        const mappedAccounts = accounts.map((acc: any) => {
-          const colorConfig = COLOR_MAP[acc.color] || COLOR_MAP.blue;
-          return {
-            id: acc.id,
-            name: acc.name,
-            isActive: acc.isActive,
-            dotColor: colorConfig.dotColor,
-          };
-        });
-        setZoomAccounts(mappedAccounts);
+    const loadZoomAccounts = async () => {
+      try {
+        const accounts = await api.get('zoom/accounts');
+        if (Array.isArray(accounts)) {
+          const mappedAccounts = accounts.map((acc: any) => {
+            const colorConfig = COLOR_MAP[acc.color] || COLOR_MAP.blue;
+            return {
+              id: acc.id,
+              accountId: acc.account_id ?? acc.accountId ?? null,
+              name: acc.name,
+              isActive: acc.is_active ?? acc.isActive ?? true,
+              dotColor: colorConfig.dotColor,
+            };
+          });
+          setZoomAccounts(mappedAccounts);
+        }
+      } catch (err) {
+        console.error('Failed to load zoom accounts:', err);
       }
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageUpdate', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageUpdate', handleStorageChange);
-    };
+    loadZoomAccounts();
   }, []);
 
-  // Get all days in the current month
   const monthDays = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    
     const days: (Date | null)[] = [];
-    
-    // Add empty cells for days before the month starts
-    const startDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    for (let i = 0; i < startDay; i++) {
+    for (let i = 0; i < firstDay.getDay(); i++) {
       days.push(null);
     }
-    
-    // Add all days of the month
     for (let day = 1; day <= lastDay.getDate(); day++) {
       days.push(new Date(year, month, day));
     }
-    
     return days;
-  }, [currentMonth]);
-
-  // Update currentMonth when selectedDate changes (from parent navigation)
-  useEffect(() => {
-    setCurrentMonth(new Date(selectedDate));
   }, [selectedDate]);
 
-  // Get bookings for a specific date
   const getBookingsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    
-    return tickets.filter(t => {
-      if (t.type !== 'zoom_meeting') return false;
-      return t.data?.meetingDate === dateStr;
-    }).sort((a, b) => {
-      // Sort by start time
-      const timeA = a.data?.startTime || '';
-      const timeB = b.data?.startTime || '';
-      return timeA.localeCompare(timeB);
-    });
+    const dateStr = formatLocalDate(date);
+    return tickets
+      .filter((ticket) => {
+        if (!ticket?.date) return false;
+        const normalized = typeof ticket.date === 'string' ? ticket.date.split('T')[0] : ticket.date;
+        return normalized === dateStr;
+      })
+      .sort((a, b) => {
+        const timeA = a.startTime ?? '';
+        const timeB = b.startTime ?? '';
+        return timeA.localeCompare(timeB);
+      });
+  };
+
+  const findAccountForBooking = (booking: ZoomCalendarEntry) => {
+    const bookingIds = [
+      booking.zoomAccountId,
+      booking.zoomAccount?.id,
+      booking.zoomAccount?.accountId,
+      booking.zoomAccountKey,
+    ]
+      .filter(Boolean)
+      .map((value) => String(value));
+
+    if (bookingIds.length === 0) {
+      return null;
+    }
+
+    return zoomAccounts.find((acc) => {
+      const accIds = [acc.id, acc.accountId]
+        .filter(Boolean)
+        .map((value) => String(value));
+      return bookingIds.some((id) => accIds.includes(id));
+    }) ?? null;
   };
 
   const isToday = (date: Date) => {
@@ -173,17 +204,16 @@ export const ZoomMonthlyCalendar: React.FC<ZoomMonthlyCalendarProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.01 }}
-                className={`min-h-[180px] border-r border-b p-2 cursor-pointer transition-colors ${
-                  isCurrentDay ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
+                className={`min-h-[180px] border-r border-b p-2 transition-colors ${
+                  isCurrentDay ? 'bg-blue-50 border-blue-300' : ''
                 } ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
-                onClick={() => onDateChange(date)}
               >
                 {/* Date Number */}
                 <div className="flex items-center justify-between mb-2">
                   <span
                     className={`text-sm font-semibold ${
-                      isCurrentDay 
-                        ? 'bg-blue-600 text-white h-6 w-6 rounded-full flex items-center justify-center' 
+                      isCurrentDay
+                        ? 'bg-blue-600 text-white h-6 w-6 rounded-full flex items-center justify-center'
                         : 'text-gray-700'
                     }`}
                   >
@@ -196,30 +226,35 @@ export const ZoomMonthlyCalendar: React.FC<ZoomMonthlyCalendarProps> = ({
                   )}
                 </div>
 
-                {/* Booking List - Show ALL bookings regardless of account status */}
                 <div className="space-y-1">
                   {bookings.map((booking) => {
-                    const zoomAccountId = booking.data?.zoomAccount;
-                    const account = zoomAccounts.find(acc => acc.id === zoomAccountId);
+                    const account = findAccountForBooking(booking);
                     const isAccountActive = account?.isActive ?? true;
+                    const statusMeta = getStatusMeta(booking.status);
+                    const StatusIcon = statusMeta.icon;
 
                     return (
                       <div
                         key={booking.id}
-                        className={`flex items-start gap-1.5 text-xs group/booking hover:bg-white/50 rounded px-1 py-0.5 transition-colors ${!isAccountActive && 'opacity-60'}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onBookingClick(booking);
-                        }}
+                        className={`flex items-start gap-1.5 text-xs rounded px-1 py-0.5 ${
+                          !isAccountActive ? 'opacity-60' : ''
+                        }`}
                       >
-                        <div className={`w-2 h-2 rounded-full ${isAccountActive ? (account?.dotColor || 'bg-gray-400') : 'bg-gray-400'} flex-shrink-0 mt-0.5`} />
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            isAccountActive ? (account?.dotColor || 'bg-gray-400') : 'bg-gray-400'
+                          } flex-shrink-0 mt-0.5`}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="truncate">
-                            <span className="font-semibold">{booking.data?.startTime}</span>{' '}
-                            <span className={isAccountActive ? 'text-gray-700' : 'text-gray-500'}>{booking.title}</span>
-                            {!isAccountActive && (
-                              <span className="text-gray-400 ml-1">(Nonaktif)</span>
-                            )}
+                            <span className="font-semibold">{booking.startTime ?? '-'}</span>{' '}
+                            <span className={isAccountActive ? 'text-gray-700' : 'text-gray-500'}>
+                              {booking.title}
+                            </span>
+                          </div>
+                          <div className={`flex items-center gap-1 mt-0.5 text-[10px] ${statusMeta.color}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            <span>{statusMeta.label}</span>
                           </div>
                         </div>
                       </div>

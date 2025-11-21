@@ -1,36 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table';
 import {
   Search,
   Eye,
-  Filter,
-  Package,
   Wrench,
   Video,
-  Clock,
-  CheckCircle,
-  XCircle,
   AlertCircle,
-  TrendingUp,
-  Activity,
+  RotateCcw,
+  User as UserIcon,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getTickets, getUsers } from '../lib/storage';
-import type { User, Ticket, TicketStatus, TicketType } from '../types';
+import { api } from '../lib/api';
+import type { User, Ticket } from '../types';
 
 interface TicketListProps {
   currentUser: User;
@@ -38,395 +26,413 @@ interface TicketListProps {
   onViewTicket: (ticketId: string) => void;
 }
 
-export const TicketList: React.FC<TicketListProps> = ({
-  currentUser,
-  viewMode,
-  onViewTicket,
-}) => {
+interface TicketStats {
+  total: number;
+  pending: number;
+  in_progress: number;
+  approved: number;
+  completed: number;
+  rejected: number;
+}
+
+interface PaginationMeta {
+  total: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+  from: number;
+  to: number;
+  has_more: boolean;
+}
+
+export const TicketList: React.FC<TicketListProps> = ({ onViewTicket }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterUrgency, setFilterUrgency] = useState<string>('all');
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [stats, setStats] = useState<TicketStats>({ 
+    total: 0, 
+    pending: 0, 
+    in_progress: 0, 
+    approved: 0,
+    completed: 0, 
+    rejected: 0 
+  });
+  const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  
+  // Load statistics on mount and when filter type changes
+  useEffect(() => {
+    loadStats();
+  }, [filterType]);
 
-  const tickets = getTickets();
-  const users = getUsers();
+  // Load tickets when filters change
+  useEffect(() => {
+    loadTickets(1);
+  }, [filterStatus, searchTerm, filterType]);
 
-  // Filter tickets based on user role and view mode
-  const filteredTickets = useMemo(() => {
-    let result = tickets;
-
-    // Filter by view mode
-    if (viewMode === 'my-tickets') {
-      result = result.filter(t => {
-        if (currentUser.role === 'user') return t.userId === currentUser.id;
-        if (currentUser.role === 'teknisi') return t.assignedTo === currentUser.id;
-        if (currentUser.role === 'admin_layanan') return true; // See all
-        if (currentUser.role === 'super_admin') return true; // See all
-        return t.userId === currentUser.id;
-      });
-      
-      console.log('📋 Ticket List (My Tickets mode):', {
-        role: currentUser.role,
-        userId: currentUser.id,
-        totalTickets: tickets.length,
-        filteredCount: result.length,
-      });
-    } else {
-      // For admin roles, show tickets they can manage
-      if (currentUser.role === 'admin_layanan') {
-        // Admin layanan can see both perbaikan and zoom_meeting tickets
-        result = result.filter(t => t.type === 'perbaikan' || t.type === 'zoom_meeting');
-      } else if (currentUser.role === 'admin_penyedia') {
-        // Admin penyedia ONLY manages perbaikan tickets (inventory/spareparts related)
-        // NO zoom meeting management
-        result = result.filter(t => t.type === 'perbaikan');
-      } else if (currentUser.role === 'teknisi') {
-        // Teknisi sees perbaikan tickets
-        result = result.filter(t => t.type === 'perbaikan');
+  const loadStats = async () => {
+    setStatsLoading(true);
+    try {
+      const query = ['admin_view=true']; // Admin view - see all tickets
+      if (filterType !== 'all') {
+        query.push(`type=${filterType}`);
       }
       
-      console.log('📋 Ticket List (All Tickets mode):', {
-        role: currentUser.role,
-        totalTickets: tickets.length,
-        filteredCount: result.length,
+      const response = await api.get<any>(`tickets-counts?${query.join('&')}`);
+      const statsData = response.counts || response;
+      
+      setStats({
+        total: statsData.total || 0,
+        pending: statsData.pending || 0,
+        in_progress: statsData.in_progress || 0,
+        approved: statsData.approved || 0,
+        completed: statsData.completed || 0,
+        rejected: statsData.rejected || 0,
       });
+    } catch (err) {
+      console.error('Failed to load ticket stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
+  };
 
-    // Apply filters
-    if (searchTerm) {
-      result = result.filter(t =>
-        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const loadTickets = async (page: number = 1) => {
+    setLoading(true);
+    try {
+      const query = [];
+      query.push(`page=${page}`);
+      query.push(`per_page=15`);
+      
+      // Add search parameter
+      if (searchTerm) {
+        query.push(`search=${encodeURIComponent(searchTerm)}`);
+      }
+      
+      // Add type filter
+      if (filterType !== 'all') {
+        query.push(`type=${filterType}`);
+      }
+      
+      // Add status filter
+      if (filterStatus !== 'all') {
+        query.push(`status=${filterStatus}`);
+      }
+
+      const url = `tickets?${query.join('&')}`;
+      const res: any = await api.get(url);
+      
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      const responseMeta = res?.meta || res;
+      
+      console.log('📊 Ticket List - Loaded tickets:', {
+        count: data.length,
+        firstTicket: data[0],
+        hasMeta: !!responseMeta,
+      });
+      
+      setTickets(data);
+      setPagination({
+        total: responseMeta.total || 0,
+        per_page: responseMeta.per_page || 15,
+        current_page: responseMeta.current_page || page,
+        last_page: responseMeta.last_page || 1,
+        from: responseMeta.from || ((page - 1) * 15) + 1,
+        to: responseMeta.to || Math.min(page * 15, responseMeta.total || 0),
+        has_more: responseMeta.has_more !== undefined ? responseMeta.has_more : responseMeta.current_page < responseMeta.last_page,
+      });
+    } catch (err) {
+      console.error('Failed to load tickets:', err);
+      setTickets([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (filterType !== 'all') {
-      result = result.filter(t => t.type === filterType);
-    }
+  const handlePrevPage = () => {
+    if (!pagination || pagination.current_page <= 1) return;
+    loadTickets(pagination.current_page - 1);
+  };
 
-    if (filterStatus !== 'all') {
-      result = result.filter(t => t.status === filterStatus);
-    }
+  const handleNextPage = () => {
+    if (!pagination || !pagination.has_more) return;
+    loadTickets(pagination.current_page + 1);
+  };
 
-    if (filterUrgency !== 'all') {
-      result = result.filter(t => t.urgency === filterUrgency);
-    }
+  const handleRefreshData = async () => {
+    await loadStats();
+    loadTickets(1);
+  };
 
-    // Sort by newest first
-    return result.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [tickets, currentUser, viewMode, searchTerm, filterType, filterStatus, filterUrgency]);
-
-  // Group tickets by status for tabs
-  const ticketGroups = useMemo(() => {
-    return {
-      all: filteredTickets,
-      pending: filteredTickets.filter(t => 
-        ['submitted', 'menunggu_review', 'pending_approval', 'menunggu_verifikasi_penyedia'].includes(t.status)
-      ),
-      inProgress: filteredTickets.filter(t =>
-        ['assigned', 'in_progress', 'on_hold', 'resolved', 'waiting_for_user', 'diproses_persiapan_pengiriman', 'dalam_perbaikan', 'sedang_diagnosa', 'ditugaskan', 'diterima_teknisi', 'dalam_pengiriman'].includes(t.status)
-      ),
-      completed: filteredTickets.filter(t => ['closed', 'selesai', 'approved'].includes(t.status)),
-      rejected: filteredTickets.filter(t =>
-        ['closed_unrepairable', 'ditolak', 'tidak_dapat_diperbaiki', 'dibatalkan', 'rejected'].includes(t.status)
-      ),
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      submitted: { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800' },
+      assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800' },
+      in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
+      on_hold: { label: 'On Hold', color: 'bg-orange-100 text-orange-800' },
+      resolved: { label: 'Resolved', color: 'bg-green-100 text-green-800' },
+      waiting_for_pegawai: { label: 'Waiting for Pegawai', color: 'bg-purple-100 text-purple-800' },
+      closed: { label: 'Closed', color: 'bg-green-100 text-green-800' },
+      closed_unrepairable: { label: 'Unrepairable', color: 'bg-red-100 text-red-800' },
+      pending_review: { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
+      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
+      completed: { label: 'Completed', color: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
+      cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
     };
-  }, [filteredTickets]);
 
-  const getTypeIcon = (type: TicketType) => {
+    const statusInfo = statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+    return <Badge className={statusInfo.color}>{statusInfo.label}</Badge>;
+  };
+
+  const getTypeIcon = (type: string) => {
     switch (type) {
       case 'perbaikan':
         return Wrench;
       case 'zoom_meeting':
         return Video;
       default:
-        return Wrench;
+        return AlertCircle;
     }
   };
 
-  const getTypeLabel = (type: TicketType) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getTypeLabel = (type: string) => {
     const labels = {
-      perbaikan: 'Perbaikan',
-      zoom_meeting: 'Zoom Meeting',
+      'perbaikan': 'Perbaikan',
+      'zoom_meeting': 'Zoom Meeting',
     };
-    return labels[type] || type;
+    return labels[type as keyof typeof labels] || type;
   };
 
-  const getStatusBadge = (status: TicketStatus) => {
-    const config: Record<string, { variant: any; label: string; icon: any }> = {
-      // Status baru untuk perbaikan
-      submitted: { variant: 'secondary', label: 'Submitted', icon: Clock },
-      assigned: { variant: 'default', label: 'Assigned', icon: Activity },
-      in_progress: { variant: 'default', label: 'In Progress', icon: Activity },
-      on_hold: { variant: 'secondary', label: 'On Hold', icon: Clock },
-      resolved: { variant: 'default', label: 'Resolved', icon: CheckCircle },
-      waiting_for_user: { variant: 'secondary', label: 'Waiting for User', icon: Clock },
-      closed: { variant: 'default', label: 'Closed', icon: CheckCircle },
-      closed_unrepairable: { variant: 'destructive', label: 'Unrepairable', icon: XCircle },
-      
-      // Status lama (backward compatibility)
-      menunggu_review: { variant: 'secondary', label: 'Menunggu Review', icon: Clock },
-      pending_approval: { variant: 'secondary', label: 'Pending Approval', icon: Clock },
-      disetujui: { variant: 'default', label: 'Disetujui', icon: CheckCircle },
-      ditolak: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
-      rejected: { variant: 'destructive', label: 'Ditolak', icon: XCircle },
-      menunggu_verifikasi_penyedia: { variant: 'secondary', label: 'Verifikasi Penyedia', icon: Clock },
-      diproses_persiapan_pengiriman: { variant: 'default', label: 'Persiapan Pengiriman', icon: Activity },
-      dalam_pengiriman: { variant: 'default', label: 'Dalam Pengiriman', icon: TrendingUp },
-      ditugaskan: { variant: 'default', label: 'Ditugaskan', icon: Activity },
-      diterima_teknisi: { variant: 'default', label: 'Diterima Teknisi', icon: Activity },
-      sedang_diagnosa: { variant: 'default', label: 'Sedang Diagnosa', icon: Activity },
-      dalam_perbaikan: { variant: 'default', label: 'Dalam Perbaikan', icon: Activity },
-      menunggu_sparepart: { variant: 'secondary', label: 'Menunggu Sparepart', icon: Clock },
-      selesai_diperbaiki: { variant: 'default', label: 'Selesai Diperbaiki', icon: CheckCircle },
-      tidak_dapat_diperbaiki: { variant: 'destructive', label: 'Tidak Dapat Diperbaiki', icon: XCircle },
-      approved: { variant: 'default', label: 'Disetujui', icon: CheckCircle },
-      dibatalkan: { variant: 'secondary', label: 'Dibatalkan', icon: XCircle },
-      selesai: { variant: 'default', label: 'Selesai', icon: CheckCircle },
+  const getTypeColor = (type: string) => {
+    const colors = {
+      'perbaikan': 'bg-orange-100 text-orange-800',
+      'zoom_meeting': 'bg-purple-100 text-purple-800',
     };
-
-    const statusConfig = config[status] || { variant: 'secondary', label: status, icon: Clock };
-    const Icon = statusConfig.icon;
-
-    return (
-      <Badge variant={statusConfig.variant} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {statusConfig.label}
-      </Badge>
-    );
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    const variants = {
-      normal: { variant: 'outline' as const, label: 'Normal' },
-      mendesak: { variant: 'default' as const, label: 'Mendesak' },
-      sangat_mendesak: { variant: 'destructive' as const, label: 'Sangat Mendesak' },
-    };
-    const config = variants[urgency as keyof typeof variants] || variants.normal;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getUserName = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    return user?.name || 'Unknown';
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl text-left">
-          {viewMode === 'my-tickets' ? 'Tiket Saya' : 'Kelola Tiket'}
-        </h1>
-        <p className="text-gray-500 mt-1">
-          {viewMode === 'my-tickets'
-            ? 'Pantau status tiket yang Anda ajukan'
-            : 'Review dan kelola tiket perbaikan dan zoom dari pengguna'}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold">Kelola Tiket</h1>
+          <p className="text-muted-foreground">Review dan kelola semua tiket dari pengguna</p>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Filter Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-5 w-5" />
-            Filter & Pencarian
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label>Cari Tiket</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Nomor tiket atau judul..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Cari tiket..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-10 text-sm"
+              />
             </div>
+            
+            {/* Type Filter */}
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Semua Tipe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Tipe</SelectItem>
+                <SelectItem value="perbaikan">Perbaikan</SelectItem>
+                <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="space-y-2">
-              <Label>Jenis Tiket</Label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Jenis</SelectItem>
-                  <SelectItem value="perbaikan">Perbaikan</SelectItem>
-                  <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Status Filter */}
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  Semua ({statsLoading ? '...' : stats.total})
+                </SelectItem>
+                <SelectItem value="pending_review">
+                  Pending ({statsLoading ? '...' : stats.pending})
+                </SelectItem>
+                <SelectItem value="approved">
+                  Disetujui ({statsLoading ? '...' : stats.approved})
+                </SelectItem>
+                <SelectItem value="completed">
+                  Selesai ({statsLoading ? '...' : stats.completed})
+                </SelectItem>
+                <SelectItem value="rejected">
+                  Ditolak ({statsLoading ? '...' : stats.rejected})
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="waiting_for_user">Waiting for User</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="closed_unrepairable">Unrepairable</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Urgensi</Label>
-              <Select value={filterUrgency} onValueChange={setFilterUrgency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Urgensi</SelectItem>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="mendesak">Mendesak</SelectItem>
-                  <SelectItem value="sangat_mendesak">Sangat Mendesak</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Refresh Button */}
+            <Button 
+              variant="outline" 
+              onClick={handleRefreshData} 
+              disabled={loading || statsLoading}
+              className="h-10"
+            >
+              <RotateCcw className={`h-4 w-4 mr-2 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tickets Table with Tabs */}
-      <Tabs defaultValue="all" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">
-            Semua ({ticketGroups.all.length})
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Pending ({ticketGroups.pending.length})
-          </TabsTrigger>
-          <TabsTrigger value="inProgress" className="gap-2">
-            <Activity className="h-4 w-4" />
-            Diproses ({ticketGroups.inProgress.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="gap-2">
-            <CheckCircle className="h-4 w-4" />
-            Selesai ({ticketGroups.completed.length})
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="gap-2">
-            <XCircle className="h-4 w-4" />
-            Ditolak ({ticketGroups.rejected.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {(['all', 'pending', 'inProgress', 'completed', 'rejected'] as const).map(tab => (
-          <TabsContent key={tab} value={tab}>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nomor Tiket</TableHead>
-                      <TableHead>Judul</TableHead>
-                      <TableHead>Jenis</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Urgensi</TableHead>
-                      {viewMode === 'all' && <TableHead>Pemohon</TableHead>}
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ticketGroups[tab].length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={viewMode === 'all' ? 8 : 7}
-                          className="text-center py-12 text-gray-500"
-                        >
-                          <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                          <p>Tidak ada tiket di kategori ini</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      ticketGroups[tab].map((ticket, index) => {
-                        const TypeIcon = getTypeIcon(ticket.type);
-                        return (
-                          <motion.tr
-                            key={ticket.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="group hover:bg-gray-50"
-                          >
-                            <TableCell className="font-mono text-sm">
-                              {ticket.ticketNumber}
-                            </TableCell>
-                            <TableCell>
-                              <div className="max-w-xs">
-                                <p className="font-medium truncate">{ticket.title}</p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {ticket.description}
-                                </p>
+      {/* Tickets List */}
+      <Card>
+        <CardContent className="p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <AlertCircle className="h-12 w-12 mb-3" />
+              <p className="text-lg font-medium">Tidak ada tiket</p>
+              <p className="text-sm">Belum ada tiket yang sesuai dengan filter</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tickets.map((ticket, index) => {
+                const TypeIcon = getTypeIcon(ticket.type);
+                
+                return (
+                  <motion.div
+                    key={ticket.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewTicket(ticket.id)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Left: Icon & Content */}
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0">
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <TypeIcon className="h-5 w-5 text-primary" />
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <TypeIcon className="h-4 w-4 text-gray-500" />
-                                <span className="text-sm">{getTypeLabel(ticket.type)}</span>
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              {/* Title & Ticket Number */}
+                              <div className="flex items-start gap-2 mb-1">
+                                <h3 className="font-semibold text-sm line-clamp-1 flex-1">
+                                  {ticket.title}
+                                </h3>
                               </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                            <TableCell>{getUrgencyBadge(ticket.urgency)}</TableCell>
-                            {viewMode === 'all' && (
-                              <TableCell>
-                                <div className="text-sm">
-                                  <p className="font-medium">{getUserName(ticket.userId)}</p>
-                                  {ticket.assignedTo && (
-                                    <p className="text-xs text-gray-500">
-                                      → {getUserName(ticket.assignedTo)}
-                                    </p>
-                                  )}
+                              
+                              {/* Ticket Number */}
+                              <p className="text-xs text-muted-foreground mb-2">
+                                #{ticket.ticketNumber}
+                              </p>
+                              
+                              {/* Metadata */}
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <UserIcon className="h-3 w-3" />
+                                  <span>{ticket.userName}</span>
                                 </div>
-                              </TableCell>
-                            )}
-                            <TableCell className="text-sm">
-                              {new Date(ticket.createdAt).toLocaleDateString('id-ID', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onViewTicket(ticket.id)}
-                                className="gap-2"
-                              >
-                                <Eye className="h-4 w-4" />
-                                Detail
-                              </Button>
-                            </TableCell>
-                          </motion.tr>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
-      </Tabs>
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{formatDate(ticket.createdAt)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Badges & Action */}
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              <Badge className={getTypeColor(ticket.type)}>
+                                {getTypeLabel(ticket.type)}
+                              </Badge>
+                              {getStatusBadge(ticket.status)}
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewTicket(ticket.id);
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Lihat
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              {pagination ? (
+                <>
+                  Menampilkan {pagination.from} - {pagination.to} dari {pagination.total} tiket
+                </>
+              ) : (
+                'Memuat...'
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={!pagination || pagination.current_page <= 1 || loading}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Sebelumnya
+              </Button>
+              
+              <div className="text-sm text-muted-foreground px-3">
+                Hal. {pagination?.current_page || 1} dari {pagination?.last_page || 1}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!pagination || !pagination.has_more || loading}
+              >
+                Selanjutnya
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

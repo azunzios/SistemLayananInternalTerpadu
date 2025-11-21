@@ -1,384 +1,347 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from './ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table';
-import {
-  Filter,
-  Search,
-  Calendar,
-  Clock,
-  User,
-  Eye,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Video,
-  Link as LinkIcon,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import type { Ticket } from '../types';
+import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
+import { AlertCircle, Search, RotateCcw, Eye, Calendar, Clock, Video, Loader } from 'lucide-react';
+import type { Ticket, ZoomTicket } from '../types';
+import { api } from '../lib/api';
 
 interface ZoomTicketListProps {
   tickets: Ticket[];
   onViewDetail?: (ticketId: string) => void;
 }
 
-export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ tickets, onViewDetail }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
+interface TicketStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
 
-  // Filter zoom tickets only
-  const zoomTickets = useMemo(() => {
-    return tickets.filter(ticket => ticket.type === 'zoom_meeting');
-  }, [tickets]);
+interface PaginationMeta {
+  total: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+  from: number;
+  to: number;
+  has_more: boolean;
+}
 
-  // Apply filters
-  const filteredTickets = useMemo(() => {
-    let filtered = [...zoomTickets];
+export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [zoomTickets, setZoomTickets] = useState<Ticket[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [stats, setStats] = useState<TicketStats>({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState<ZoomTicket | null>(null);
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(ticket =>
-        ticket.ticketNumber.toLowerCase().includes(query) ||
-        ticket.title.toLowerCase().includes(query) ||
-        ticket.userName.toLowerCase().includes(query) ||
-        ticket.description.toLowerCase().includes(query)
-      );
-    }
+  // Load statistics on mount
+  useEffect(() => {
+    loadStats();
+  }, []);
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter);
-    }
+  // Load tickets when tab or searchTerm changes
+  useEffect(() => {
+    loadTickets(1);
+  }, [selectedTab, searchTerm]);
 
-    // Date filter
-    if (dateFilter !== 'all') {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+  const loadStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await api.get<any>('tickets-counts?type=zoom_meeting');
+      const statsData = response.counts || response;
       
-      if (dateFilter === 'today') {
-        filtered = filtered.filter(ticket => ticket.data?.meetingDate === todayStr);
-      } else if (dateFilter === 'upcoming') {
-        filtered = filtered.filter(ticket => {
-          const meetingDate = ticket.data?.meetingDate;
-          return meetingDate && meetingDate >= todayStr;
-        });
-      } else if (dateFilter === 'past') {
-        filtered = filtered.filter(ticket => {
-          const meetingDate = ticket.data?.meetingDate;
-          return meetingDate && meetingDate < todayStr;
-        });
-      }
+      // Zoom hanya punya 3 status: pending_review, approved, rejected
+      const pending = statsData.pending || 0;
+      const approved = (statsData.completed || 0); // approved termasuk dalam completed di backend
+      const rejected = statsData.rejected || 0;
+      
+      setStats({
+        total: statsData.total || 0,
+        pending: pending,
+        approved: approved,
+        rejected: rejected,
+      });
+    } catch (err) {
+      console.error('Failed to load zoom ticket stats:', err);
+    } finally {
+      setStatsLoading(false);
     }
+  };
 
-    // Sort by date (newest first)
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.data?.meetingDate || a.createdAt).getTime();
-      const dateB = new Date(b.data?.meetingDate || b.createdAt).getTime();
-      return dateB - dateA;
-    });
+  const loadTickets = async (page: number = 1) => {
+    setLoading(true);
+    try {
+      const query = [];
+      query.push(`page=${page}`);
+      query.push(`per_page=15`);
+      query.push(`type=zoom_meeting`);
+      
+      // Add search parameter
+      if (searchTerm) {
+        query.push(`search=${encodeURIComponent(searchTerm)}`);
+      }
+      
+      // Add status filter based on tab
+      if (selectedTab === 'pending') {
+        query.push(`status=pending_review`);
+      } else if (selectedTab === 'approved') {
+        query.push(`status=approved`);
+      } else if (selectedTab === 'rejected') {
+        query.push(`status=rejected`);
+      }
 
-    return filtered;
-  }, [zoomTickets, searchQuery, statusFilter, dateFilter]);
+      const url = `tickets?${query.join('&')}`;
+      const res: any = await api.get(url);
+      
+      const data = Array.isArray(res) ? res : (res?.data || []);
+      const responseMeta = res?.meta || res;
+      
+      setZoomTickets(data);
+      setPagination({
+        total: responseMeta.total || 0,
+        per_page: responseMeta.per_page || 15,
+        current_page: responseMeta.current_page || page,
+        last_page: responseMeta.last_page || 1,
+        from: responseMeta.from || ((page - 1) * 15) + 1,
+        to: responseMeta.to || Math.min(page * 15, responseMeta.total || 0),
+        has_more: responseMeta.has_more !== undefined ? responseMeta.has_more : responseMeta.current_page < responseMeta.last_page,
+      });
+    } catch (err) {
+      console.error('Failed to load zoom tickets:', err);
+      setZoomTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Count by status
-  const statusCounts = useMemo(() => {
-    return {
-      all: zoomTickets.length,
-      pending_review: zoomTickets.filter(t => t.status === 'pending_review').length,
-      approved: zoomTickets.filter(t => t.status === 'approved').length,
-      rejected: zoomTickets.filter(t => t.status === 'rejected').length,
-      completed: zoomTickets.filter(t => t.status === 'completed').length,
-    };
-  }, [zoomTickets]);
+  const handlePrevPage = () => {
+    if (!pagination || pagination.current_page <= 1) return;
+    loadTickets(pagination.current_page - 1);
+  };
 
-  // Get status badge
+  const handleNextPage = () => {
+    if (!pagination || !pagination.has_more) return;
+    loadTickets(pagination.current_page + 1);
+  };
+
+  const handleRefreshData = async () => {
+    await loadStats();
+    loadTickets(1);
+  };
+
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pending_review: { label: 'Menunggu Review', variant: 'secondary' },
-      approved: { label: 'Disetujui', variant: 'default' },
-      rejected: { label: 'Ditolak', variant: 'destructive' },
-      completed: { label: 'Selesai', variant: 'outline' },
+    const statusMap: Record<string, { label: string; color: string }> = {
+      pending_review: { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
+      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
     };
 
-    const statusInfo = statusMap[status] || { label: status, variant: 'outline' };
-    return (
-      <Badge variant={statusInfo.variant} className="whitespace-nowrap">
-        {statusInfo.label}
-      </Badge>
-    );
+    const statusInfo = statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+    return <Badge className={statusInfo.color}>{statusInfo.label}</Badge>;
   };
 
-  // Format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
       year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
-  // Handle view detail
   const handleViewDetail = (ticketId: string) => {
-    if (onViewDetail) {
-      onViewDetail(ticketId);
+    const ticket = zoomTickets.find(t => t.id === ticketId);
+    if (ticket && ticket.type === 'zoom_meeting') {
+      setSelectedBooking(ticket as ZoomTicket);
+    }
+  };
+
+  const handleModalClose = () => {
+    setSelectedBooking(null);
+  };
+
+  const handleModalUpdate = () => {
+    handleRefreshData();
+    if (onViewDetail && selectedBooking) {
+      onViewDetail(selectedBooking.id);
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl flex items-center gap-3">
-          <Video className="h-7 w-7 text-blue-600" />
-          Daftar Tiket Booking Zoom
-        </h2>
-        <p className="text-gray-500 mt-1">
-          Review dan kelola semua tiket booking Zoom meeting dari pengguna
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold flex items-center gap-3">
+            Daftar Tiket Zoom Meeting
+          </h1>
+          <p className="text-muted-foreground">Kelola semua permintaan booking Zoom meeting</p>
+        </div>
       </div>
 
-      {/* Filter & Search */}
+      {/* Filter Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-5 w-5" />
-            Filter & Pencarian
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="space-y-2">
-              <label className="text-sm">Cari Tiket</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Nomor tiket atau judul..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <label className="text-sm">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Semua Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="pending_review">Menunggu Review</SelectItem>
-                  <SelectItem value="approved">Disetujui</SelectItem>
-                  <SelectItem value="rejected">Ditolak</SelectItem>
-                  <SelectItem value="completed">Selesai</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date Filter */}
-            <div className="space-y-2">
-              <label className="text-sm">Tanggal Meeting</label>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Semua Tanggal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Tanggal</SelectItem>
-                  <SelectItem value="today">Hari Ini</SelectItem>
-                  <SelectItem value="upcoming">Akan Datang</SelectItem>
-                  <SelectItem value="past">Sudah Lewat</SelectItem>
-                </SelectContent>
-              </Select>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshData} 
+              disabled={loading || statsLoading}
+              className="h-8"
+            >
+              <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Cari tiket..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-8 text-xs"
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Status Tabs */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Button
-          variant={statusFilter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('all')}
-          className="gap-2"
-        >
-          Semua ({statusCounts.all})
-        </Button>
-        <Button
-          variant={statusFilter === 'pending_review' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('pending_review')}
-          className="gap-2"
-        >
-          <AlertCircle className="h-4 w-4" />
-          Pending ({statusCounts.pending_review})
-        </Button>
-        <Button
-          variant={statusFilter === 'approved' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('approved')}
-          className="gap-2"
-        >
-          <CheckCircle className="h-4 w-4" />
-          Disetujui ({statusCounts.approved})
-        </Button>
-        <Button
-          variant={statusFilter === 'rejected' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('rejected')}
-          className="gap-2"
-        >
-          <XCircle className="h-4 w-4" />
-          Ditolak ({statusCounts.rejected})
-        </Button>
-        <Button
-          variant={statusFilter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setStatusFilter('completed')}
-          className="gap-2"
-        >
-          <CheckCircle className="h-4 w-4" />
-          Selesai ({statusCounts.completed})
-        </Button>
-      </div>
-
-      {/* Tickets Table */}
+      {/* Tickets Tabs */}
       <Card>
-        <CardContent className="p-0">
-          {filteredTickets.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Video className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg">Tidak ada tiket ditemukan</p>
-              <p className="text-sm mt-1">Coba ubah filter pencarian Anda</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nomor Tiket</TableHead>
-                    <TableHead>Judul</TableHead>
-                    <TableHead>Tanggal Meeting</TableHead>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead>Akun Zoom</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Pemohon</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket, index) => (
-                    <motion.tr
-                      key={ticket.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className="group hover:bg-gray-50"
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Video className="h-4 w-4 text-blue-600" />
-                          <span className="font-mono">{ticket.ticketNumber}</span>
+        <CardContent className="p-4">
+          <Tabs value={selectedTab} onValueChange={(val) => setSelectedTab(val as any)} className="w-full">
+            <TabsList className="grid grid-cols-4 w-full">
+              <TabsTrigger value="all">
+                Semua {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.total})`}
+              </TabsTrigger>
+              <TabsTrigger value="pending">
+                Pending {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.pending})`}
+              </TabsTrigger>
+              <TabsTrigger value="approved">
+                Disetujui {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.approved})`}
+              </TabsTrigger>
+              <TabsTrigger value="rejected">
+                Ditolak {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.rejected})`}
+              </TabsTrigger>
+            </TabsList>
+
+            {(['all', 'pending', 'approved', 'rejected'] as const).map((tab) => (
+              <TabsContent key={tab} value={tab} className="mt-4">
+                {loading ? (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-16">
+                      <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ) : zoomTickets.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-16">
+                      <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Tidak ada tiket</h3>
+                      <p className="text-muted-foreground text-center">
+                        {tab === 'all' && 'Belum ada tiket zoom meeting'}
+                        {tab === 'pending' && 'Tidak ada tiket pending'}
+                        {tab === 'approved' && 'Tidak ada tiket disetujui'}
+                        {tab === 'rejected' && 'Tidak ada tiket ditolak'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid gap-4">
+                      {zoomTickets.map((ticket) => (
+                        <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewDetail(ticket.id)}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <Video className="h-5 w-5 text-purple-600" />
+                                    <h3 className="font-semibold text-lg">{ticket.title}</h3>
+                                  </div>
+                                  <Badge className="bg-purple-100 text-purple-800">
+                                    Zoom Meeting
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <span className="font-mono">{ticket.ticketNumber}</span>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{ticket.date ? formatDate(ticket.date) : '-'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{ticket.startTime || '-'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusBadge(ticket.status)}
+                                  </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  <span className="font-medium">{ticket.userName}</span>
+                                  {ticket.unitKerja && <span> • {ticket.unitKerja}</span>}
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <Button variant="link" size="sm" className="h-8 w-8 p-0">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Pagination */}
+                    <Card>
+                      <CardContent className="flex items-center justify-between py-4">
+                        <div className="text-sm text-muted-foreground">
+                          {pagination && `Halaman ${pagination.current_page} dari ${pagination.last_page} • Menampilkan ${pagination.from}-${pagination.to} dari ${pagination.total}`}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{ticket.title}</p>
-                          <p className="text-sm text-gray-500 line-clamp-1">
-                            {ticket.description}
-                          </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handlePrevPage} 
+                            disabled={!pagination || pagination.current_page === 1 || loading}
+                          >
+                            Sebelumnya
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleNextPage} 
+                            disabled={!pagination || !pagination.has_more || loading}
+                          >
+                            Berikutnya
+                          </Button>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-gray-700">
-                          <Calendar className="h-4 w-4" />
-                          <span>{formatDate(ticket.data?.meetingDate || ticket.createdAt)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-gray-700">
-                          <Clock className="h-4 w-4" />
-                          <span className="text-sm">
-                            {ticket.data?.startTime} - {ticket.data?.endTime}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {ticket.data?.zoomAccount ? (
-                          <Badge variant="outline" className="gap-1.5">
-                            <LinkIcon className="h-3 w-3" />
-                            {ticket.data.zoomAccount}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-gray-400">Belum ditentukan</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(ticket.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <User className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <p className="font-medium text-sm">{ticket.userName}</p>
-                            <p className="text-xs text-gray-500">{ticket.userNIP}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-gray-600">
-                          {formatDate(ticket.createdAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetail(ticket.id)}
-                          className="gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Detail
-                        </Button>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
         </CardContent>
       </Card>
 
-      {/* Summary */}
-      {filteredTickets.length > 0 && (
-        <div className="text-sm text-gray-500 text-center">
-          Menampilkan {filteredTickets.length} dari {zoomTickets.length} total tiket booking Zoom
-        </div>
+      {/* Review Modal */}
+      {selectedBooking && (
+        <ZoomAdminReviewModal
+          booking={selectedBooking}
+          onClose={handleModalClose}
+          onUpdate={handleModalUpdate}
+        />
       )}
     </div>
   );
