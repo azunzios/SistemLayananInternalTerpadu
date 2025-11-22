@@ -190,9 +190,9 @@ class DatabaseSeeder extends Seeder
             'user_phone' => $pegawai->phone,
             'unit_kerja' => $pegawai->unit_kerja,
             'assigned_to' => $teknisi->id,
-            'asset_code' => 'DELL-001',
-            'asset_nup' => '2020-001',
-            'asset_location' => 'Ruang Statistik',
+            'asset_code' => '2060101999',
+            'asset_nup' => '00001',
+            'asset_location' => 'Bagian TI',
             'severity' => 'high',
             'status' => 'assigned',
             'form_data' => json_encode([
@@ -275,5 +275,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed Assets
         $this->call(AssetSeeder::class);
+
+        // Seed Zoom accounts for booking management
+        $this->call(ZoomAccountSeeder::class);
     }
 }

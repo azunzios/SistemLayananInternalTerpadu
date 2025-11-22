@@ -84,6 +84,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
   hasMore,
   onLoadMoreComments,
 }) => {
+  const attachmentList = Array.isArray((ticket as any).attachments) ? (ticket as any).attachments : [];
   return (
     <Card className="gap-0">
       <CardHeader className="!pb-0 p-4">
@@ -148,6 +149,27 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
             </div>
 
+            {attachmentList.length > 0 && (
+              <div>
+                <h4 className="text-sm mb-2">File Terlampir</h4>
+                <div className="space-y-1">
+                  {attachmentList.map((att: any, idx: number) => (
+                    <a
+                      key={att.id || idx}
+                      href={att.url || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                    >
+                      <Paperclip className="h-3 w-3" />
+                      <span className="truncate">{att.name || `File ${idx + 1}`}</span>
+                      {att.size && <span className="text-xs text-gray-500">({Math.round(att.size / 1024)} KB)</span>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {ticket.type === 'perbaikan' && (
               <>
                 <Separator />
@@ -178,33 +200,11 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                         <span>{ticket.data.itemName}</span>
                       </div>
                     )}
-                    {ticket.attachments && (
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-32">Attachment Count:</span>
-                        <span>{ticket.attachments.length}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </>
             )}
 
-            {ticket.attachments && ticket.attachments.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="text-sm mb-2">File Terlampir</h4>
-                  <div className="space-y-1">
-                    {ticket.attachments.map((att, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
-                        <Paperclip className="h-3 w-3" />
-                        <span>{att.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
 
           {/* Right Column - Work Orders & Discussion */}

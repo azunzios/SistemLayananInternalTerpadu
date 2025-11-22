@@ -3,13 +3,13 @@ import { Card, CardContent} from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { User as Key, CheckCircle, Eye, EyeOff, Camera } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { api } from '../lib/api';
+import { api, API_BASE_URL } from '../lib/api';
 import type { User } from '../types';
 import type { ViewType } from './main-layout';
 
@@ -23,6 +23,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   currentUser,
   onUserUpdate,
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
   
   const [profileData, setProfileData] = useState({
@@ -43,6 +44,36 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarUrl = React.useMemo(() => {
+    if (!currentUser.avatar) return null;
+    if (currentUser.avatar.startsWith('http')) return currentUser.avatar;
+    const rawPath = currentUser.avatar.replace(/^\/?/, '');
+    const cleanPath = rawPath.startsWith('storage/') ? rawPath : `storage/${rawPath}`;
+    // Use API base without trailing /api for file access
+    const fileBase = (API_BASE_URL || '').replace(/\/api$/i, '');
+    return fileBase ? `${fileBase}/${cleanPath}` : `/${cleanPath}`;
+  }, [currentUser.avatar]);
+
+  const handleAvatarUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    try {
+      setIsUploadingAvatar(true);
+      // Do NOT set Content-Type manually; let browser set boundary
+      const response = await api.post<User>('/upload-avatar', formData);
+      const updatedUser = (response as any)?.data ?? response;
+      onUserUpdate(updatedUser);
+      sessionStorage.setItem('bps_current_user', JSON.stringify(updatedUser));
+      toast.success('Avatar berhasil diupload');
+    } catch (err: any) {
+      console.error('Failed to upload avatar', err);
+      const message = err?.body?.message || 'Gagal mengupload avatar';
+      toast.error(message);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleUpdateProfile = async () => {
     setIsUpdating(true);
@@ -52,6 +83,8 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       if (response && response.user) {
         onUserUpdate(response.user);
         toast.success('Profil berhasil diperbarui');
+        // persist latest profile (including potential avatar updates from server)
+        sessionStorage.setItem('bps_current_user', JSON.stringify(response.user));
       }
     } catch (error: any) {
       console.error('Failed to update profile:', error);
@@ -122,10 +155,19 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       admin_layanan: 'Admin Layanan',
       admin_penyedia: 'Admin Penyedia',
       teknisi: 'Teknisi',
+      pegawai: 'Pegawai',
       user: 'Pegawai',
     };
     return labels[role] || role;
   };
+  const userRoles = React.useMemo(() => {
+    const roles = Array.isArray(currentUser.roles) && currentUser.roles.length > 0
+      ? currentUser.roles
+      : [currentUser.role];
+    // Remove duplicates and falsy values
+    const unique = Array.from(new Set(roles.filter(Boolean)));
+    return unique.length > 0 ? unique : ['pegawai'];
+  }, [currentUser.roles, currentUser.role]);
 
   const passwordRequirements = [
     { label: 'Minimal 8 karakter', test: (pwd: string) => pwd.length >= 8 },
@@ -152,24 +194,43 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                 {/* Avatar with Camera Button */}
                 <div className="relative">
                   <Avatar className="h-32 w-32">
+                    {avatarUrl && (
+                      <AvatarImage
+                        src={avatarUrl}
+                        alt={currentUser.name}
+                      />
+                    )}
                     <AvatarFallback className="text-4xl bg-gradient-to-br from-blue-500 to-blue-600 text-white">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <button
                     className="absolute bottom-0 right-0 h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-blue-700 transition-colors"
-                    onClick={() => toast.info('Fitur upload foto akan segera hadir')}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
                   >
                     <Camera className="h-5 w-5" />
                   </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 2 * 1024 * 1024) {
+                        toast.error('Ukuran file maksimal 2MB');
+                        return;
+                      }
+                      handleAvatarUpload(file);
+                    }}
+                  />
                 </div>
 
                 {/* Name and Role */}
                 <div className="space-y-2 w-full">
                   <h2 className="text-xl">{currentUser.name}</h2>
-                  <Badge variant="default" className="mx-auto">
-                    {getRoleLabel(currentUser.role)}
-                  </Badge>
                   <p className="text-gray-600 text-sm">{currentUser.unitKerja}</p>
                 </div>
 
@@ -287,15 +348,21 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Role</Label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <Badge variant="default">{getRoleLabel(currentUser.role)}</Badge>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Hubungi Super Admin untuk upgrade role
-                      </p>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex flex-wrap gap-2">
+                      {userRoles.map(role => (
+                        <Badge key={role} variant="default">
+                          {getRoleLabel(role)}
+                        </Badge>
+                      ))}
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Hubungi Super Admin untuk upgrade role
+                    </p>
                   </div>
+                </div>
 
                   <Separator />
 

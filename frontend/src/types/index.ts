@@ -31,6 +31,7 @@ export interface User {
   password?: string; // Optional on client; never returned in plaintext
   name: string;
   nip: string;
+  jabatan: string;
   role: UserRole; // current Role saat ini
   roles: UserRole[]; // daftar role yang tersedia untuk akun tersebut, bisa saja array isinya cuma satu, value di role akan tetap masuk di roles.
   unitKerja: string;

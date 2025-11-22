@@ -70,6 +70,7 @@ class TicketResource extends JsonResource
                 'repairable' => $this->repairable,
                 'unrepairableReason' => $this->unrepairable_reason,
                 'workOrderId' => $this->work_order_id,
+                'attachments' => $this->attachments ?? [],
                 'formData' => $this->form_data,
             ]);
         } else if ($this->type === 'zoom_meeting') {

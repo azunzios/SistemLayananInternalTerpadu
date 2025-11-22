@@ -82,7 +82,7 @@ class KartuKendaliController extends Controller
             'asset_nup' => 'required|string|max:50|unique:kartu_kendali',
             'asset_name' => 'required|string|max:255',
             'asset_description' => 'nullable|string',
-            'condition' => 'nullable|in:baru,baik,kurang_baik,rusak',
+            'condition' => 'nullable|in:baik,rusak_ringan,rusak_berat',
             'condition_notes' => 'nullable|string',
             'location' => 'nullable|string|max:255',
             'responsible_user_id' => 'nullable|exists:users,id',
@@ -130,7 +130,7 @@ class KartuKendaliController extends Controller
         $validated = $request->validate([
             'asset_name' => 'nullable|string|max:255',
             'asset_description' => 'nullable|string',
-            'condition' => 'nullable|in:baru,baik,kurang_baik,rusak',
+            'condition' => 'nullable|in:baik,rusak_ringan,rusak_berat',
             'condition_notes' => 'nullable|string',
             'location' => 'nullable|string|max:255',
             'responsible_user_id' => 'nullable|exists:users,id',
@@ -194,7 +194,7 @@ class KartuKendaliController extends Controller
             'description' => 'nullable|string',
             'findings' => 'nullable|string',
             'actions_taken' => 'nullable|string',
-            'asset_condition_after' => 'nullable|in:baru,baik,kurang_baik,rusak',
+            'asset_condition_after' => 'nullable|in:baik,rusak_ringan,rusak_berat',
             'total_cost' => 'nullable|numeric|min:0',
             'attachments' => 'nullable|array',
         ]);

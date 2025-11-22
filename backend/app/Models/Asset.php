@@ -15,28 +15,32 @@ class Asset extends Model
         'asset_code',
         'asset_nup',
         'asset_name',
-        'description',
-        'asset_type',
-        'manufacturer',
-        'model',
-        'serial_number',
+        'merk_tipe',
+        'spesifikasi',
+        'tahun_perolehan',
+        'tanggal_perolehan',
+        'sumber_dana',
+        'nomor_bukti_perolehan',
+        'nilai_perolehan',
+        'nilai_buku',
+        'satuan',
+        'jumlah',
         'location',
-        'user_id',
-        'unit_kerja',
+        'unit_pengguna',
+        'penanggung_jawab_user_id',
         'condition',
+        'status_penggunaan',
         'is_active',
-        'acquisition_date',
-        'warranty_end_date',
-        'acquisition_cost',
-        'current_value',
+        'keterangan',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'acquisition_date' => 'date',
-        'warranty_end_date' => 'date',
-        'acquisition_cost' => 'decimal:2',
-        'current_value' => 'decimal:2',
+        'tanggal_perolehan' => 'date',
+        'nilai_perolehan' => 'decimal:2',
+        'nilai_buku' => 'decimal:2',
+        'jumlah' => 'integer',
+        'tahun_perolehan' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -46,7 +50,7 @@ class Asset extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'penanggung_jawab_user_id');
     }
 
     /**

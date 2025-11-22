@@ -307,11 +307,7 @@ class UserController extends Controller
                 'ip_address' => request()->ip(),
             ]);
 
-            return response()->json([
-                'message' => 'Avatar berhasil diupload',
-                'avatar' => $path,
-                'avatar_url' => \Storage::disk('public')->url($path),
-            ]);
+            return response()->json(new UserResource($user->fresh()), 200);
         }
 
         return response()->json([

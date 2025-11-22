@@ -26,9 +26,14 @@ class AssetController extends Controller
             $query->where('condition', $request->condition);
         }
 
-        // Filter by asset type
-        if ($request->has('asset_type')) {
-            $query->where('asset_type', $request->asset_type);
+        // Filter by sumber dana
+        if ($request->has('sumber_dana')) {
+            $query->where('sumber_dana', $request->sumber_dana);
+        }
+
+        // Filter by status penggunaan
+        if ($request->has('status_penggunaan')) {
+            $query->where('status_penggunaan', $request->status_penggunaan);
         }
 
         // Search by name, code, or NUP
@@ -38,7 +43,8 @@ class AssetController extends Controller
                 $q->where('asset_name', 'like', "%$search%")
                   ->orWhere('asset_code', 'like', "%$search%")
                   ->orWhere('asset_nup', 'like', "%$search%")
-                  ->orWhere('serial_number', 'like', "%$search%");
+                  ->orWhere('merk_tipe', 'like', "%$search%")
+                  ->orWhere('nomor_bukti_perolehan', 'like', "%$search%");
             });
         }
 
@@ -61,23 +67,26 @@ class AssetController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'asset_code' => 'required|string|unique:assets,asset_code',
-            'asset_nup' => 'required|string|unique:assets,asset_nup',
+            'asset_code' => 'required|string|max:50|unique:assets,asset_code',
+            'asset_nup' => 'required|string|max:50|unique:assets,asset_nup',
             'asset_name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'asset_type' => 'nullable|string',
-            'manufacturer' => 'nullable|string',
-            'model' => 'nullable|string',
-            'serial_number' => 'nullable|string|unique:assets,serial_number',
-            'location' => 'nullable|string',
-            'user_id' => 'nullable|exists:users,id',
-            'unit_kerja' => 'nullable|string',
-            'condition' => 'in:baru,baik,kurang_baik,rusak',
+            'merk_tipe' => 'nullable|string|max:255',
+            'spesifikasi' => 'nullable|string',
+            'tahun_perolehan' => 'nullable|integer|min:1900|max:' . date('Y'),
+            'tanggal_perolehan' => 'nullable|date',
+            'sumber_dana' => 'nullable|in:dipa,pnbp,hibah,lainnya',
+            'nomor_bukti_perolehan' => 'nullable|string|max:255',
+            'nilai_perolehan' => 'nullable|numeric|min:0',
+            'nilai_buku' => 'nullable|numeric|min:0',
+            'satuan' => 'nullable|string|max:50',
+            'jumlah' => 'nullable|integer|min:1',
+            'location' => 'nullable|string|max:255',
+            'unit_pengguna' => 'nullable|string|max:255',
+            'penanggung_jawab_user_id' => 'nullable|exists:users,id',
+            'condition' => 'in:baik,rusak_ringan,rusak_berat',
+            'status_penggunaan' => 'in:digunakan,dipinjamkan,idle',
             'is_active' => 'boolean',
-            'acquisition_date' => 'nullable|date',
-            'warranty_end_date' => 'nullable|date',
-            'acquisition_cost' => 'nullable|numeric|min:0',
-            'current_value' => 'nullable|numeric|min:0',
+            'keterangan' => 'nullable|string',
         ]);
 
         $asset = Asset::create($validated);
@@ -99,23 +108,26 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset)
     {
         $validated = $request->validate([
-            'asset_code' => 'string|unique:assets,asset_code,' . $asset->id,
-            'asset_nup' => 'string|unique:assets,asset_nup,' . $asset->id,
+            'asset_code' => 'string|max:50|unique:assets,asset_code,' . $asset->id,
+            'asset_nup' => 'string|max:50|unique:assets,asset_nup,' . $asset->id,
             'asset_name' => 'string|max:255',
-            'description' => 'nullable|string',
-            'asset_type' => 'nullable|string',
-            'manufacturer' => 'nullable|string',
-            'model' => 'nullable|string',
-            'serial_number' => 'nullable|string|unique:assets,serial_number,' . $asset->id,
-            'location' => 'nullable|string',
-            'user_id' => 'nullable|exists:users,id',
-            'unit_kerja' => 'nullable|string',
-            'condition' => 'in:baru,baik,kurang_baik,rusak',
+            'merk_tipe' => 'nullable|string|max:255',
+            'spesifikasi' => 'nullable|string',
+            'tahun_perolehan' => 'nullable|integer|min:1900|max:' . date('Y'),
+            'tanggal_perolehan' => 'nullable|date',
+            'sumber_dana' => 'nullable|in:dipa,pnbp,hibah,lainnya',
+            'nomor_bukti_perolehan' => 'nullable|string|max:255',
+            'nilai_perolehan' => 'nullable|numeric|min:0',
+            'nilai_buku' => 'nullable|numeric|min:0',
+            'satuan' => 'nullable|string|max:50',
+            'jumlah' => 'nullable|integer|min:1',
+            'location' => 'nullable|string|max:255',
+            'unit_pengguna' => 'nullable|string|max:255',
+            'penanggung_jawab_user_id' => 'nullable|exists:users,id',
+            'condition' => 'in:baik,rusak_ringan,rusak_berat',
+            'status_penggunaan' => 'in:digunakan,dipinjamkan,idle',
             'is_active' => 'boolean',
-            'acquisition_date' => 'nullable|date',
-            'warranty_end_date' => 'nullable|date',
-            'acquisition_cost' => 'nullable|numeric|min:0',
-            'current_value' => 'nullable|numeric|min:0',
+            'keterangan' => 'nullable|string',
         ]);
 
         $asset->update($validated);
@@ -186,13 +198,16 @@ class AssetController extends Controller
     public function getTypes()
     {
         return response()->json([
-            'types' => [
-                'Elektronik',
-                'Furniture',
-                'Peralatan Kantor',
-                'Kendaraan',
-                'Mesin',
-                'Lainnya',
+            'sumber_dana' => [
+                'dipa' => 'DIPA',
+                'pnbp' => 'PNBP',
+                'hibah' => 'Hibah',
+                'lainnya' => 'Lainnya',
+            ],
+            'status_penggunaan' => [
+                'digunakan' => 'Digunakan',
+                'dipinjamkan' => 'Dipinjamkan',
+                'idle' => 'Idle',
             ],
         ]);
     }
@@ -204,10 +219,9 @@ class AssetController extends Controller
     {
         return response()->json([
             'conditions' => [
-                'baru' => 'Baru',
                 'baik' => 'Baik',
-                'kurang_baik' => 'Kurang Baik',
-                'rusak' => 'Rusak',
+                'rusak_ringan' => 'Rusak Ringan',
+                'rusak_berat' => 'Rusak Berat',
             ],
         ]);
     }

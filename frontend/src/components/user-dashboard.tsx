@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api } from '../lib/api';
+import { getActiveRole } from '../lib/storage';
 import { UserOnboarding } from './user-onboarding';
 import { QuickBookingDialog } from './zoom-booking-dialogs/index';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 import type { ViewType } from './main-layout';
 
 interface DashboardStats {
@@ -40,6 +41,14 @@ const INITIAL_BOOKING_FORM = {
   endTime: '',
 };
 
+const roleLabels: Record<UserRole, string> = {
+  super_admin: 'Super Admin',
+  admin_layanan: 'Admin Layanan',
+  admin_penyedia: 'Admin Penyedia',
+  teknisi: 'Teknisi',
+  pegawai: 'Pegawai',
+};
+
 export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNavigate }) => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -53,13 +62,14 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
   const [coHostResults, setCoHostResults] = useState<User[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
+  const activeRole = (getActiveRole(currentUser.id) || currentUser.role) as UserRole;
 
   useEffect(() => {
     const loadStats = async () => {
       try {
         setLoading(true);
         const response = await api.get<{ success: boolean; stats: DashboardStats }>(
-          'tickets/stats/dashboard'
+          'tickets/stats/dashboard?scope=my'
         );
         if (response.success && response.stats) {
           setStats(response.stats);
@@ -261,7 +271,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
                 Selamat Datang, {currentUser.name.split(' ')[0]}!
               </h1>
               <p className="text-blue-600">
-                {currentUser.unitKerja} • {currentUser.role === 'pegawai' ? 'Pegawai' : currentUser.role}
+                {currentUser.unitKerja} • {roleLabels[activeRole] || 'Pegawai'}
               </p>
             </div>
             <div className="hidden md:block">

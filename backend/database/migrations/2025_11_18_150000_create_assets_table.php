@@ -13,33 +13,39 @@ return new class extends Migration
     {
         Schema::create('assets', function (Blueprint $table) {
             $table->id();
-            $table->string('asset_code')->unique(); // Kode Barang, e.g., "KB-2024-001"
-            $table->string('asset_nup')->unique();   // NUP (Nomor Urut Pendaftaran), e.g., "000001"
-            $table->string('asset_name');             // Nama barang, e.g., "Laptop Dell"
-            $table->text('description')->nullable();  // Deskripsi detail
-            
-            // Asset info
-            $table->string('asset_type')->nullable();     // Tipe aset, e.g., "Elektronik", "Furniture"
-            $table->string('manufacturer')->nullable();   // Pabrikan
-            $table->string('model')->nullable();          // Model
-            $table->string('serial_number')->nullable();  // Nomor seri
-            
-            // Lokasi & Pengguna
-            $table->string('location')->nullable();       // Lokasi saat ini
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null'); // Pengguna pemegang
-            $table->string('unit_kerja')->nullable();     // Unit kerja pengguna
-            
-            // Kondisi & Status
-            $table->enum('condition', ['baru', 'baik', 'kurang_baik', 'rusak'])->default('baik');
-            $table->boolean('is_active')->default(true);
-            
-            // Tanggal
-            $table->date('acquisition_date')->nullable(); // Tanggal perolehan
-            $table->date('warranty_end_date')->nullable(); // Tanggal akhir garansi
-            
+            // Identitas BMN
+            $table->string('asset_code', 50)->unique();      // Kode Barang (15 digit)
+            $table->string('asset_nup', 50)->unique();       // NUP
+            $table->string('asset_name');                    // Nama Barang
+            $table->string('merk_tipe')->nullable();         // Merk/Tipe
+            $table->text('spesifikasi')->nullable();         // Spesifikasi/Keterangan teknis
+
+            // Data perolehan
+            $table->unsignedSmallInteger('tahun_perolehan')->nullable(); // Tahun perolehan
+            $table->date('tanggal_perolehan')->nullable();               // Tanggal perolehan (jika tersedia)
+            $table->enum('sumber_dana', ['dipa', 'pnbp', 'hibah', 'lainnya'])->nullable();
+            $table->string('nomor_bukti_perolehan')->nullable();         // No BAST/SP2D/dll
+
             // Nilai
-            $table->decimal('acquisition_cost', 15, 2)->nullable(); // Biaya perolehan
-            $table->decimal('current_value', 15, 2)->nullable();    // Nilai sekarang
+            $table->decimal('nilai_perolehan', 15, 2)->nullable(); // Harga perolehan
+            $table->decimal('nilai_buku', 15, 2)->nullable();      // Nilai buku (opsional)
+
+            // Kuantitas
+            $table->string('satuan', 50)->default('unit');
+            $table->unsignedInteger('jumlah')->default(1);
+
+            // Lokasi & Pengguna
+            $table->string('location')->nullable();                    // Lokasi fisik
+            $table->string('unit_pengguna')->nullable();               // Unit pengguna
+            $table->foreignId('penanggung_jawab_user_id')->nullable()->constrained('users')->onDelete('set null');
+
+            // Kondisi & Status penggunaan
+            $table->enum('condition', ['baik', 'rusak_ringan', 'rusak_berat'])->default('baik');
+            $table->enum('status_penggunaan', ['digunakan', 'dipinjamkan', 'idle'])->default('digunakan');
+            $table->boolean('is_active')->default(true);
+
+            // Catatan tambahan
+            $table->text('keterangan')->nullable();
             
             $table->timestamps();
         });

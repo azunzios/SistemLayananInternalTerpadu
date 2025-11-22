@@ -163,6 +163,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackTo
         name: formData.name,
         nip: formData.nip,
         jabatan: formData.jabatan,
+        roles: ['pegawai'],
         role: 'pegawai', // Default role for self-registration
         unitKerja: formData.unitKerja,
         phone: formData.phone,

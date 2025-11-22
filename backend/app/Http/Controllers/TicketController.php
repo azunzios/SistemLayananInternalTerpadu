@@ -14,6 +14,7 @@ use App\Services\ZoomBookingService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
 class TicketController extends Controller
 {
@@ -77,16 +78,23 @@ class TicketController extends Controller
 
         // Role-based filtering
         $user = auth()->user();
+        $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles) &&
-                !in_array('teknisi', $userRoles)) {
-                // Pegawai can only see their own tickets
+            if ($scope === 'my') {
                 $query->where('user_id', $user->id);
-            } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                // Teknisi can only see assigned tickets
+            } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } else {
+                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                if (!in_array('admin_layanan', $userRoles) && 
+                    !in_array('super_admin', $userRoles) &&
+                    !in_array('teknisi', $userRoles)) {
+                    // Pegawai can only see their own tickets
+                    $query->where('user_id', $user->id);
+                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                    // Teknisi can only see assigned tickets
+                    $query->where('assigned_to', $user->id);
+                }
             }
         }
 
@@ -177,20 +185,27 @@ class TicketController extends Controller
 
         // Check if admin_view parameter is set (for admin ticket list - see all tickets)
         $adminView = $request->boolean('admin_view', false);
+        $scope = $request->get('scope');
 
         // Apply role-based filtering only if NOT admin view
         if (!$adminView) {
             $user = auth()->user();
             if ($user) {
-                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                if (!in_array('admin_layanan', $userRoles) && 
-                    !in_array('super_admin', $userRoles) &&
-                    !in_array('teknisi', $userRoles)) {
-                    // Pegawai can only see their own tickets
+                if ($scope === 'my') {
                     $query->where('user_id', $user->id);
-                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                    // Teknisi can only see assigned tickets
+                } elseif ($scope === 'assigned') {
                     $query->where('assigned_to', $user->id);
+                } else {
+                    $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                    if (!in_array('admin_layanan', $userRoles) && 
+                        !in_array('super_admin', $userRoles) &&
+                        !in_array('teknisi', $userRoles)) {
+                        // Pegawai can only see their own tickets
+                        $query->where('user_id', $user->id);
+                    } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                        // Teknisi can only see assigned tickets
+                        $query->where('assigned_to', $user->id);
+                    }
                 }
             }
         }
@@ -235,6 +250,20 @@ class TicketController extends Controller
      */
     public function store(Request $request)
     {
+        // Decode JSON strings if sent via multipart
+        if (is_string($request->form_data)) {
+            $decoded = json_decode($request->form_data, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $request->merge(['form_data' => $decoded]);
+            }
+        }
+        if (is_string($request->zoom_co_hosts)) {
+            $decoded = json_decode($request->zoom_co_hosts, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $request->merge(['zoom_co_hosts' => $decoded]);
+            }
+        }
+
         $validated = $request->validate([
             'type' => 'required|in:perbaikan,zoom_meeting',
             'category_id' => 'nullable|exists:categories,id',
@@ -258,6 +287,9 @@ class TicketController extends Controller
             'zoom_attachments.*' => 'file|max:' . env('MAX_ZOOM_ATTACHMENT_SIZE', 10240) . '|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png',
             // Dynamic form data
             'form_data' => 'nullable|array',
+            // Perbaikan attachments
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'file|max:2048|mimes:jpg,jpeg,png,pdf,doc,docx',
         ]);
 
         $user = auth()->user();
@@ -320,6 +352,26 @@ class TicketController extends Controller
             $ticket->asset_location = $validated['asset_location'] ?? null;
             $ticket->severity = $validated['severity'];
             $ticket->status = 'submitted';
+
+            // Handle file uploads (attachments)
+            $attachmentPaths = [];
+            if ($request->hasFile('attachments')) {
+                $basePath = env('TICKET_ATTACHMENTS_PATH', 'ticket_attachments');
+                foreach ($request->file('attachments') as $file) {
+                    $filename = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $path = $file->storeAs($basePath, $filename, 'public');
+                    $attachmentPaths[] = [
+                        'id' => (string) Str::uuid(),
+                        'name' => $file->getClientOriginalName(),
+                        'path' => $path,
+                        'size' => $file->getSize(),
+                        'type' => $file->getClientMimeType(),
+                        'url' => \Storage::disk('public')->url($path),
+                        'uploadedAt' => now()->toIso8601String(),
+                    ];
+                }
+            }
+            $ticket->attachments = $attachmentPaths;
         } else if ($validated['type'] === 'zoom_meeting') {
             // Validasi dan assign akun zoom otomatis
             $bookingService = new ZoomBookingService();
@@ -338,15 +390,18 @@ class TicketController extends Controller
             // Handle file uploads
             $attachmentPaths = [];
             if ($request->hasFile('zoom_attachments')) {
+                $basePath = env('ZOOM_ATTACHMENTS_PATH', 'zoom_attachments');
                 foreach ($request->file('zoom_attachments') as $file) {
                     $filename = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
-                    $path = $file->storeAs('', $filename, 'zoom_attachments');
+                    $path = $file->storeAs($basePath, $filename, 'public');
                     $attachmentPaths[] = [
+                        'id' => (string) Str::uuid(),
                         'name' => $file->getClientOriginalName(),
                         'path' => $path,
                         'size' => $file->getSize(),
                         'type' => $file->getClientMimeType(),
-                        'url' => asset('storage/' . env('ZOOM_ATTACHMENTS_PATH', 'zoom_attachments') . '/' . $filename),
+                        'url' => \Storage::disk('public')->url($path),
+                        'uploadedAt' => now()->toIso8601String(),
                     ];
                 }
             }
@@ -728,15 +783,22 @@ class TicketController extends Controller
         
         // Apply role-based filtering
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles) &&
-                !in_array('teknisi', $userRoles)) {
-                // Pegawai can only see their own tickets
+            $scope = $request->get('scope');
+            if ($scope === 'my') {
                 $query->where('user_id', $user->id);
-            } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                // Teknisi can only see assigned tickets
+            } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } else {
+                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                if (!in_array('admin_layanan', $userRoles) && 
+                    !in_array('super_admin', $userRoles) &&
+                    !in_array('teknisi', $userRoles)) {
+                    // Pegawai can only see their own tickets
+                    $query->where('user_id', $user->id);
+                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                    // Teknisi can only see assigned tickets
+                    $query->where('assigned_to', $user->id);
+                }
             }
         }
 
