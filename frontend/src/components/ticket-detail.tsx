@@ -150,33 +150,31 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const ticket = ticketDetail || tickets.find((t) => t.id === ticketId);
 
   // === COMPUTED VALUES (useMemo must be before conditional returns) ===
+  const [technicianStats, setTechnicianStats] = React.useState<Record<string, number>>({});
+
+  React.useEffect(() => {
+    const fetchTechnicianStats = async () => {
+      try {
+        const response = await api.get<any[]>('technician-stats');
+        const stats = response.reduce((acc, curr) => {
+          acc[curr.id] = curr.active_tickets;
+          return acc;
+        }, {} as Record<string, number>);
+        setTechnicianStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch technician stats:", error);
+      }
+    };
+
+    if (adminDialogs.showAssignDialog) {
+      fetchTechnicianStats();
+    }
+  }, [adminDialogs.showAssignDialog]);
+
   const technicians = useMemo(
     () => users.filter((u) => u.role === "teknisi"),
     [users]
   );
-
-  const technicianActiveTickets = useMemo(() => {
-    const activeStatuses: TicketStatus[] = [
-      "assigned",
-      "in_progress",
-      "on_hold",
-      "ditugaskan",
-      "diterima_teknisi",
-      "sedang_diagnosa",
-      "dalam_perbaikan",
-      "menunggu_sparepart",
-    ];
-    return technicians.reduce((acc, tech) => {
-      const activeCount = tickets.filter(
-        (t) =>
-          t.type === "perbaikan" &&
-          t.assignedTo === tech.id &&
-          activeStatuses.includes(t.status)
-      ).length;
-      acc[tech.id] = activeCount;
-      return acc;
-    }, {} as Record<string, number>);
-  }, [tickets, technicians]);
 
   // === EARLY RETURN IF TICKET NOT FOUND (AFTER ALL HOOKS) ===
   if (loadingDetail) {
@@ -213,42 +211,29 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     ticket.userId === currentUser.id &&
     ["resolved", "selesai_diperbaiki", "dalam_pengiriman"].includes(
       ticket.status as any
-    );
+    )
+    ;
 
   // === HANDLERS (KEPT INLINE) ===
-  const handleApprove = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        const newStatus: TicketStatus =
-          t.type === "perbaikan" ? "disetujui" : "approved";
-        return {
-          ...t,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "APPROVED",
-              actor: currentUser.name,
-              details: "Tiket disetujui",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Disetujui",
-      message: `Tiket ${ticket.ticketNumber} telah disetujui`,
-      type: "success",
-      read: false,
-    });
-    toast.success("Tiket berhasil disetujui");
-    adminDialogs.setShowApproveDialog(false);
+  const handleApprove = async () => {
+    // Jika tiket perbaikan, buka dialog assign teknisi
+    if (ticket.type === "perbaikan") {
+      adminDialogs.setShowApproveDialog(false);
+      adminDialogs.setShowAssignDialog(true);
+      return;
+    }
+
+    try {
+      await api.patch(`tickets/${ticketId}/approve`, {});
+
+      toast.success("Tiket berhasil disetujui");
+      adminDialogs.setShowApproveDialog(false);
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to approve ticket:", error);
+      const errorMsg = error?.body?.message || "Gagal menyetujui tiket";
+      toast.error(errorMsg);
+    }
   };
 
   const handleReject = async () => {
@@ -279,54 +264,27 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!adminDialogs.selectedTechnician) {
       toast.error("Pilih teknisi terlebih dahulu");
       return;
     }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "assigned" as TicketStatus,
-          assignedTo: adminDialogs.selectedTechnician,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "ASSIGNED",
-              actor: currentUser.name,
-              details: `Ditugaskan ke ${
-                users.find((u) => u.id === adminDialogs.selectedTechnician)
-                  ?.name
-              }`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: adminDialogs.selectedTechnician,
-      title: "Tiket Baru Ditugaskan",
-      message: `Anda ditugaskan untuk menangani tiket ${ticket.ticketNumber}`,
-      type: "info",
-      read: false,
-    });
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Sedang Ditangani",
-      message: `Tiket ${ticket.ticketNumber} sedang ditangani oleh teknisi`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Tiket berhasil ditugaskan");
-    adminDialogs.setShowAssignDialog(false);
-    adminDialogs.setSelectedTechnician("");
-    adminDialogs.setAssignNotes("");
+
+    try {
+      await api.patch(`tickets/${ticketId}/assign`, {
+        assigned_to: adminDialogs.selectedTechnician,
+      });
+
+      toast.success("Tiket berhasil ditugaskan");
+      adminDialogs.setShowAssignDialog(false);
+      adminDialogs.setSelectedTechnician("");
+      adminDialogs.setAssignNotes("");
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to assign ticket:", error);
+      const errorMsg = error?.body?.message || "Gagal menugaskan tiket";
+      toast.error(errorMsg);
+    }
   };
 
   const handleComplete = () => {
@@ -658,19 +616,19 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       spareparts:
         workOrderDialog.workOrderType === "sparepart"
           ? [
-              {
-                name: workOrderDialog.sparepartName,
-                quantity: 1,
-                unit: "unit",
-                remarks: workOrderDialog.sparepartDescription,
-              },
-            ]
+            {
+              name: workOrderDialog.sparepartName,
+              quantity: 1,
+              unit: "unit",
+              remarks: workOrderDialog.sparepartDescription,
+            },
+          ]
           : undefined,
       vendorInfo:
         workOrderDialog.workOrderType === "vendor"
           ? {
-              description: workOrderDialog.sparepartDescription,
-            }
+            description: workOrderDialog.sparepartDescription,
+          }
           : undefined,
     });
     const updatedTickets = tickets.map((t) => {
@@ -767,14 +725,20 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         currentUser={currentUser}
         canComplete={canComplete}
         onBack={onBack}
-        onShowCompleteDialog={() => {}}
+        onShowCompleteDialog={() => { }}
       />
 
       {/* Alerts */}
       <TicketDetailAlerts
         ticket={ticket}
         currentUser={currentUser}
-        onShowReviewDialog={() => adminDialogs.setShowApproveDialog(true)}
+        onShowReviewDialog={() => {
+          if (ticket.type === "perbaikan") {
+            adminDialogs.setShowAssignDialog(true);
+          } else {
+            adminDialogs.setShowApproveDialog(true);
+          }
+        }}
         onShowRejectDialog={() => adminDialogs.setShowRejectDialog(true)}
         onShowAssignDialog={() => adminDialogs.setShowAssignDialog(true)}
         onShowTeknisiAcceptDialog={() =>
@@ -816,10 +780,11 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       )}
 
       {/* Teknisi Workflow */}
+      {/* Teknisi Workflow */}
       {currentUser.role === "teknisi" &&
         ticket.type === "perbaikan" &&
         ticket.assignedTo === currentUser.id &&
-        (ticket.status as any) === "menunggu_sparepart" && (
+        ["assigned", "in_progress", "sedang_diagnosa", "dalam_perbaikan", "menunggu_sparepart"].includes(ticket.status as any) && (
           <TeknisiWorkflow
             ticket={ticket}
             currentUser={currentUser}
@@ -896,7 +861,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               <SelectContent>
                 {technicians.map((tech) => (
                   <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name} ({technicianActiveTickets[tech.id] || 0} aktif)
+                    {tech.name} ({technicianStats[tech.id] || 0} aktif)
                   </SelectItem>
                 ))}
               </SelectContent>

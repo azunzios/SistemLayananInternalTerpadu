@@ -81,7 +81,10 @@ class TicketController extends Controller
         $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
         if ($user) {
             if ($scope === 'my') {
-                $query->where('user_id', $user->id);
+                $query->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('assigned_to', $user->id);
+                });
             } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
             } else {
@@ -192,7 +195,10 @@ class TicketController extends Controller
             $user = auth()->user();
             if ($user) {
                 if ($scope === 'my') {
-                    $query->where('user_id', $user->id);
+                    $query->where(function($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                          ->orWhere('assigned_to', $user->id);
+                    });
                 } elseif ($scope === 'assigned') {
                     $query->where('assigned_to', $user->id);
                 } else {
@@ -243,6 +249,50 @@ class TicketController extends Controller
             'completed' => $completed,
             'rejected' => $rejected,
         ]);
+    }
+
+    /**
+     * Get technician statistics (active tickets count)
+     */
+    public function technicianStats()
+    {
+        // Get all users with role 'teknisi'
+        // Note: Assuming roles is a JSON column or we filter after retrieval if needed
+        // For better compatibility, we'll retrieve and filter if whereJsonContains isn't reliable on all DBs
+        // But whereJsonContains is standard in Laravel for JSON columns.
+        
+        $technicians = \App\Models\User::whereJsonContains('roles', 'teknisi')->get();
+        
+        // Fallback if roles is not JSON or empty result (e.g. stored as string)
+        if ($technicians->isEmpty()) {
+             $technicians = \App\Models\User::all()->filter(function ($user) {
+                $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
+                return is_array($roles) && in_array('teknisi', $roles);
+             });
+        }
+
+        $stats = $technicians->map(function ($tech) {
+            $activeCount = Ticket::where('assigned_to', $tech->id)
+                ->whereIn('status', [
+                    'assigned',
+                    'in_progress',
+                    'on_hold',
+                    'waiting_for_pegawai',
+                    'diterima_teknisi',
+                    'sedang_diagnosa',
+                    'dalam_perbaikan',
+                    'menunggu_sparepart'
+                ])
+                ->count();
+
+            return [
+                'id' => $tech->id,
+                'name' => $tech->name,
+                'active_tickets' => $activeCount
+            ];
+        })->values(); // Reset keys after filter if any
+
+        return response()->json($stats);
     }
 
     /**
@@ -497,6 +547,26 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Notification to assigned technician
+        \App\Models\Notification::create([
+            'user_id' => $validated['assigned_to'],
+            'title' => 'Tiket Baru Ditugaskan',
+            'message' => "Anda ditugaskan untuk menangani tiket {$ticket->ticket_number} ({$ticket->title})",
+            'type' => 'info',
+            'link' => "/tickets/{$ticket->id}",
+            'read' => false,
+        ]);
+
+        // Notification to user
+        \App\Models\Notification::create([
+            'user_id' => $ticket->user_id,
+            'title' => 'Tiket Sedang Ditangani',
+            'message' => "Tiket {$ticket->ticket_number} telah ditugaskan ke teknisi",
+            'type' => 'info',
+            'link' => "/tickets/{$ticket->id}",
+            'read' => false,
+        ]);
+
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
 
@@ -726,6 +796,49 @@ class TicketController extends Controller
         ]);
 
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+    }
+
+    /**
+     * Approve ticket (admin_layanan only)
+     * Changes status to 'assigned' for repair tickets
+     */
+    public function approve(Request $request, Ticket $ticket)
+    {
+        if (!$this->userHasRole(auth()->user(), 'admin_layanan')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($ticket->type === 'perbaikan') {
+            $oldStatus = $ticket->status;
+            $ticket->status = 'assigned';
+            $ticket->save();
+            $ticket->refresh();
+
+            // Create timeline
+            Timeline::logStatusChange($ticket->id, auth()->id(), $oldStatus, 'assigned');
+
+            // Audit log
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'TICKET_APPROVED',
+                'details' => "Ticket {$ticket->ticket_number} approved and status changed to assigned",
+                'ip_address' => request()->ip(),
+            ]);
+
+            // Notification to user
+            \App\Models\Notification::create([
+                'user_id' => $ticket->user_id,
+                'title' => 'Tiket Disetujui',
+                'message' => "Tiket {$ticket->ticket_number} telah disetujui dan sedang menunggu teknisi",
+                'type' => 'success',
+                'link' => "/tickets/{$ticket->id}",
+                'read' => false,
+            ]);
+
+            return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        }
+
+        return response()->json(['message' => 'Invalid ticket type for this action'], 400);
     }
 
     /**
