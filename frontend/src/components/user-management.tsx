@@ -158,7 +158,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       };
 
       const updated = await api.put<User>(`users/${selectedUser.id}`, payload);
-      const normalized: User = { ...selectedUser, ...updated, role: updated.role, roles: updated.roles };
+      const normalized: User = { 
+        ...selectedUser, 
+        ...updated, 
+        jabatan: updated.jabatan ?? selectedUser.jabatan, 
+        role: updated.role, 
+        roles: updated.roles 
+      };
       const updatedUsers = users.map(u => (u.id === selectedUser.id ? normalized : u));
       setUsers(updatedUsers);
 
@@ -218,19 +224,28 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   const handleDeleteUser = () => {
     if (!selectedUser) return;
 
-    const updatedUsers = users.filter(u => u.id !== selectedUser.id);
-    setUsers(updatedUsers);
-    saveUsers(updatedUsers);
-
-    addAuditLog({
-      userId: currentUser.id,
-      action: 'USER_DELETED',
-      details: `Deleted user ${selectedUser.email}`,
-    });
-
-    toast.success('User berhasil dihapus');
-    setShowDeleteDialog(false);
-    setSelectedUser(null);
+    api
+      .delete(`users/${selectedUser.id}`)
+      .then(() => {
+        // Refresh list from server to keep cache in sync
+        return getUsers().then(fetched => setUsers(fetched));
+      })
+      .then(() => {
+        addAuditLog({
+          userId: currentUser.id,
+          action: 'USER_DELETED',
+          details: `Deleted user ${selectedUser.email}`,
+        });
+        toast.success('User berhasil dihapus');
+      })
+      .catch(err => {
+        console.error('Failed to delete user', err);
+        toast.error('Gagal menghapus user');
+      })
+      .finally(() => {
+        setShowDeleteDialog(false);
+        setSelectedUser(null);
+      });
   };
 
   const toggleCreateRole = (role: UserRole) => {
@@ -295,6 +310,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       const created = await api.post<User>('users', payload);
       const newUser: User = {
         ...created,
+        jabatan: created.jabatan ?? '',
         role: created.role || created.roles?.[0] || 'pegawai',
         roles: created.roles || [created.role],
       };

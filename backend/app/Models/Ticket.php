@@ -44,6 +44,7 @@ class Ticket extends Model
         'zoom_rejection_reason',
         'zoom_account_id', // Reference to zoom_accounts.id
         'zoom_attachments', // File pendukung zoom
+        'attachments', // File lampiran perbaikan
         'form_data',
         'status',
     ];
@@ -51,6 +52,7 @@ class Ticket extends Model
     protected $casts = [
         'zoom_co_hosts' => 'array',
         'zoom_attachments' => 'array',
+        'attachments' => 'array',
         'form_data' => 'array',
         'repairable' => 'boolean',
         'zoom_date' => 'date',

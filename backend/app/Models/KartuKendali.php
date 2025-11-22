@@ -89,6 +89,6 @@ class KartuKendali extends Model
      */
     public function scopeActive($query)
     {
-        return $query->whereIn('condition', ['baru', 'baik', 'kurang_baik']);
+        return $query->whereIn('condition', ['baik', 'rusak_ringan']);
     }
 }

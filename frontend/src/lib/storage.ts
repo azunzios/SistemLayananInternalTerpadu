@@ -307,6 +307,7 @@ export const loginUser = async (email: string, password: string): Promise<{ acce
       email: String(raw.email ?? ''),
       name: String(raw.name ?? ''),
       nip: String(raw.nip ?? ''),
+      jabatan: String(raw.jabatan ?? ''),
       role: (roles[0] ?? 'pegawai') as any,
       roles: roles as any,
       unitKerja: String(raw.unitKerja ?? raw.unit_kerja ?? ''),
@@ -357,7 +358,11 @@ export const getCurrentUser = (): User | null => {
   try {
     const stored = sessionStorage.getItem('bps_current_user');
     if (stored) {
-      cache.currentUser = JSON.parse(stored) as User;
+      const parsed = JSON.parse(stored);
+      if (!parsed.jabatan) {
+        parsed.jabatan = '';
+      }
+      cache.currentUser = parsed as User;
       return cache.currentUser;
     }
   } catch {

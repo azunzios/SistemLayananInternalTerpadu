@@ -43,6 +43,8 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import { RoleSwitcherDialog } from './role-switcher-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { API_BASE_URL } from '../lib/api';
 
 interface HeaderProps {
   currentUser: UserType;
@@ -64,6 +66,15 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
   const activeRole = getActiveRole(currentUser.id) || currentUser.role;
   const availableRoles = currentUser.roles || [currentUser.role];
   const hasMultipleRoles = availableRoles.length > 1;
+
+  const avatarUrl = React.useMemo(() => {
+    if (!currentUser.avatar) return null;
+    if (currentUser.avatar.startsWith('http')) return currentUser.avatar;
+    const rawPath = currentUser.avatar.replace(/^\/?/, '');
+    const cleanPath = rawPath.startsWith('storage/') ? rawPath : `storage/${rawPath}`;
+    const fileBase = (API_BASE_URL || '').replace(/\/api$/i, '');
+    return fileBase ? `${fileBase}/${cleanPath}` : `/${cleanPath}`;
+  }, [currentUser.avatar]);
 
   const handleMarkAsRead = (notificationId: string) => {
     const allNotifications = getNotifications(currentUser.id);
@@ -264,9 +275,12 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 h-9 px-2.5 hover:bg-transparent">
-                  <div className="h-7 w-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm">
-                    {currentUser.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar className="h-8 w-8">
+                    {avatarUrl && <AvatarImage src={avatarUrl} alt={currentUser.name} />}
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <ChevronDown className="h-4 w-4 text-gray-500" />
                 </Button>
               </DropdownMenuTrigger>

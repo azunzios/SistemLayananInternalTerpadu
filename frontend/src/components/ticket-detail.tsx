@@ -11,6 +11,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription } from './ui/alert';
 import { TicketProgressTracker } from './ticket-progress-tracker';
+import { TicketProgressTrackerZoom } from './ticket-progress-tracker-zoom';
 import { TeknisiWorkflow } from './teknisi-workflow-new';
 import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
 import {
@@ -730,9 +731,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       />
 
       {/* Progress Tracker */}
-      {(currentUser.id === ticket.userId || currentUser.role === 'admin_layanan') && ticket.type === 'perbaikan' && (
-        <TicketProgressTracker ticket={ticket} />
-      )}
+      {ticket.type === 'perbaikan' && <TicketProgressTracker ticket={ticket} />}
+      {ticket.type === 'zoom_meeting' && <TicketProgressTrackerZoom ticket={ticket} />}
 
       {/* Teknisi Workflow */}
       {currentUser.role === 'teknisi' && ticket.type === 'perbaikan' && ticket.assignedTo === currentUser.id && (ticket.status as any) === 'menunggu_sparepart' && (
