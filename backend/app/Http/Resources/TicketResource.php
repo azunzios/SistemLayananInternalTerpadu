@@ -48,6 +48,7 @@ class TicketResource extends JsonResource
             
             // Status & Timeline
             'status' => $this->status,
+            'rejectionReason' => $this->rejection_reason, // Alasan penolakan untuk semua tipe tiket
             'timeline' => TimelineResource::collection($this->whenLoaded('timeline')),
             
             // Comments

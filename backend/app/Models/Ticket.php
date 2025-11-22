@@ -30,6 +30,7 @@ class Ticket extends Model
         'final_problem_type',
         'repairable',
         'unrepairable_reason',
+        'rejection_reason',
         'work_order_id',
         'zoom_date',
         'zoom_start_time',
