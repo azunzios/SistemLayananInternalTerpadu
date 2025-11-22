@@ -149,6 +149,28 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
             </div>
 
+            {/* Tampilkan alasan penolakan jika tiket ditolak */}
+            {ticket.status === 'rejected' && ticket.rejectionReason && (
+              <>
+                <Separator />
+                <div className="border border-red-200 bg-red-50 p-3 rounded-lg">
+                  <h4 className="text-sm font-semibold text-red-900 mb-2">Alasan Penolakan</h4>
+                  <p className="text-sm text-red-700 whitespace-pre-wrap">{ticket.rejectionReason}</p>
+                </div>
+              </>
+            )}
+
+            {/* Tampilkan alasan unrepairable jika ada */}
+            {ticket.type === 'perbaikan' && ticket.status === 'closed_unrepairable' && (ticket as any).unrepairableReason && (
+              <>
+                <Separator />
+                <div className="border border-orange-200 bg-orange-50 p-3 rounded-lg">
+                  <h4 className="text-sm font-semibold text-orange-900 mb-2">Tidak Dapat Diperbaiki</h4>
+                  <p className="text-sm text-orange-700 whitespace-pre-wrap">{(ticket as any).unrepairableReason}</p>
+                </div>
+              </>
+            )}
+
             {attachmentList.length > 0 && (
               <div>
                 <h4 className="text-sm mb-2">File Terlampir</h4>

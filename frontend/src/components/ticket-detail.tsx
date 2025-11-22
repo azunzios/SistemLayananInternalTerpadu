@@ -200,42 +200,31 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     adminDialogs.setShowApproveDialog(false);
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!adminDialogs.rejectReason.trim()) {
       toast.error('Alasan penolakan harus diisi');
       return;
     }
-    const updatedTickets = tickets.map(t => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: 'ditolak' as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: 'REJECTED',
-              actor: currentUser.name,
-              details: `Tiket ditolak: ${adminDialogs.rejectReason}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: 'Tiket Ditolak',
-      message: `Tiket ${ticket.ticketNumber} ditolak: ${adminDialogs.rejectReason}`,
-      type: 'error',
-      read: false,
-    });
-    toast.success('Tiket berhasil ditolak');
-    adminDialogs.setShowRejectDialog(false);
-    adminDialogs.setRejectReason('');
+
+    try {
+      // Gunakan endpoint yang sesuai berdasarkan tipe tiket
+      const endpoint = ticket.type === 'zoom_meeting' 
+        ? `tickets/${ticketId}/reject-zoom`
+        : `tickets/${ticketId}/reject`;
+
+      await api.patch(endpoint, {
+        reason: adminDialogs.rejectReason,
+      });
+
+      toast.success('Tiket berhasil ditolak');
+      adminDialogs.setShowRejectDialog(false);
+      adminDialogs.setRejectReason('');
+      setRefreshKey(prev => prev + 1);
+    } catch (error: any) {
+      console.error('Failed to reject ticket:', error);
+      const errorMsg = error?.body?.message || 'Gagal menolak tiket';
+      toast.error(errorMsg);
+    }
   };
 
   const handleAssign = () => {

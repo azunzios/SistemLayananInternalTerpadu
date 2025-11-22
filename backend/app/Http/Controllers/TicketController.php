@@ -667,6 +667,68 @@ class TicketController extends Controller
     }
 
     /**
+     * Reject perbaikan ticket (admin_layanan only)
+     */
+    public function rejectTicket(Request $request, Ticket $ticket)
+    {
+        if (!$this->userHasRole(auth()->user(), 'admin_layanan')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Validasi status - hanya tiket submitted yang bisa ditolak
+        if (!in_array($ticket->status, ['submitted', 'pending_review'])) {
+            return response()->json([
+                'message' => 'Only submitted or pending review tickets can be rejected'
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $oldStatus = $ticket->status;
+        
+        // Simpan alasan penolakan di rejection_reason untuk semua tipe tiket
+        $ticket->rejection_reason = $validated['reason'];
+        $ticket->status = 'rejected';
+        $ticket->save();
+        $ticket->refresh();
+
+        // Create timeline
+        Timeline::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => auth()->id(),
+            'action' => 'ticket_rejected',
+            'details' => "Tiket ditolak oleh admin: {$validated['reason']}",
+            'metadata' => [
+                'old_status' => $oldStatus,
+                'new_status' => 'rejected',
+                'rejection_reason' => $validated['reason'],
+            ],
+        ]);
+
+        // Audit log
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'TICKET_REJECTED',
+            'details' => "Ticket {$ticket->ticket_number} ({$ticket->type}) rejected: {$validated['reason']}",
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Notifikasi ke user yang mengajukan
+        \App\Models\Notification::create([
+            'user_id' => $ticket->user_id,
+            'title' => 'Tiket Ditolak',
+            'message' => "Tiket {$ticket->ticket_number} ditolak: {$validated['reason']}",
+            'type' => 'error',
+            'link' => "/tickets/{$ticket->id}",
+            'read' => false,
+        ]);
+
+        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+    }
+
+    /**
      * Helper method to check ticket access
      */
     private function authorizeTicketAccess(Ticket $ticket)

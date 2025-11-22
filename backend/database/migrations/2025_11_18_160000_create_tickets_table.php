@@ -68,7 +68,7 @@ return new class extends Migration
                 'closed_unrepairable', // Tidak dapat diperbaiki (perbaikan only)
                 'pending_review',      // Menunggu review (zoom only)
                 'approved',            // Disetujui (zoom only)
-                'rejected',            // Ditolak (zoom only)
+                'rejected',            // Ditolak (zoom & perbaikan)
                 'cancelled',           // Dibatalkan (zoom only)
                 'completed',           // Acara zoom selesai (zoom only)
             ])->default('submitted');

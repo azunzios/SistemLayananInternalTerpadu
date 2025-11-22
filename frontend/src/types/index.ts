@@ -12,7 +12,8 @@ export type PerbaikanStatus =
   | 'resolved'         // Selesai diperbaiki (oleh teknisi)
   | 'waiting_for_user' // Menunggu konfirmasi user
   | 'closed'           // Selesai & dikonfirmasi
-  | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
+  | 'closed_unrepairable' // Tidak dapat diperbaiki sama sekali
+  | 'rejected';        // Ditolak oleh admin layanan
 
 export type ZoomStatus = 
   | 'pending_review'   // Menggantikan 'menunggu_review' & 'pending_approval'
@@ -98,6 +99,9 @@ interface BaseTicket {
   assignedTo?: string; // ID Teknisi (Perbaikan) or ID Admin (Zoom)
   createdAt: string;
   updatedAt: string;
+  
+  // Alasan penolakan (untuk semua tipe tiket)
+  rejectionReason?: string;
   
   // Dibuat non-optional, tiket baru memiliki array kosong
   attachments: Attachment[];
