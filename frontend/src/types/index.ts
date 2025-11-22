@@ -15,11 +15,11 @@ export type PerbaikanStatus =
   | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
 
 export type ZoomStatus = 
-  | 'pending_review'   // Menggantikan 'menunggu_review' & 'pending_approval'
+  | 'pending_review'   // Menggantikan 'menunggu_review' 
   | 'approved'         // Disetujui
   | 'rejected'         // Ditolak
   | 'cancelled'        // Menggantikan 'dibatalkan'
-  | 'completed';       // Acara zoom telah selesai
+  | 'completed';       // Acara zoom telah selesai, otomatis oleh sistem -> belum di implementasikan, apabila sudah melebih waktu pengajuan
 
 export type SeverityLevel = 'low' | 'normal' | 'high' | 'critical';
 
