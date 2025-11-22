@@ -3,7 +3,7 @@ import { LoginPage } from './components/login-page';
 import { MainLayout } from './components/main-layout';
 import { Toaster } from './components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner'
-import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce } from './lib/storage';
+import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce, resetAllCaches } from './lib/storage';
 import type { User } from './types';
 
 const App: React.FC = () => {
@@ -30,12 +30,14 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (user: User) => {
+    resetAllCaches();
     setCurrentUser(user);
     // Load API data after successful login
     loadDataFromApiOnce(user.role ?? 'pegawai').catch(() => {});
   };
 
   const handleLogout = () => {
+    resetAllCaches();
     setCurrentUser(null);
     saveCurrentUser(null);
     clearRememberToken();

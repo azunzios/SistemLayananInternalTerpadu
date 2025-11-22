@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { api } from '../lib/api';
-import type { User, Ticket } from '../types';
+import type { User, Ticket, UserRole } from '../types';
 
 interface TicketListProps {
   currentUser: User;
+  activeRole: UserRole;
   viewMode: 'all' | 'my-tickets';
   onViewTicket: (ticketId: string) => void;
 }
@@ -45,7 +46,7 @@ interface PaginationMeta {
   has_more: boolean;
 }
 
-export const TicketList: React.FC<TicketListProps> = ({ onViewTicket }) => {
+export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUser, activeRole }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -62,20 +63,34 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket }) => {
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   
+  // Role effective mengikuti activeRole (bukan sekadar daftar roles)
+  const effectiveRole = activeRole || currentUser.role;
+  const isAdmin = effectiveRole === 'admin_layanan' || effectiveRole === 'super_admin';
+  const isTeknisiOnly = effectiveRole === 'teknisi';
+  const isPegawaiOnly = !isAdmin && !isTeknisiOnly;
+
   // Load statistics on mount and when filter type changes
   useEffect(() => {
     loadStats();
-  }, [filterType]);
+  }, [filterType, effectiveRole]);
 
   // Load tickets when filters change
   useEffect(() => {
     loadTickets(1);
-  }, [filterStatus, searchTerm, filterType]);
+  }, [filterStatus, searchTerm, filterType, effectiveRole]);
 
   const loadStats = async () => {
     setStatsLoading(true);
     try {
-      const query = ['admin_view=true']; // Admin view - see all tickets
+      const query: string[] = [];
+      // Admin view hanya untuk super_admin/admin_layanan
+      if (isAdmin) {
+        query.push('admin_view=true');
+      } else if (isPegawaiOnly) {
+        query.push('scope=my');
+      } else if (isTeknisiOnly) {
+        query.push('scope=assigned');
+      }
       if (filterType !== 'all') {
         query.push(`type=${filterType}`);
       }
@@ -120,11 +135,25 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket }) => {
         query.push(`status=${filterStatus}`);
       }
 
+      // Scope according to active role to force backend filtering even for multi-role users
+      if (isPegawaiOnly) {
+        query.push('scope=my');
+      } else if (isTeknisiOnly) {
+        query.push('scope=assigned');
+      }
+
       const url = `tickets?${query.join('&')}`;
       const res: any = await api.get(url);
       
-      const data = Array.isArray(res) ? res : (res?.data || []);
+      let data = Array.isArray(res) ? res : (res?.data || []);
       const responseMeta = res?.meta || res;
+
+      // Safety: filter di frontend sesuai activeRole agar pegawai tidak melihat tiket orang lain
+      if (isPegawaiOnly) {
+        data = data.filter((t: any) => (t.userId || t.user_id) === currentUser.id);
+      } else if (isTeknisiOnly) {
+        data = data.filter((t: any) => (t.assignedTo || t.assigned_to) === currentUser.id);
+      }
       
       console.log('📊 Ticket List - Loaded tickets:', {
         count: data.length,
@@ -134,12 +163,12 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket }) => {
       
       setTickets(data);
       setPagination({
-        total: responseMeta.total || 0,
+        total: (isPegawaiOnly || isTeknisiOnly) ? data.length : (responseMeta.total || data.length),
         per_page: responseMeta.per_page || 15,
         current_page: responseMeta.current_page || page,
         last_page: responseMeta.last_page || 1,
         from: responseMeta.from || ((page - 1) * 15) + 1,
-        to: responseMeta.to || Math.min(page * 15, responseMeta.total || 0),
+        to: responseMeta.to || Math.min(page * 15, responseMeta.total || data.length),
         has_more: responseMeta.has_more !== undefined ? responseMeta.has_more : responseMeta.current_page < responseMeta.last_page,
       });
     } catch (err) {

@@ -47,6 +47,27 @@ const ticketsMeta: TicketsMeta = {
   pagesLoaded: new Set<number>(),
 };
 
+// Reset all caches (useful on logout/login user switch)
+export function resetAllCaches() {
+  cache.currentUser = null;
+  cache.activeRole = new Map<string, string>();
+  cache.tickets = [];
+  cache.categories = [];
+  cache.users = [];
+  cache.sparepartRequests = [];
+  cache.auditLogs = [];
+  cache.notifications = [];
+  cache.workOrders = [];
+  cache.kartuKendali = [];
+  ticketsMeta.total = 0;
+  ticketsMeta.currentPage = 1;
+  ticketsMeta.lastPage = 1;
+  ticketsMeta.pagesLoaded.clear();
+  (Object.keys(datasetLoaded) as Array<keyof typeof datasetLoaded>).forEach(key => {
+    datasetLoaded[key] = false;
+  });
+}
+
 export const getTicketsMeta = (): TicketsMeta => ({
   total: ticketsMeta.total,
   perPage: ticketsMeta.perPage,
@@ -332,7 +353,17 @@ export const saveUsers = async (users: User[]) => {
 };
 
 export const getCurrentUser = (): User | null => {
-  return cache.currentUser;
+  if (cache.currentUser) return cache.currentUser;
+  try {
+    const stored = sessionStorage.getItem('bps_current_user');
+    if (stored) {
+      cache.currentUser = JSON.parse(stored) as User;
+      return cache.currentUser;
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return null;
 };
 
 export const setCurrentUser = (user: User | null) => {
@@ -463,12 +494,13 @@ export const saveNotifications = async (notifications: Notification[]) => {
 };
 
 export const addNotification = async (notification: Omit<Notification, 'id' | 'createdAt'>) => {
+  const safeCache = Array.isArray(cache.notifications) ? cache.notifications : [];
   const newNotification: Notification = {
     ...notification,
     id: Date.now().toString(),
     createdAt: new Date().toISOString(),
   } as any;
-  cache.notifications = [...cache.notifications, newNotification];
+  cache.notifications = [...safeCache, newNotification];
   datasetLoaded.notifications = true;
   try {
     await api.post('notifications', newNotification);
@@ -544,6 +576,7 @@ export const logoutUser = async (): Promise<void> => {
     setCurrentUser(null);
     sessionStorage.removeItem('auth_token');
     sessionStorage.removeItem('token_type');
+    resetAllCaches();
   }
 };
 

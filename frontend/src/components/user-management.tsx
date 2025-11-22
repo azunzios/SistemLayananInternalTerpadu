@@ -41,7 +41,7 @@ import { Switch } from './ui/switch';
 import { Users, Search, Edit, Trash2, Plus, Shield, UserCheck, UserX } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { getUsers, getUsersSync, saveUsers, addAuditLog, addNotification } from '../lib/storage';
+import { getUsers, getUsersSync, addAuditLog, addNotification, api } from '../lib/storage';
 import type { User, UserRole } from '../types';
 
 interface UserManagementProps {
@@ -88,7 +88,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     nip: '',
     jabatan: '',
     email: '',
-    role: 'pegawai' as UserRole,
+    roles: ['pegawai'] as UserRole[],
     unitKerja: '',
     phone: '',
     isActive: true,
@@ -99,19 +99,27 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     jabatan: '',
     email: '',
     password: '',
-    role: 'pegawai' as UserRole,
+    roles: ['pegawai'] as UserRole[],
     unitKerja: '',
     phone: '',
   });
+  const roleOptions: { value: UserRole; label: string }[] = [
+    { value: 'super_admin', label: 'Super Admin' },
+    { value: 'admin_layanan', label: 'Admin Layanan' },
+    { value: 'admin_penyedia', label: 'Admin Penyedia' },
+    { value: 'teknisi', label: 'Teknisi' },
+    { value: 'pegawai', label: 'Pegawai' },
+  ];
 
   // Filter users
   const filteredUsers = users.filter(user => {
+    const primaryRole = user.role || user.roles?.[0] || 'pegawai';
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.unitKerja.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const matchesRole = filterRole === 'all' || primaryRole === filterRole || (user.roles ?? []).includes(filterRole as UserRole);
     const matchesStatus = filterStatus === 'all' || 
       (filterStatus === 'active' && user.isActive) ||
       (filterStatus === 'inactive' && !user.isActive);
@@ -126,7 +134,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       nip: user.nip,
       jabatan: user.jabatan,
       email: user.email,
-      role: user.role,
+      roles: user.roles ?? [user.role],
       unitKerja: user.unitKerja,
       phone: user.phone,
       isActive: user.isActive,
@@ -134,60 +142,77 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     setShowEditDialog(true);
   };
 
-  const handleEditUser = () => {
+  const handleEditUser = async () => {
     if (!selectedUser) return;
 
-    const updatedUsers = users.map(u =>
-      u.id === selectedUser.id
-        ? {
-            ...u,
-            ...editFormData,
-          }
-        : u
-    );
+    try {
+      const payload: any = {
+        name: editFormData.name,
+        nip: editFormData.nip,
+        jabatan: editFormData.jabatan,
+        email: editFormData.email,
+        unit_kerja: editFormData.unitKerja,
+        phone: editFormData.phone,
+        roles: editFormData.roles,
+        is_active: editFormData.isActive,
+      };
 
-    setUsers(updatedUsers);
-    saveUsers(updatedUsers);
+      const updated = await api.put<User>(`users/${selectedUser.id}`, payload);
+      const normalized: User = { ...selectedUser, ...updated, role: updated.role, roles: updated.roles };
+      const updatedUsers = users.map(u => (u.id === selectedUser.id ? normalized : u));
+      setUsers(updatedUsers);
 
-    addAuditLog({
-      userId: currentUser.id,
-      action: 'USER_UPDATED',
-      details: `Updated user ${selectedUser.email}`,
-    });
-
-    if (selectedUser.id !== currentUser.id) {
-      addNotification({
-        userId: selectedUser.id,
-        title: 'Profil Diperbarui',
-        message: 'Profil Anda telah diperbarui oleh administrator',
-        type: 'info',
-        read: false,
+      addAuditLog({
+        userId: currentUser.id,
+        action: 'USER_UPDATED',
+        details: `Updated user ${selectedUser.email}`,
       });
-    }
 
-    toast.success('User berhasil diperbarui');
-    setShowEditDialog(false);
-    setSelectedUser(null);
+      if (selectedUser.id !== currentUser.id) {
+        addNotification({
+          userId: selectedUser.id,
+          title: 'Profil Diperbarui',
+          message: 'Profil Anda telah diperbarui oleh administrator',
+          type: 'info',
+          read: false,
+        });
+      }
+
+      toast.success('User berhasil diperbarui');
+      setShowEditDialog(false);
+      setSelectedUser(null);
+    } catch (err: any) {
+      console.error('Failed to update user', err);
+      toast.error('Gagal memperbarui user');
+    }
   };
 
   const handleToggleStatus = (userId: string) => {
-    const updatedUsers = users.map(u =>
-      u.id === userId ? { ...u, isActive: !u.isActive } : u
-    );
-
-    setUsers(updatedUsers);
-    saveUsers(updatedUsers);
-
     const user = users.find(u => u.id === userId);
-    if (user) {
-      addAuditLog({
-        userId: currentUser.id,
-        action: user.isActive ? 'USER_DEACTIVATED' : 'USER_ACTIVATED',
-        details: `${user.isActive ? 'Deactivated' : 'Activated'} user ${user.email}`,
-      });
+    if (!user) return;
 
-      toast.success(`User ${user.isActive ? 'dinonaktifkan' : 'diaktifkan'}`);
-    }
+    const newStatus = !user.isActive;
+
+    // Optimistic UI update
+    const updatedUsers = users.map(u => (u.id === userId ? { ...u, isActive: newStatus } : u));
+    setUsers(updatedUsers);
+
+    api
+      .put(`users/${userId}`, { is_active: newStatus, roles: user.roles || [user.role] })
+      .then(() => {
+        addAuditLog({
+          userId: currentUser.id,
+          action: newStatus ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+          details: `${newStatus ? 'Activated' : 'Deactivated'} user ${user.email}`,
+        });
+        toast.success(`User ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`);
+      })
+      .catch(err => {
+        console.error('Failed to toggle status', err);
+        // revert
+        setUsers(users);
+        toast.error('Gagal mengubah status user');
+      });
   };
 
   const handleDeleteUser = () => {
@@ -208,7 +233,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     setSelectedUser(null);
   };
 
-  const handleCreateUser = () => {
+  const toggleCreateRole = (role: UserRole) => {
+    setCreateFormData(prev => {
+      const exists = prev.roles.includes(role);
+      const roles = exists ? prev.roles.filter(r => r !== role) : [...prev.roles, role];
+      return { ...prev, roles };
+    });
+  };
+
+  const toggleEditRole = (role: UserRole) => {
+    setEditFormData(prev => {
+      const exists = prev.roles.includes(role);
+      const roles = exists ? prev.roles.filter(r => r !== role) : [...prev.roles, role];
+      return { ...prev, roles };
+    });
+  };
+
+  const handleCreateUser = async () => {
     // Validate
     if (!createFormData.name || !createFormData.nip || !createFormData.jabatan || !createFormData.email || !createFormData.password) {
       toast.error('Semua field harus diisi');
@@ -233,53 +274,63 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       return;
     }
 
-    // Create new user
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      name: createFormData.name,
-      nip: createFormData.nip,
-      jabatan: createFormData.jabatan,
-      email: createFormData.email.toLowerCase(),
-      password: createFormData.password,
-      role: createFormData.role,
-      unitKerja: createFormData.unitKerja,
-      phone: createFormData.phone,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: undefined,
-      failedLoginAttempts: 0,
-    };
+    if (createFormData.roles.length === 0) {
+      toast.error('Pilih minimal satu role');
+      return;
+    }
 
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    saveUsers(updatedUsers);
+    try {
+      const payload = {
+        name: createFormData.name,
+        nip: createFormData.nip,
+        jabatan: createFormData.jabatan,
+        email: createFormData.email.toLowerCase(),
+        password: createFormData.password,
+        unit_kerja: createFormData.unitKerja,
+        phone: createFormData.phone,
+        roles: createFormData.roles,
+        is_active: true,
+      };
 
-    addAuditLog({
-      userId: currentUser.id,
-      action: 'USER_CREATED',
-      details: `Created new user ${newUser.email} with role ${newUser.role}`,
-    });
+      const created = await api.post<User>('users', payload);
+      const newUser: User = {
+        ...created,
+        role: created.role || created.roles?.[0] || 'pegawai',
+        roles: created.roles || [created.role],
+      };
 
-    addNotification({
-      userId: newUser.id,
-      title: 'Akun Dibuat',
-      message: `Selamat datang di Sistem Layanan Internal BPS NTB! Akun Anda telah dibuat oleh administrator.`,
-      type: 'info',
-      read: false,
-    });
+      setUsers([...users, newUser]);
 
-    toast.success('User baru berhasil dibuat');
-    setShowCreateDialog(false);
-    setCreateFormData({
-      name: '',
-      nip: '',
-      jabatan: '',
-      email: '',
-      password: '',
-      role: 'pegawai',
-      unitKerja: '',
-      phone: '',
-    });
+      addAuditLog({
+        userId: currentUser.id,
+        action: 'USER_CREATED',
+        details: `Created new user ${newUser.email} with roles ${newUser.roles.join(', ')}`,
+      });
+
+      addNotification({
+        userId: newUser.id,
+        title: 'Akun Dibuat',
+        message: `Selamat datang di Sistem Layanan Internal BPS NTB! Akun Anda telah dibuat oleh administrator.`,
+        type: 'info',
+        read: false,
+      });
+
+      toast.success('User baru berhasil dibuat');
+      setShowCreateDialog(false);
+      setCreateFormData({
+        name: '',
+        nip: '',
+        jabatan: '',
+        email: '',
+        password: '',
+        roles: ['pegawai'],
+        unitKerja: '',
+        phone: '',
+      });
+    } catch (err: any) {
+      console.error('Failed to create user', err);
+      toast.error('Gagal membuat user');
+    }
   };
 
   const getRoleBadge = (role: UserRole) => {
@@ -292,6 +343,9 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     };
 
     const roleConfig = config[role];
+    if (!roleConfig) {
+      return <Badge variant="outline">{role || 'Unknown'}</Badge>;
+    }
     return <Badge variant={roleConfig.variant}>{roleConfig.label}</Badge>;
   };
 
@@ -420,7 +474,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{user.email}</TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell className="space-y-1">
+                      {Array.isArray(user.roles) && user.roles.length > 0
+                        ? user.roles.map(r => <div key={`${user.id}-${r}`}>{getRoleBadge(r)}</div>)
+                        : getRoleBadge(user.role)}
+                    </TableCell>
                     <TableCell className="text-sm">{user.unitKerja}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -537,24 +595,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
             </div>
 
             <div className="space-y-2">
-              <Label>Role</Label>
-              <Select
-                value={createFormData.role}
-                onValueChange={(value: UserRole) =>
-                  setCreateFormData({ ...createFormData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pegawai">Pegawai</SelectItem>
-                  <SelectItem value="teknisi">Teknisi</SelectItem>
-                  <SelectItem value="admin_penyedia">Admin Penyedia</SelectItem>
-                  <SelectItem value="admin_layanan">Admin Layanan</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Roles (pilih satu atau lebih)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {roleOptions.map(opt => {
+                  const checked = createFormData.roles.includes(opt.value);
+                  return (
+                    <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCreateRole(opt.value)}
+                        className="h-4 w-4"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -632,24 +689,23 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
 
             {currentUser.role === 'super_admin' && (
               <div className="space-y-2">
-                <Label>Role</Label>
-                <Select
-                  value={editFormData.role}
-                  onValueChange={(value: UserRole) =>
-                    setEditFormData({ ...editFormData, role: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pegawai">Pegawai</SelectItem>
-                    <SelectItem value="teknisi">Teknisi</SelectItem>
-                    <SelectItem value="admin_penyedia">Admin Penyedia</SelectItem>
-                    <SelectItem value="admin_layanan">Admin Layanan</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Roles (pilih satu atau lebih)</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {roleOptions.map(opt => {
+                    const checked = editFormData.roles.includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleEditRole(opt.value)}
+                          className="h-4 w-4"
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

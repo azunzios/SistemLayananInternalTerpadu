@@ -77,16 +77,23 @@ class TicketController extends Controller
 
         // Role-based filtering
         $user = auth()->user();
+        $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles) &&
-                !in_array('teknisi', $userRoles)) {
-                // Pegawai can only see their own tickets
+            if ($scope === 'my') {
                 $query->where('user_id', $user->id);
-            } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                // Teknisi can only see assigned tickets
+            } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } else {
+                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                if (!in_array('admin_layanan', $userRoles) && 
+                    !in_array('super_admin', $userRoles) &&
+                    !in_array('teknisi', $userRoles)) {
+                    // Pegawai can only see their own tickets
+                    $query->where('user_id', $user->id);
+                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                    // Teknisi can only see assigned tickets
+                    $query->where('assigned_to', $user->id);
+                }
             }
         }
 
@@ -177,20 +184,27 @@ class TicketController extends Controller
 
         // Check if admin_view parameter is set (for admin ticket list - see all tickets)
         $adminView = $request->boolean('admin_view', false);
+        $scope = $request->get('scope');
 
         // Apply role-based filtering only if NOT admin view
         if (!$adminView) {
             $user = auth()->user();
             if ($user) {
-                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                if (!in_array('admin_layanan', $userRoles) && 
-                    !in_array('super_admin', $userRoles) &&
-                    !in_array('teknisi', $userRoles)) {
-                    // Pegawai can only see their own tickets
+                if ($scope === 'my') {
                     $query->where('user_id', $user->id);
-                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                    // Teknisi can only see assigned tickets
+                } elseif ($scope === 'assigned') {
                     $query->where('assigned_to', $user->id);
+                } else {
+                    $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                    if (!in_array('admin_layanan', $userRoles) && 
+                        !in_array('super_admin', $userRoles) &&
+                        !in_array('teknisi', $userRoles)) {
+                        // Pegawai can only see their own tickets
+                        $query->where('user_id', $user->id);
+                    } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                        // Teknisi can only see assigned tickets
+                        $query->where('assigned_to', $user->id);
+                    }
                 }
             }
         }
@@ -728,15 +742,22 @@ class TicketController extends Controller
         
         // Apply role-based filtering
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles) &&
-                !in_array('teknisi', $userRoles)) {
-                // Pegawai can only see their own tickets
+            $scope = $request->get('scope');
+            if ($scope === 'my') {
                 $query->where('user_id', $user->id);
-            } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
-                // Teknisi can only see assigned tickets
+            } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } else {
+                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                if (!in_array('admin_layanan', $userRoles) && 
+                    !in_array('super_admin', $userRoles) &&
+                    !in_array('teknisi', $userRoles)) {
+                    // Pegawai can only see their own tickets
+                    $query->where('user_id', $user->id);
+                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                    // Teknisi can only see assigned tickets
+                    $query->where('assigned_to', $user->id);
+                }
             }
         }
 

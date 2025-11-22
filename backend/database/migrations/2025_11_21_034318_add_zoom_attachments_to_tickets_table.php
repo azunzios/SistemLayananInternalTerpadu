@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tickets', function (Blueprint $table) {
-            $table->json('zoom_attachments')->nullable()->after('zoom_rejection_reason');
+            // Column already exists in base tickets migration; add only if missing to avoid duplicate error
+            if (!Schema::hasColumn('tickets', 'zoom_attachments')) {
+                $table->json('zoom_attachments')->nullable()->after('zoom_rejection_reason');
+            }
         });
     }
 
@@ -22,7 +25,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tickets', function (Blueprint $table) {
-            $table->dropColumn('zoom_attachments');
+            if (Schema::hasColumn('tickets', 'zoom_attachments')) {
+                $table->dropColumn('zoom_attachments');
+            }
         });
     }
 };

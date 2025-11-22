@@ -275,5 +275,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed Assets
         $this->call(AssetSeeder::class);
+
+        // Seed Zoom accounts for booking management
+        $this->call(ZoomAccountSeeder::class);
     }
 }

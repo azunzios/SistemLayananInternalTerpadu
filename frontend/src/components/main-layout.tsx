@@ -96,7 +96,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   };
 
   const handleRoleSwitch = () => {
-    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    const activeRole = (getActiveRole(currentUser.id) || currentUser.role) as any;
     loadDataFromApiOnce(activeRole).catch(err => {
       console.warn('⚠️ Failed to load datasets for active role', err);
     });
@@ -158,6 +158,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
         return (
           <TicketList
             currentUser={currentUser}
+            activeRole={activeRole as any}
             viewMode="all"
             onViewTicket={handleViewTicketDetail}
           />

@@ -59,7 +59,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
       try {
         setLoading(true);
         const response = await api.get<{ success: boolean; stats: DashboardStats }>(
-          'tickets/stats/dashboard'
+          'tickets/stats/dashboard?scope=my'
         );
         if (response.success && response.stats) {
           setStats(response.stats);

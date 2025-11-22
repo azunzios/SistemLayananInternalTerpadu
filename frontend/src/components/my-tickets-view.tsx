@@ -55,8 +55,12 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({ onViewTicket }) =>
   const loadStats = async () => {
     setStatsLoading(true);
     try {
+      const params: string[] = ['scope=my'];
+      if (filterType !== 'all') {
+        params.push(`type=${filterType}`);
+      }
       const response = await api.get<any>(
-        `tickets-counts${filterType !== 'all' ? `?type=${filterType}` : ''}`
+        `tickets-counts${params.length ? `?${params.join('&')}` : ''}`
       );
       // Response bisa langsung berisi properties atau nested dalam 'counts'
       const statsData = response.counts || response;
@@ -99,6 +103,9 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({ onViewTicket }) =>
       } else if (selectedTab === 'completed') {
         query.push(`status=completed`);
       }
+
+      // Force scope to current user
+      query.push('scope=my');
 
       const url = `tickets?${query.join('&')}`;
       const res: any = await api.get(url);
