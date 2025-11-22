@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Dashboard } from './dashboard';
-import { CreateTicket } from './create-ticket';
-import { TicketList } from './ticket-list';
-import { TicketDetail } from './ticket-detail';
-import { ZoomBooking } from './zoom-booking';
-import { ZoomManagementView } from './zoom-management-view';
-import { UserManagement } from './user-management';
-
-import { ProfileSettings } from './profile-settings';
-import { ReportsView } from './reports-view';
-import { WorkOrderList } from './work-order-list';
-import { TeknisiWorkOrderList } from './teknisi-work-order-list';
-import { MyTicketsView } from './my-tickets-view';
-import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '../lib/storage';
-import type { User } from '../types';
+import { CreateTicket, TicketList, TicketDetail, MyTicketsView } from '@/components/views/tickets';
+import { ZoomBooking, ZoomManagementView } from '@/components/views/zoom';
+import { UserManagement, ReportsView } from '@/components/views/admin';
+import { ProfileSettings, RoleSwitcherDialog } from '@/components/views/shared';
+import { WorkOrderList, TeknisiWorkOrderList } from '@/components/views/work-orders';
+import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '@/lib/storage';
+import { ROUTES } from '@/routing/constants';
+import type { User } from '@/types';
 
 interface MainLayoutProps {
   currentUser: User;
@@ -62,9 +57,19 @@ export const getDefaultViewForRole = (role: string): ViewType => {
 };
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, onUserUpdate }) => {
-  // Set initial view berdasarkan role
-  const [currentView, setCurrentView] = useState<ViewType>(getDefaultViewForRole(currentUser.role));
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = useParams();
+  
+  // Derive current view from URL pathname
+  const getViewFromPath = (): ViewType => {
+    const path = location.pathname.replace('/', '');
+    if (path.startsWith('ticket-detail')) return 'ticket-detail';
+    return (path || 'dashboard') as ViewType;
+  };
+  
+  const currentView = getViewFromPath();
+  const selectedTicketId = params.id || null;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -89,9 +94,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   }, [currentUser.id, currentUser.role]);
 
   const handleNavigate = (view: ViewType, ticketId?: string) => {
-    setCurrentView(view);
-    if (ticketId) {
-      setSelectedTicketId(ticketId);
+    if (view === 'ticket-detail' && ticketId) {
+      navigate(`/ticket-detail/${ticketId}`);
+    } else {
+      const routeMap: Record<ViewType, string> = {
+        'dashboard': '/dashboard',
+        'create-ticket-perbaikan': '/create-ticket-perbaikan',
+        'create-ticket-zoom': '/create-ticket-zoom',
+        'tickets': '/tickets',
+        'my-tickets': '/my-tickets',
+        'ticket-detail': '/tickets',
+        'zoom-booking': '/zoom-booking',
+        'zoom-management': '/zoom-management',
+        'work-orders': '/work-orders',
+        'users': '/users',
+        'reports': '/reports',
+        'profile': '/profile',
+        'settings': '/settings',
+      };
+      navigate(routeMap[view]);
     }
   };
 
@@ -101,23 +122,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
       console.warn('⚠️ Failed to load datasets for active role', err);
     });
     setRefreshKey(prev => prev + 1);
-    setCurrentView(getDefaultViewForRole(activeRole));
-    setSelectedTicketId(null);
+    navigate(getDefaultViewForRole(activeRole) === 'ticket-detail' ? '/dashboard' : `/${getDefaultViewForRole(activeRole)}`);
   };
 
   const handleViewTicketDetail = (ticketId: string) => {
-    setSelectedTicketId(ticketId);
-    setCurrentView('ticket-detail');
+    navigate(`/ticket-detail/${ticketId}`);
   };
 
   const handleBackToList = () => {
-    setCurrentView(currentUser.role === 'pegawai' ? 'my-tickets' : 'tickets');
-    setSelectedTicketId(null);
+    const backRoute = currentUser.role === 'pegawai' ? '/my-tickets' : '/tickets';
+    navigate(backRoute);
   };
 
   const handleCreateTicket = (ticketType: 'perbaikan' | 'zoom_meeting') => {
-    const view = ticketType === 'perbaikan' ? 'create-ticket-perbaikan' : 'create-ticket-zoom';
-    handleNavigate(view);
+    const view = ticketType === 'perbaikan' ? '/create-ticket-perbaikan' : '/create-ticket-zoom';
+    navigate(view);
   };
 
   const renderContent = () => {
@@ -263,7 +282,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
         {/* Sidebar */}
         <Sidebar
           currentUser={currentUser}
-          currentView={currentView}
           onNavigate={handleNavigate}
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}

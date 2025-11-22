@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,8 +9,9 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Eye, EyeOff, AlertCircle, Mail, ArrowUpRight, ArrowDownLeftFromSquareIcon } from 'lucide-react';
 import { toast, Toaster } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
-import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '../lib/storage';
-import type { User } from '../types';
+import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '@/lib/storage';
+import { ROUTES } from '@/routing';
+import type { User } from '@/types';
 
 /**
  * Mendapatkan nama view yang akan dibuka berdasarkan role
@@ -36,6 +38,8 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const navigate = useNavigate();
+  
   //INI NANTI DIUBAH
   const [formData, setFormData] = useState({
     login: 'pegawai@example.com',
@@ -109,6 +113,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       });
 
       onLogin(user);
+      
+      // Navigate ke dashboard setelah login sukses
+      navigate(ROUTES.DASHBOARD);
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err?.body?.message || err?.body?.errors?.email?.[0] || 'Email atau password tidak valid';

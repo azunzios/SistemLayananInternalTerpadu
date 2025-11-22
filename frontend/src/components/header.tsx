@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
@@ -28,8 +29,9 @@ import {
   Building,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getNotifications, saveNotifications, getActiveRole, setActiveRole } from '../lib/storage';
-import type { User as UserType, UserRole } from '../types';
+import { getNotifications, saveNotifications, getActiveRole, setActiveRole } from '@/lib/storage';
+import { ROUTES } from '@/routing';
+import type { User as UserType, UserRole } from '@/types';
 import type { ViewType } from './main-layout';
 import { toast } from 'sonner';
 import {
@@ -42,7 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-import { RoleSwitcherDialog } from './role-switcher-dialog';
+import { RoleSwitcherDialog } from '@/components/views/shared';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { API_BASE_URL } from '../lib/api';
 
@@ -56,6 +58,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, sidebarCollapsed, onToggleSidebar, onRoleSwitch }) => {
+  const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showRoleSwitchDialog, setShowRoleSwitchDialog] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -103,6 +106,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     setShowLogoutDialog(false);
     toast.success('Anda berhasil logout');
     onLogout();
+    
+    // Navigate ke login page setelah logout
+    navigate(ROUTES.LOGIN);
   };
 
   const handleRoleSwitchClick = () => {
@@ -345,7 +351,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
         open={showRoleSwitchDialog}
         onOpenChange={setShowRoleSwitchDialog}
         currentUser={currentUser}
-        activeRole={activeRole}
+        activeRole={activeRole as UserRole}
         onRoleSwitch={handleRoleSwitch}
       />
     </>

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Eye, EyeOff, Building, UserPlus, AlertCircle, Check } from 'lucide-react';
 import { toast } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
-import { getUsers, saveUsers, addAuditLog, addNotification } from '../lib/storage';
+import { getUsers, saveUsers, addAuditLog, addNotification } from '@/lib/storage';
 import type { User } from '../types';
 
 interface RegisterPageProps {
