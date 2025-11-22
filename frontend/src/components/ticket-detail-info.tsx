@@ -344,6 +344,16 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                 <div className="space-y-3">
                   {comments && comments.length > 0 ? (
                     <>
+                      {hasMore && !commentsLoading && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onLoadMoreComments}
+                          className="w-full mb-4"
+                        >
+                          Load More Percakapan Terdahulu
+                        </Button>
+                      )}
                       {commentsLoading && (
                         <p className="text-sm text-gray-500 text-center py-2">
                           Loading...
@@ -407,16 +417,6 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                           )}
                         </div>
                       ))}
-                      {hasMore && !commentsLoading && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={onLoadMoreComments}
-                          className="w-full mt-4"
-                        >
-                          Load More Percakapan Terdahulu
-                        </Button>
-                      )}
                     </>
                   ) : (
                     <div className="text-center py-12 text-gray-500">
