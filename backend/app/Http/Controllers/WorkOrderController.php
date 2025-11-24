@@ -106,16 +106,18 @@ class WorkOrderController extends Controller
 
         $validated = $request->validate([
             'ticket_id' => 'required|exists:tickets,id',
-            'type' => 'required|in:sparepart,vendor',
+            'type' => 'required|in:sparepart,vendor,license',
             'items' => 'nullable|array',
-            'items.*.name' => 'required|string|max:255',
-            'items.*.quantity' => 'required|numeric|min:1',
-            'items.*.unit' => 'required|string|max:50',
+            'items.*.name' => 'required_with:items|string|max:255',
+            'items.*.quantity' => 'required_with:items|numeric|min:1',
+            'items.*.unit' => 'required_with:items|string|max:50',
             'items.*.remarks' => 'nullable|string',
             'items.*.estimated_price' => 'nullable|numeric|min:0',
             'vendor_name' => 'nullable|string|max:255',
             'vendor_contact' => 'nullable|string|max:255',
             'vendor_description' => 'nullable|string',
+            'license_name' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
         $ticket = Ticket::find($validated['ticket_id']);
@@ -126,25 +128,40 @@ class WorkOrderController extends Controller
             ], 404);
         }
 
-        // Validate ticket status - work order can only be created for assigned or in_progress tickets
-        if (!in_array($ticket->status, ['assigned', 'in_progress'])) {
+        // Validate ticket status - work order can only be created for on_hold or in_diagnosis tickets
+        if (!in_array($ticket->status, ['on_hold', 'in_diagnosis', 'in_repair', 'assigned', 'accepted', 'in_progress'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Work order can only be created for assigned or in_progress tickets',
+                'message' => 'Work order can only be created for tickets in diagnosis or repair process',
             ], 422);
         }
 
-        $workOrder = WorkOrder::create([
+        // Prepare data based on type
+        $workOrderData = [
             'ticket_id' => $validated['ticket_id'],
             'ticket_number' => $ticket->ticket_number,
             'type' => $validated['type'],
             'status' => 'requested',
             'created_by' => $user->id,
-            'items' => $validated['items'] ?? [],
-            'vendor_name' => $validated['vendor_name'] ?? null,
-            'vendor_contact' => $validated['vendor_contact'] ?? null,
-            'vendor_description' => $validated['vendor_description'] ?? null,
-        ]);
+        ];
+
+        if ($validated['type'] === 'sparepart') {
+            $workOrderData['items'] = $validated['items'] ?? [];
+        } elseif ($validated['type'] === 'vendor') {
+            $workOrderData['vendor_name'] = $validated['vendor_name'] ?? null;
+            $workOrderData['vendor_contact'] = $validated['vendor_contact'] ?? null;
+            $workOrderData['vendor_description'] = $validated['description'] ?? $validated['vendor_description'] ?? null;
+        } elseif ($validated['type'] === 'license') {
+            $workOrderData['license_name'] = $validated['license_name'] ?? null;
+            $workOrderData['license_description'] = $validated['description'] ?? null;
+        }
+
+        $workOrder = WorkOrder::create($workOrderData);
+
+        // Update ticket status to on_hold when work order is created
+        if (in_array($ticket->status, ['in_progress', 'in_diagnosis', 'in_repair'])) {
+            $ticket->update(['status' => 'on_hold']);
+        }
 
         // Log timeline
         Timeline::create([
@@ -272,9 +289,9 @@ class WorkOrderController extends Controller
             'status' => 'required|in:requested,in_procurement,delivered,completed,failed,cancelled',
             'notes' => 'nullable|string',
             'completion_notes' => 'nullable|string',
-            'received_qty' => 'nullable|numeric|min:1',
-            'received_remarks' => 'nullable|string',
             'failure_reason' => 'nullable|string',
+            'vendor_name' => 'nullable|string|max:255',
+            'vendor_contact' => 'nullable|string|max:255',
         ]);
 
         $newStatus = $validated['status'];
@@ -300,21 +317,19 @@ class WorkOrderController extends Controller
         // Update status
         $workOrder->status = $newStatus;
 
+        // Update vendor info if provided
+        if (isset($validated['vendor_name'])) {
+            $workOrder->vendor_name = $validated['vendor_name'];
+        }
+        if (isset($validated['vendor_contact'])) {
+            $workOrder->vendor_contact = $validated['vendor_contact'];
+        }
+
         // Handle completion
         if ($newStatus === 'completed') {
             $workOrder->completed_at = now();
             if (isset($validated['completion_notes'])) {
                 $workOrder->completion_notes = $validated['completion_notes'];
-            }
-        }
-
-        // Handle delivery
-        if ($newStatus === 'delivered') {
-            if (isset($validated['received_qty'])) {
-                $workOrder->received_qty = $validated['received_qty'];
-            }
-            if (isset($validated['received_remarks'])) {
-                $workOrder->received_remarks = $validated['received_remarks'];
             }
         }
 
@@ -346,7 +361,8 @@ class WorkOrderController extends Controller
         // If work order is completed, update ticket status
         if ($newStatus === 'completed') {
             $ticket = $workOrder->ticket;
-            if ($ticket && $ticket->status === 'in_progress') {
+            if ($ticket && in_array($ticket->status, ['on_hold', 'in_progress'])) {
+                $oldStatus = $ticket->status;
                 $ticket->status = 'resolved';
                 $ticket->save();
 
@@ -356,7 +372,7 @@ class WorkOrderController extends Controller
                     'action' => 'ticket_status_changed',
                     'details' => 'Ticket status auto-updated to resolved (work order completed)',
                     'metadata' => [
-                        'from' => 'in_progress',
+                        'from' => $oldStatus,
                         'to' => 'resolved',
                         'trigger' => 'work_order_completion',
                     ],

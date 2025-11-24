@@ -17,23 +17,20 @@ class KartuKendaliEntry extends Model
         'maintenance_type',
         'vendor_name',
         'vendor_reference',
+        'vendor_contact',
+        'vendor_description',
+        'license_name',
+        'license_description',
         'spareparts',
         'technician_id',
         'technician_name',
         'recorded_by',
-        'description',
-        'findings',
-        'actions_taken',
         'asset_condition_after',
-        'total_cost',
-        'attachments',
     ];
 
     protected $casts = [
         'spareparts' => 'array',
-        'attachments' => 'array',
         'maintenance_date' => 'date',
-        'total_cost' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -121,12 +118,7 @@ class KartuKendaliEntry extends Model
             'technician_id' => $technician->id,
             'technician_name' => $technician->name,
             'recorded_by' => auth()->id(),
-            'description' => $data['description'] ?? null,
-            'findings' => $data['findings'] ?? null,
-            'actions_taken' => $data['actions_taken'] ?? null,
-            'asset_condition_after' => $data['asset_condition_after'] ?? null,
-            'total_cost' => $data['total_cost'] ?? null,
-            'attachments' => $data['attachments'] ?? [],
+            'asset_condition_after' => $data['asset_condition_after'] ?? 'baik',
         ]);
     }
 

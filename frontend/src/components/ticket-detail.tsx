@@ -49,7 +49,6 @@ import {
   saveTickets,
   getUsersSync,
   addNotification,
-  createWorkOrder,
   getWorkOrdersByTicket,
 } from "../lib/storage";
 import type { ViewType } from "./main-layout";
@@ -57,11 +56,12 @@ import { TicketDetailHeader, TicketDetailInfo } from "./ticket-detail-info";
 import { TicketDetailAlerts } from "./ticket-detail-alerts";
 import { formatActorName } from "./ticket-detail-utils";
 import { useTicketComments } from "../hooks/useTicketComments";
+import { TicketDiagnosisForm } from "./ticket-diagnosis-form";
+import { WorkOrderForm } from "./work-order-form";
 import {
   useAdminLayananDialogs,
   useTeknisiDialogs,
   useDiagnosaDialogs,
-  useWorkOrderDialogs,
   useProgressDialog,
   useCommentState,
   useZoomReviewModal,
@@ -104,17 +104,19 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [ticketDetail, setTicketDetail] = React.useState<any>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(true);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [allTickets, setAllTickets] = React.useState<any[]>([]);
   const tickets = useMemo(() => getTickets(), [refreshKey]);
-  const users = getUsersSync();
 
   // Import state dari custom hooks
   const adminDialogs = useAdminLayananDialogs();
   const tekDialogs = useTeknisiDialogs();
   const diagnosaDialog = useDiagnosaDialogs();
-  const workOrderDialog = useWorkOrderDialogs();
   const progressDialog = useProgressDialog();
   const { comment, setComment } = useCommentState();
   const { showZoomReviewModal, setShowZoomReviewModal } = useZoomReviewModal();
+  const [showDiagnosisForm, setShowDiagnosisForm] = React.useState(false);
+  const [showWorkOrderForm, setShowWorkOrderForm] = React.useState(false);
   const {
     comments,
     loading: commentsLoading,
@@ -124,6 +126,41 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     addComment,
   } = useTicketComments();
 
+  // Fetch users from API
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await api.get<any>("users?per_page=100");
+        // Backend returns paginated data: { data: [...], meta: {...} }
+        const usersData = response?.data || [];
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        // Fallback to cached users if API fails
+        setUsers(getUsersSync());
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  // Fetch all tickets from API untuk hitung tiket aktif teknisi
+  React.useEffect(() => {
+    const fetchAllTickets = async () => {
+      try {
+        const response = await api.get<any>(
+          "tickets?per_page=1000&type=perbaikan"
+        );
+        const ticketsData = response?.data || [];
+        setAllTickets(ticketsData);
+      } catch (error) {
+        console.error("Failed to fetch all tickets:", error);
+        // Fallback to cached tickets if API fails
+        setAllTickets(getTickets());
+      }
+    };
+    fetchAllTickets();
+  }, [refreshKey]);
+
   // Fetch full ticket detail from backend
   React.useEffect(() => {
     const fetchTicketDetail = async () => {
@@ -132,7 +169,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         const response = await api.get<any>(`tickets/${ticketId}`);
         const ticketData = response.data || response;
         setTicketDetail(ticketData);
-        console.log("📝 Ticket Detail fetched:", ticketData);
       } catch (error) {
         console.error("Failed to fetch ticket detail:", error);
       } finally {
@@ -150,10 +186,9 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const ticket = ticketDetail || tickets.find((t) => t.id === ticketId);
 
   // === COMPUTED VALUES (useMemo must be before conditional returns) ===
-  const technicians = useMemo(
-    () => users.filter((u) => u.role === "teknisi"),
-    [users]
-  );
+  const technicians = useMemo(() => {
+    return users.filter((u) => u.role === "teknisi");
+  }, [users]);
 
   const technicianActiveTickets = useMemo(() => {
     const activeStatuses: TicketStatus[] = [
@@ -165,18 +200,23 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       "sedang_diagnosa",
       "dalam_perbaikan",
       "menunggu_sparepart",
+      "approved", // Tambahkan status approved juga
     ];
-    return technicians.reduce((acc, tech) => {
-      const activeCount = tickets.filter(
-        (t) =>
+    const counts = technicians.reduce((acc, tech) => {
+      const activeCount = allTickets.filter((t) => {
+        // Support both camelCase (assignedTo) and snake_case (assigned_to) from backend
+        const assignedUserId = t.assignedTo || t.assigned_to;
+        return (
           t.type === "perbaikan" &&
-          t.assignedTo === tech.id &&
+          assignedUserId === tech.id &&
           activeStatuses.includes(t.status)
-      ).length;
+        );
+      }).length;
       acc[tech.id] = activeCount;
       return acc;
     }, {} as Record<string, number>);
-  }, [tickets, technicians]);
+    return counts;
+  }, [technicians, allTickets]);
 
   // === EARLY RETURN IF TICKET NOT FOUND (AFTER ALL HOOKS) ===
   if (loadingDetail) {
@@ -210,45 +250,24 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   // === PERMISSION CHECKS ===
   const canComplete =
     currentUser.role === "pegawai" &&
-    ticket.userId === currentUser.id &&
+    String(ticket.userId) === String(currentUser.id) &&
     ["resolved", "selesai_diperbaiki", "dalam_pengiriman"].includes(
       ticket.status as any
     );
 
   // === HANDLERS (KEPT INLINE) ===
-  const handleApprove = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        const newStatus: TicketStatus =
-          t.type === "perbaikan" ? "disetujui" : "approved";
-        return {
-          ...t,
-          status: newStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "APPROVED",
-              actor: currentUser.name,
-              details: "Tiket disetujui",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Disetujui",
-      message: `Tiket ${ticket.ticketNumber} telah disetujui`,
-      type: "success",
-      read: false,
-    });
-    toast.success("Tiket berhasil disetujui");
-    adminDialogs.setShowApproveDialog(false);
+  const handleApprove = async () => {
+    try {
+      await api.patch(`tickets/${ticketId}/approve`, {});
+
+      toast.success("Tiket berhasil disetujui");
+      adminDialogs.setShowApproveDialog(false);
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to approve ticket:", error);
+      const errorMsg = error?.body?.message || "Gagal menyetujui tiket";
+      toast.error(errorMsg);
+    }
   };
 
   const handleReject = async () => {
@@ -279,89 +298,50 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!adminDialogs.selectedTechnician) {
       toast.error("Pilih teknisi terlebih dahulu");
       return;
     }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "assigned" as TicketStatus,
-          assignedTo: adminDialogs.selectedTechnician,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "ASSIGNED",
-              actor: currentUser.name,
-              details: `Ditugaskan ke ${
-                users.find((u) => u.id === adminDialogs.selectedTechnician)
-                  ?.name
-              }`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: adminDialogs.selectedTechnician,
-      title: "Tiket Baru Ditugaskan",
-      message: `Anda ditugaskan untuk menangani tiket ${ticket.ticketNumber}`,
-      type: "info",
-      read: false,
-    });
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Sedang Ditangani",
-      message: `Tiket ${ticket.ticketNumber} sedang ditangani oleh teknisi`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Tiket berhasil ditugaskan");
-    adminDialogs.setShowAssignDialog(false);
-    adminDialogs.setSelectedTechnician("");
-    adminDialogs.setAssignNotes("");
+
+    try {
+      await api.patch(`tickets/${ticketId}/assign`, {
+        assigned_to: adminDialogs.selectedTechnician,
+        notes: adminDialogs.assignNotes,
+      });
+
+      toast.success("Tiket berhasil ditugaskan");
+      adminDialogs.setShowAssignDialog(false);
+      adminDialogs.setSelectedTechnician("");
+      adminDialogs.setAssignNotes("");
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to assign ticket:", error);
+      const errorMsg = error?.body?.message || "Gagal assign tiket";
+      toast.error(errorMsg);
+    }
   };
 
-  const handleComplete = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "closed" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "CLOSED",
-              actor: currentUser.name,
-              details: "Tiket dikonfirmasi selesai oleh user",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    if (ticket.assignedTo) {
-      addNotification({
-        userId: ticket.assignedTo,
-        title: "Tiket Diselesaikan",
-        message: `Tiket ${ticket.ticketNumber} telah dikonfirmasi selesai oleh user`,
-        type: "success",
-        read: false,
+  const handleComplete = async () => {
+    try {
+      await api.patch(`tickets/${ticketId}/status`, {
+        status: "closed",
+        notes: "Tiket dikonfirmasi selesai oleh pegawai",
       });
+
+      toast.success(
+        "Terima kasih atas konfirmasinya! Tiket telah diselesaikan."
+      );
+      setRefreshKey((prev) => prev + 1); // Refresh ticket data
+      // Optionally navigate back or close dialog
+      setTimeout(() => {
+        onBack();
+      }, 1000);
+    } catch (error: any) {
+      console.error("Failed to close ticket:", error);
+      const errorMsg = error?.body?.message || "Gagal menyelesaikan tiket";
+      toast.error(errorMsg);
     }
-    toast.success("Terima kasih atas konfirmasinya!");
-    onBack();
   };
 
   const handleAddComment = async () => {
@@ -380,119 +360,44 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   };
 
   // === TEKNISI HANDLERS ===
-  const handleTeknisiAcceptTicket = () => {
+  const handleTeknisiAcceptTicket = async () => {
     if (!tekDialogs.estimatedSchedule) {
       toast.error("Estimasi jadwal harus diisi");
       return;
     }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "diterima_teknisi" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "ACCEPTED",
-              actor: currentUser.name,
-              details: `Tiket diterima. Estimasi: ${tekDialogs.estimatedSchedule}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Diterima Teknisi",
-      message: `Teknisi ${currentUser.name} telah menerima tiket Anda. Estimasi: ${tekDialogs.estimatedSchedule}`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Tiket berhasil diterima");
-    tekDialogs.setShowTeknisiAcceptDialog(false);
-    tekDialogs.setEstimatedSchedule("");
-    setRefreshKey((prev) => prev + 1);
+    try {
+      await api.patch(`tickets/${ticketId}/status`, {
+        status: "accepted",
+        estimated_schedule: tekDialogs.estimatedSchedule,
+      });
+      toast.success("Tiket berhasil diterima");
+      tekDialogs.setShowTeknisiAcceptDialog(false);
+      tekDialogs.setEstimatedSchedule("");
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to accept ticket:", error);
+      toast.error(error.response?.data?.message || "Gagal menerima tiket");
+    }
   };
 
-  const handleTeknisiRejectTicket = () => {
+  const handleTeknisiRejectTicket = async () => {
     if (!tekDialogs.teknisiRejectReason.trim()) {
       toast.error("Alasan penolakan harus diisi");
       return;
     }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "rejected" as TicketStatus,
-          assignedTo: undefined,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "REJECTED",
-              actor: currentUser.name,
-              details: `Tiket ditolak: ${tekDialogs.teknisiRejectReason}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    const adminLayanan = users.filter((u) => u.role === "admin_layanan");
-    adminLayanan.forEach((admin) => {
-      addNotification({
-        userId: admin.id,
-        title: "Tiket Ditolak Teknisi",
-        message: `${currentUser.name} menolak tiket ${ticket.ticketNumber}`,
-        type: "warning",
-        read: false,
+    try {
+      await api.patch(`tickets/${ticketId}/status`, {
+        status: "rejected",
+        reject_reason: tekDialogs.teknisiRejectReason,
       });
-    });
-    toast.success("Tiket telah ditolak");
-    tekDialogs.setShowTeknisiRejectDialog(false);
-    tekDialogs.setTeknisiRejectReason("");
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleTeknisiStartDiagnosa = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "sedang_diagnosa" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: "Memulai diagnosa",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Diagnosa Dimulai",
-      message: `Teknisi sedang melakukan diagnosa`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Status diubah ke Sedang Diagnosa");
-    setRefreshKey((prev) => prev + 1);
+      toast.success("Tiket telah ditolak");
+      tekDialogs.setShowTeknisiRejectDialog(false);
+      tekDialogs.setTeknisiRejectReason("");
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
+      console.error("Failed to reject ticket:", error);
+      toast.error(error.response?.data?.message || "Gagal menolak tiket");
+    }
   };
 
   const handleSubmitDiagnosa = () => {
@@ -636,81 +541,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     setRefreshKey((prev) => prev + 1);
   };
 
-  const handleCreateWorkOrder = () => {
-    if (workOrderDialog.workOrderType === "sparepart") {
-      if (
-        !workOrderDialog.sparepartName.trim() ||
-        !workOrderDialog.sparepartDescription.trim()
-      ) {
-        toast.error("Nama sparepart dan deskripsi harus diisi");
-        return;
-      }
-    } else {
-      if (!workOrderDialog.sparepartDescription.trim()) {
-        toast.error("Deskripsi pekerjaan harus diisi");
-        return;
-      }
-    }
-    createWorkOrder({
-      ticketId: ticket.id,
-      type: workOrderDialog.workOrderType,
-      createdBy: currentUser.id,
-      spareparts:
-        workOrderDialog.workOrderType === "sparepart"
-          ? [
-              {
-                name: workOrderDialog.sparepartName,
-                quantity: 1,
-                unit: "unit",
-                remarks: workOrderDialog.sparepartDescription,
-              },
-            ]
-          : undefined,
-      vendorInfo:
-        workOrderDialog.workOrderType === "vendor"
-          ? {
-              description: workOrderDialog.sparepartDescription,
-            }
-          : undefined,
-    });
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "on_hold" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "WORK_ORDER_CREATED",
-              actor: currentUser.name,
-              details: `Work order ${workOrderDialog.workOrderType} dibuat`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    const adminLayanan = users.filter((u) => u.role === "admin_layanan");
-    adminLayanan.forEach((admin) => {
-      addNotification({
-        userId: admin.id,
-        title: "Work Order Baru",
-        message: `Work order ${workOrderDialog.workOrderType} untuk tiket ${ticket.ticketNumber}`,
-        type: "info",
-        read: false,
-      });
-    });
-    toast.success(`Work Order berhasil dibuat`);
-    workOrderDialog.setShowSparepartDialog(false);
-    workOrderDialog.setSparepartName("");
-    workOrderDialog.setSparepartDescription("");
-    setRefreshKey((prev) => prev + 1);
-  };
-
   const handleUpdateProgress = () => {
     if (
       progressDialog.newStatus === "tidak_dapat_diperbaiki" &&
@@ -767,8 +597,28 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         currentUser={currentUser}
         canComplete={canComplete}
         onBack={onBack}
-        onShowCompleteDialog={() => {}}
+        onShowCompleteDialog={handleComplete}
       />
+
+      {/* Teknisi Workflow - After header */}
+      {(() => {
+        const shouldShowWorkflow =
+          currentUser.role === "teknisi" &&
+          ticketDetail &&
+          ticketDetail.type === "perbaikan" &&
+          ticketDetail.assignedTo == currentUser.id &&
+          ["assigned", "in_progress", "on_hold"].includes(
+            ticketDetail.status as any
+          );
+
+        return shouldShowWorkflow ? (
+          <TeknisiWorkflow
+            ticket={ticketDetail}
+            currentUser={currentUser}
+            onUpdate={() => setRefreshKey((prev) => prev + 1)}
+          />
+        ) : null;
+      })()}
 
       {/* Alerts */}
       <TicketDetailAlerts
@@ -777,20 +627,11 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         onShowReviewDialog={() => adminDialogs.setShowApproveDialog(true)}
         onShowRejectDialog={() => adminDialogs.setShowRejectDialog(true)}
         onShowAssignDialog={() => adminDialogs.setShowAssignDialog(true)}
-        onShowTeknisiAcceptDialog={() =>
-          tekDialogs.setShowTeknisiAcceptDialog(true)
-        }
-        onShowTeknisiRejectDialog={() =>
-          tekDialogs.setShowTeknisiRejectDialog(true)
-        }
-        onShowTeknisiStartDiagnosa={handleTeknisiStartDiagnosa}
-        onShowDiagnosaDialog={() => diagnosaDialog.setShowDiagnosaDialog(true)}
+        onShowDiagnosaDialog={() => setShowDiagnosisForm(true)}
         onShowCompletionDialog={() =>
           diagnosaDialog.setShowCompletionDialog(true)
         }
-        onShowSparepartDialog={() =>
-          workOrderDialog.setShowSparepartDialog(true)
-        }
+        onShowSparepartDialog={() => setShowWorkOrderForm(true)}
         getWorkOrdersByTicket={getWorkOrdersByTicket}
       />
 
@@ -814,18 +655,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       {ticket.type === "zoom_meeting" && (
         <TicketProgressTrackerZoom ticket={ticket} />
       )}
-
-      {/* Teknisi Workflow */}
-      {currentUser.role === "teknisi" &&
-        ticket.type === "perbaikan" &&
-        ticket.assignedTo === currentUser.id &&
-        (ticket.status as any) === "menunggu_sparepart" && (
-          <TeknisiWorkflow
-            ticket={ticket}
-            currentUser={currentUser}
-            onUpdate={() => setRefreshKey((prev) => prev + 1)}
-          />
-        )}
 
       {/* ============== DIALOGS ============== */}
 
@@ -970,7 +799,32 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diagnosa */}
+      {/* Diagnosa - Form Baru Terhubung Backend */}
+      <TicketDiagnosisForm
+        ticketId={ticketId}
+        ticketNumber={ticket.ticketNumber}
+        open={showDiagnosisForm}
+        onOpenChange={setShowDiagnosisForm}
+        existingDiagnosis={ticket.diagnosis || null}
+        onDiagnosisSubmitted={() => {
+          setRefreshKey((prev) => prev + 1);
+        }}
+        onCreateWorkOrder={(_type: "sparepart" | "vendor" | "license") => {
+          setShowWorkOrderForm(true);
+        }}
+      />
+
+      {/* Work Order Form */}
+      <WorkOrderForm
+        isOpen={showWorkOrderForm}
+        onClose={() => setShowWorkOrderForm(false)}
+        ticketId={parseInt(ticketId)}
+        onSuccess={() => {
+          setRefreshKey((prev) => prev + 1);
+        }}
+      />
+
+      {/* Diagnosa - Dialog Lama (Backup) */}
       <Dialog
         open={diagnosaDialog.showDiagnosaDialog}
         onOpenChange={diagnosaDialog.setShowDiagnosaDialog}
@@ -1168,61 +1022,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               Batal
             </Button>
             <Button onClick={handleCompleteRepair}>Selesai</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Work Order */}
-      <Dialog
-        open={workOrderDialog.showSparepartDialog}
-        onOpenChange={workOrderDialog.setShowSparepartDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Work Order</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <RadioGroup
-              value={workOrderDialog.workOrderType}
-              onValueChange={(val) =>
-                workOrderDialog.setWorkOrderType(val as any)
-              }
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sparepart" id="sp" />
-                <Label htmlFor="sp">Sparepart</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="vendor" id="vn" />
-                <Label htmlFor="vn">Vendor</Label>
-              </div>
-            </RadioGroup>
-            {workOrderDialog.workOrderType === "sparepart" && (
-              <Input
-                placeholder="Nama sparepart..."
-                value={workOrderDialog.sparepartName}
-                onChange={(e) =>
-                  workOrderDialog.setSparepartName(e.target.value)
-                }
-              />
-            )}
-            <Textarea
-              placeholder="Deskripsi..."
-              value={workOrderDialog.sparepartDescription}
-              onChange={(e) =>
-                workOrderDialog.setSparepartDescription(e.target.value)
-              }
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => workOrderDialog.setShowSparepartDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleCreateWorkOrder}>Buat</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

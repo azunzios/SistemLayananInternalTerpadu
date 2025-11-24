@@ -14,6 +14,7 @@ use App\Http\Controllers\KartuKendaliController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ZoomAccountController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\TicketDiagnosisController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -56,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('tickets', TicketController::class);
     Route::patch('/tickets/{ticket}/assign', [TicketController::class, 'assign']);
     Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus']);
+    Route::patch('/tickets/{ticket}/approve', [TicketController::class, 'approveTicket']);
     Route::patch('/tickets/{ticket}/approve-zoom', [TicketController::class, 'approveZoom']);
     Route::patch('/tickets/{ticket}/reject-zoom', [TicketController::class, 'rejectZoom']);
     Route::patch('/tickets/{ticket}/reject', [TicketController::class, 'rejectTicket']);
@@ -63,6 +65,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Comment Management Routes (Diskusi/Percakapan)
     Route::get('/tickets/{ticket}/comments', [CommentController::class, 'index']);
     Route::post('/tickets/{ticket}/comments', [CommentController::class, 'store']);
+
+    // Ticket Diagnosis Routes
+    Route::get('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'show']);
+    Route::post('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'store']);
+    Route::delete('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'destroy']);
 
     // Work Order Management Routes
     Route::apiResource('work-orders', WorkOrderController::class);
@@ -77,10 +84,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sparepart-requests/stats/summary', [SparepartRequestController::class, 'stats']);
     
     // Kartu Kendali (Maintenance Control Card) Routes
+    Route::get('/kartu-kendali/stats/summary', [KartuKendaliController::class, 'stats']);
+    Route::get('/kartu-kendali/check-work-order/{work_order_id}', [KartuKendaliController::class, 'checkWorkOrder']);
+    Route::post('/kartu-kendali/from-work-order', [KartuKendaliController::class, 'createFromWorkOrder']);
     Route::apiResource('kartu-kendali', KartuKendaliController::class);
     Route::post('/kartu-kendali/{kartuKendali}/entries', [KartuKendaliController::class, 'addEntry']);
     Route::get('/kartu-kendali/{kartuKendali}/entries', [KartuKendaliController::class, 'getEntries']);
-    Route::get('/kartu-kendali/stats/summary', [KartuKendaliController::class, 'stats']);
     
     // Notification Routes
     Route::get('/notifications', [NotificationController::class, 'index']);

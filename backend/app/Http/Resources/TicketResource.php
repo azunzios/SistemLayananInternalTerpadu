@@ -56,6 +56,9 @@ class TicketResource extends JsonResource
                 return $this->comments->count();
             }),
             
+            // Work Orders
+            'workOrders' => WorkOrderResource::collection($this->whenLoaded('workOrders')),
+            
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
         ];
@@ -73,6 +76,9 @@ class TicketResource extends JsonResource
                 'workOrderId' => $this->work_order_id,
                 'attachments' => $this->attachments ?? [],
                 'formData' => $this->form_data,
+                'diagnosis' => $this->whenLoaded('diagnosis', function () {
+                    return $this->diagnosis ? new TicketDiagnosisResource($this->diagnosis) : null;
+                }),
             ]);
         } else if ($this->type === 'zoom_meeting') {
             $baseData = array_merge($baseData, [

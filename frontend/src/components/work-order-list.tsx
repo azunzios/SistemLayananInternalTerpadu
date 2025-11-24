@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Separator } from './ui/separator';
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Separator } from "./ui/separator";
 import {
   Table,
   TableBody,
@@ -13,7 +19,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from './ui/table';
+} from "./ui/table";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +27,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
+} from "./ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
+} from "./ui/select";
 import {
   Package,
   Building,
@@ -38,164 +44,217 @@ import {
   Truck,
   AlertTriangle,
   Eye,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { toast } from 'sonner';
-import { getWorkOrders, updateWorkOrder, getTickets, saveTickets, addNotification, getUsersSync } from '../lib/storage';
-import type { WorkOrder, WorkOrderStatus, User } from '../types';
+  FileText,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { toast } from "sonner";
+import { api } from "../lib/api";
+import type { WorkOrder, WorkOrderStatus, User } from "../types";
+import { KartuKendaliForm } from "./kartu-kendali-form";
 
 interface WorkOrderListProps {
   currentUser: User;
 }
 
-export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => {
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(getWorkOrders());
+export const WorkOrderList: React.FC<WorkOrderListProps> = ({
+  currentUser,
+}) => {
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterType, setFilterType] = useState<string>('all');
-  
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+
+  // Kartu Kendali states
+  const [showKartuKendaliForm, setShowKartuKendaliForm] = useState(false);
+  const [selectedWOForKartuKendali, setSelectedWOForKartuKendali] =
+    useState<WorkOrder | null>(null);
+  const [workOrdersWithKartuKendali, setWorkOrdersWithKartuKendali] = useState<
+    Set<number>
+  >(new Set());
+
   // Form untuk update WO
   const [updateForm, setUpdateForm] = useState({
-    status: '' as WorkOrderStatus,
-    receivedQty: '',
-    receivedRemarks: '',
-    failureReason: '',
-    vendorCompletionNotes: '',
-    vendorName: '',
-    vendorContact: '',
+    status: "" as WorkOrderStatus,
+    failureReason: "",
+    vendorCompletionNotes: "",
+    vendorName: "",
+    vendorContact: "",
   });
 
-  const loadWorkOrders = () => {
-    const wos = getWorkOrders();
-    setWorkOrders(wos);
+  // Helper: parse items (handle both array and JSON string)
+  const parseItems = (items: any) => {
+    if (!items) return [];
+    if (Array.isArray(items)) return items;
+    if (typeof items === "string") {
+      try {
+        return JSON.parse(items);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Fetch work orders from API
+  useEffect(() => {
+    fetchWorkOrders();
+  }, []);
+
+  // Check which work orders have kartu kendali
+  const checkKartuKendali = async (woIds: number[]) => {
+    try {
+      const checks = await Promise.all(
+        woIds.map(async (id) => {
+          const response = await api.get<any>(
+            `/kartu-kendali/check-work-order/${id}`
+          );
+          return {
+            id,
+            hasKartuKendali: response.data?.data?.has_kartu_kendali || false,
+          };
+        })
+      );
+
+      const woWithKK = new Set(
+        checks.filter((c) => c.hasKartuKendali).map((c) => c.id)
+      );
+      setWorkOrdersWithKartuKendali(woWithKK);
+    } catch (error) {
+      console.error("Error checking kartu kendali:", error);
+    }
+  };
+
+  const fetchWorkOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get<any>("work-orders");
+
+      // Transform snake_case to camelCase
+      const transformedData =
+        response.data?.map((wo: any) => ({
+          ...wo,
+          createdBy: wo.created_by,
+          createdByUser: wo.created_by_user,
+          ticketId: wo.ticket_id,
+          ticketNumber: wo.ticket_number,
+          vendorName: wo.vendor_name,
+          vendorContact: wo.vendor_contact,
+          vendorDescription: wo.vendor_description,
+          licenseName: wo.license_name,
+          licenseDescription: wo.license_description,
+          createdAt: wo.created_at,
+          updatedAt: wo.updated_at,
+        })) || [];
+
+      setWorkOrders(transformedData);
+
+      // Check kartu kendali for completed work orders
+      const completedWOIds = transformedData
+        .filter((wo: WorkOrder) => wo.status === "completed")
+        .map((wo: WorkOrder) =>
+          typeof wo.id === "string" ? parseInt(wo.id) : wo.id
+        );
+
+      if (completedWOIds.length > 0) {
+        checkKartuKendali(completedWOIds);
+      }
+    } catch (error) {
+      console.error("Failed to fetch work orders:", error);
+      toast.error("Gagal memuat work order");
+      setWorkOrders([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewDetail = (wo: WorkOrder) => {
     setSelectedWO(wo);
     setUpdateForm({
       status: wo.status,
-      receivedQty: wo.receivedQty?.toString() || '',
-      receivedRemarks: wo.receivedRemarks || '',
-      failureReason: wo.failureReason || '',
-      vendorCompletionNotes: wo.vendorInfo?.completionNotes || '',
-      vendorName: wo.vendorInfo?.name || '',
-      vendorContact: wo.vendorInfo?.contact || '',
+      failureReason: wo.failureReason || "",
+      vendorCompletionNotes: "",
+      vendorName: wo.vendorName || "",
+      vendorContact: wo.vendorContact || "",
     });
     setShowDetailDialog(true);
   };
 
-  const handleUpdateWorkOrder = () => {
+  const handleUpdateWorkOrder = async () => {
     if (!selectedWO) return;
 
-    const updates: Partial<WorkOrder> = {
-      status: updateForm.status,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Add timeline entry
-    const timelineEntry = {
-      id: `tl-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      action: `STATUS_CHANGED_${updateForm.status.toUpperCase()}`,
-      actor: currentUser.name,
-      details: `Status diubah menjadi ${getStatusLabel(updateForm.status)}`,
-    };
-
-    if (updateForm.status === 'delivered' && selectedWO.type === 'sparepart') {
-      updates.receivedQty = parseInt(updateForm.receivedQty) || 0;
-      updates.receivedRemarks = updateForm.receivedRemarks;
-      timelineEntry.details = `Sparepart diterima. Qty: ${updateForm.receivedQty}. ${updateForm.receivedRemarks}`;
-    }
-
-    // Save vendor info when status is in_procurement or completed
-    if (selectedWO.type === 'vendor' && (updateForm.status === 'in_procurement' || updateForm.status === 'completed')) {
-      updates.vendorInfo = {
-        ...selectedWO.vendorInfo,
-        name: updateForm.vendorName,
-        contact: updateForm.vendorContact,
+    try {
+      const updates: any = {
+        status: updateForm.status,
       };
-      
-      if (updateForm.status === 'in_procurement') {
-        timelineEntry.details = `Vendor ditambahkan: ${updateForm.vendorName}. Kontak: ${updateForm.vendorContact}`;
-      }
-    }
 
-    if (updateForm.status === 'completed' && selectedWO.type === 'vendor') {
-      updates.completedAt = new Date().toISOString();
-      updates.vendorInfo = {
-        ...updates.vendorInfo,
-        ...selectedWO.vendorInfo,
-        completionNotes: updateForm.vendorCompletionNotes,
-        name: updateForm.vendorName,
-        contact: updateForm.vendorContact,
-      };
-      timelineEntry.details = `Pekerjaan vendor selesai. ${updateForm.vendorCompletionNotes}`;
-    }
+      // Handle vendor info
+      if (
+        selectedWO.type === "vendor" &&
+        (updateForm.status === "in_procurement" ||
+          updateForm.status === "completed")
+      ) {
+        updates.vendor_name = updateForm.vendorName;
+        updates.vendor_contact = updateForm.vendorContact;
 
-    if (updateForm.status === 'failed') {
-      updates.failureReason = updateForm.failureReason;
-      timelineEntry.details = `Work order gagal. Alasan: ${updateForm.failureReason}`;
-    }
-
-    updates.timeline = [...selectedWO.timeline, timelineEntry];
-
-    const updatedWO = updateWorkOrder(selectedWO.id, updates);
-
-    if (updatedWO) {
-      // Update ticket status if WO is completed/delivered
-      if (updateForm.status === 'delivered' || updateForm.status === 'completed') {
-        const tickets = getTickets();
-        const updatedTickets = tickets.map(t => {
-          if (t.id === selectedWO.ticketId) {
-            return {
-              ...t,
-              status: 'in_progress' as any,
-              updatedAt: new Date().toISOString(),
-              timeline: [
-                ...t.timeline,
-                {
-                  id: `tl-${Date.now()}`,
-                  timestamp: new Date().toISOString(),
-                  action: 'WORK_ORDER_COMPLETED',
-                  actor: currentUser.name,
-                  details: `Work order ${selectedWO.type === 'sparepart' ? 'sparepart' : 'vendor'} selesai. Teknisi dapat melanjutkan perbaikan.`,
-                },
-              ],
-            };
-          }
-          return t;
-        });
-        saveTickets(updatedTickets);
-
-        // Notify teknisi
-        const users = getUsersSync();
-        const ticket = tickets.find(t => t.id === selectedWO.ticketId);
-        if (ticket && ticket.assignedTo) {
-          addNotification({
-            userId: ticket.assignedTo,
-            title: 'Work Order Selesai',
-            message: `Work order ${selectedWO.type === 'sparepart' ? 'sparepart' : 'vendor'} untuk tiket ${ticket.ticketNumber} telah selesai. Silakan lanjutkan perbaikan.`,
-            type: 'success',
-            read: false,
-          });
+        if (updateForm.status === "completed") {
+          updates.completion_notes = updateForm.vendorCompletionNotes;
         }
       }
 
-      toast.success('Work order berhasil diupdate');
-      loadWorkOrders();
+      // Handle failure
+      if (updateForm.status === "failed") {
+        updates.failure_reason = updateForm.failureReason;
+      }
+
+      // Use PATCH endpoint for status update
+      await api.patch(`work-orders/${selectedWO.id}/status`, updates);
+
+      toast.success("Work order berhasil diupdate");
+      await fetchWorkOrders();
       setShowDetailDialog(false);
+    } catch (error) {
+      console.error("Failed to update work order:", error);
+      toast.error("Gagal update work order");
     }
   };
 
   const getStatusBadge = (status: WorkOrderStatus) => {
-    const variants: Record<WorkOrderStatus, { variant: string; label: string; icon: any }> = {
-      requested: { variant: 'bg-blue-100 text-blue-800', label: 'Requested', icon: Clock },
-      in_procurement: { variant: 'bg-yellow-100 text-yellow-800', label: 'Procurement', icon: Package },
-      delivered: { variant: 'bg-green-100 text-green-800', label: 'Delivered', icon: Truck },
-      completed: { variant: 'bg-emerald-100 text-emerald-800', label: 'Completed', icon: CheckCircle },
-      failed: { variant: 'bg-red-100 text-red-800', label: 'Failed', icon: XCircle },
-      cancelled: { variant: 'bg-gray-100 text-gray-800', label: 'Cancelled', icon: XCircle },
+    const variants: Record<
+      WorkOrderStatus,
+      { variant: string; label: string; icon: any }
+    > = {
+      requested: {
+        variant: "bg-blue-100 text-blue-800",
+        label: "Requested",
+        icon: Clock,
+      },
+      in_procurement: {
+        variant: "bg-yellow-100 text-yellow-800",
+        label: "Procurement",
+        icon: Package,
+      },
+      delivered: {
+        variant: "bg-green-100 text-green-800",
+        label: "Delivered",
+        icon: Truck,
+      },
+      completed: {
+        variant: "bg-emerald-100 text-emerald-800",
+        label: "Completed",
+        icon: CheckCircle,
+      },
+      failed: {
+        variant: "bg-red-100 text-red-800",
+        label: "Failed",
+        icon: XCircle,
+      },
+      cancelled: {
+        variant: "bg-gray-100 text-gray-800",
+        label: "Cancelled",
+        icon: XCircle,
+      },
     };
 
     const config = variants[status];
@@ -211,23 +270,34 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
 
   const getStatusLabel = (status: WorkOrderStatus) => {
     const labels: Record<WorkOrderStatus, string> = {
-      requested: 'Diminta',
-      in_procurement: 'Dalam Pengadaan',
-      delivered: 'Diterima',
-      completed: 'Selesai',
-      failed: 'Gagal',
-      cancelled: 'Dibatalkan',
+      requested: "Diminta",
+      in_procurement: "Dalam Pengadaan",
+      delivered: "Diterima",
+      completed: "Selesai",
+      failed: "Gagal",
+      cancelled: "Dibatalkan",
     };
     return labels[status];
   };
 
-  const getTypeBadge = (type: 'sparepart' | 'vendor') => {
-    return type === 'sparepart' ? (
-      <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
-        <Package className="h-3 w-3" />
-        Sparepart
-      </Badge>
-    ) : (
+  const getTypeBadge = (type: "sparepart" | "vendor" | "license") => {
+    if (type === "sparepart") {
+      return (
+        <Badge className="bg-purple-100 text-purple-800 flex items-center gap-1">
+          <Package className="h-3 w-3" />
+          Sparepart
+        </Badge>
+      );
+    }
+    if (type === "license") {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+          <span>🔑</span>
+          Lisensi
+        </Badge>
+      );
+    }
+    return (
       <Badge className="bg-orange-100 text-orange-800 flex items-center gap-1">
         <Building className="h-3 w-3" />
         Vendor
@@ -235,9 +305,9 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
     );
   };
 
-  const filteredWorkOrders = workOrders.filter(wo => {
-    if (filterStatus !== 'all' && wo.status !== filterStatus) return false;
-    if (filterType !== 'all' && wo.type !== filterType) return false;
+  const filteredWorkOrders = workOrders.filter((wo) => {
+    if (filterStatus !== "all" && wo.status !== filterStatus) return false;
+    if (filterType !== "all" && wo.type !== filterType) return false;
     return true;
   });
 
@@ -245,7 +315,9 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
     <div className="space-y-6">
       <div>
         <h2>Work Order Management</h2>
-        <p className="text-gray-600">Kelola work order sparepart dan vendor untuk perbaikan</p>
+        <p className="text-gray-600">
+          Kelola work order sparepart dan vendor untuk perbaikan
+        </p>
       </div>
 
       {/* Filters */}
@@ -279,6 +351,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                   <SelectItem value="all">Semua Tipe</SelectItem>
                   <SelectItem value="sparepart">Sparepart</SelectItem>
                   <SelectItem value="vendor">Vendor</SelectItem>
+                  <SelectItem value="license">Lisensi</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -307,48 +380,88 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredWorkOrders.length === 0 ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-8 text-gray-500"
+                  >
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : filteredWorkOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center py-8 text-gray-500"
+                  >
                     Tidak ada work order
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredWorkOrders.map(wo => {
-                  const tickets = getTickets();
-                  const ticket = tickets.find(t => t.id === wo.ticketId);
+                filteredWorkOrders.map((wo) => {
+                  const ticket = wo.ticket;
 
                   return (
                     <TableRow key={wo.id}>
                       <TableCell className="font-mono text-sm">
-                        {wo.id.split('-').pop()?.substring(0, 8)}
+                        WO-{wo.id}
                       </TableCell>
                       <TableCell>{getTypeBadge(wo.type)}</TableCell>
                       <TableCell>{getStatusBadge(wo.status)}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-mono text-sm">{ticket?.ticketNumber}</div>
-                          <div className="text-xs text-gray-500">{ticket?.title}</div>
+                          <div className="font-mono text-sm">
+                            {ticket?.ticketNumber}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {ticket?.title}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {new Date(wo.createdAt).toLocaleDateString('id-ID', { 
-                          day: '2-digit', 
-                          month: 'short', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                        {new Date(wo.createdAt).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetail(wo)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Detail
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetail(wo)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Detail
+                          </Button>
+                          {wo.status === "completed" &&
+                            wo.ticket &&
+                            (wo.ticket as any)?.type === "perbaikan" &&
+                            (wo.ticket as any)?.assetCode &&
+                            (wo.ticket as any)?.assetNUP &&
+                            !workOrdersWithKartuKendali.has(
+                              typeof wo.id === "string"
+                                ? parseInt(wo.id)
+                                : wo.id
+                            ) && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700"
+                                onClick={() => {
+                                  setSelectedWOForKartuKendali(wo);
+                                  setShowKartuKendaliForm(true);
+                                }}
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                Isi Kartu Kendali
+                              </Button>
+                            )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -365,7 +478,10 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
           <DialogHeader>
             <DialogTitle>Detail Work Order</DialogTitle>
             <DialogDescription>
-              {selectedWO && `Work Order ${selectedWO.type === 'sparepart' ? 'Sparepart' : 'Vendor'}`}
+              {selectedWO &&
+                `Work Order ${
+                  selectedWO.type === "sparepart" ? "Sparepart" : "Vendor"
+                }`}
             </DialogDescription>
           </DialogHeader>
 
@@ -379,14 +495,16 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                 </div>
                 <div>
                   <Label className="text-xs text-gray-500">Status</Label>
-                  <div className="mt-1">{getStatusBadge(selectedWO.status)}</div>
+                  <div className="mt-1">
+                    {getStatusBadge(selectedWO.status)}
+                  </div>
                 </div>
               </div>
 
               <Separator />
 
               {/* Sparepart Details */}
-              {selectedWO.type === 'sparepart' && selectedWO.spareparts && (
+              {selectedWO.type === "sparepart" && selectedWO.items && (
                 <div className="space-y-3">
                   <h4 className="font-semibold">Daftar Sparepart</h4>
                   <Table>
@@ -395,46 +513,52 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                         <TableHead>Nama</TableHead>
                         <TableHead>Qty</TableHead>
                         <TableHead>Satuan</TableHead>
-                        <TableHead>Keterangan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedWO.spareparts.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{item.name}</TableCell>
-                          <TableCell>{item.qty}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell className="text-sm text-gray-600">
-                            {item.remarks || '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {parseItems(selectedWO.items).map(
+                        (item: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                          </TableRow>
+                        )
+                      )}
                     </TableBody>
                   </Table>
                 </div>
               )}
 
               {/* Vendor Details */}
-              {selectedWO.type === 'vendor' && (
+              {selectedWO.type === "vendor" && (
                 <div className="space-y-3">
                   <h4 className="font-semibold">Informasi Vendor</h4>
-                  
-                  {selectedWO.vendorInfo && selectedWO.vendorInfo.name ? (
+
+                  {selectedWO.vendorName ? (
                     // Display vendor info if already filled
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label className="text-xs text-gray-500">Nama Vendor</Label>
-                          <p>{selectedWO.vendorInfo.name}</p>
+                          <Label className="text-xs text-gray-500">
+                            Nama Vendor
+                          </Label>
+                          <p>{selectedWO.vendorName}</p>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">Kontak</Label>
-                          <p>{selectedWO.vendorInfo.contact || '-'}</p>
+                          <Label className="text-xs text-gray-500">
+                            Kontak
+                          </Label>
+                          <p>{selectedWO.vendorContact || "-"}</p>
                         </div>
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-500">Deskripsi Pekerjaan</Label>
-                        <p className="text-sm mt-1">{selectedWO.vendorInfo.description || '-'}</p>
+                        <Label className="text-xs text-gray-500">
+                          Deskripsi Pekerjaan
+                        </Label>
+                        <p className="text-sm mt-1">
+                          {selectedWO.vendorDescription || "-"}
+                        </p>
                       </div>
                     </>
                   ) : (
@@ -447,7 +571,8 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                             Informasi vendor belum ditambahkan
                           </p>
                           <p className="text-sm text-yellow-700 mt-1">
-                            Silakan tambahkan nama dan kontak vendor di form update di bawah
+                            Silakan tambahkan nama dan kontak vendor di form
+                            update di bawah
                           </p>
                         </div>
                       </div>
@@ -456,12 +581,33 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                 </div>
               )}
 
+              {/* License Details */}
+              {selectedWO.type === "license" && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold">Informasi Lisensi</h4>
+                  <div className="grid gap-4">
+                    <div>
+                      <Label className="text-xs text-gray-500">
+                        Nama Lisensi
+                      </Label>
+                      <p>{selectedWO.licenseName || "-"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-500">Deskripsi</Label>
+                      <p className="text-sm mt-1">
+                        {selectedWO.licenseDescription || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <Separator />
 
               {/* Update Form */}
               <div className="space-y-4">
                 <h4 className="font-semibold">Update Work Order</h4>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
                   <Select
@@ -475,7 +621,9 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="requested">Requested</SelectItem>
-                      <SelectItem value="in_procurement">In Procurement</SelectItem>
+                      <SelectItem value="in_procurement">
+                        In Procurement
+                      </SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="failed">Failed</SelectItem>
@@ -485,72 +633,74 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                 </div>
 
                 {/* Conditional fields based on status and type */}
-                {selectedWO.type === 'vendor' && (updateForm.status === 'in_procurement' || updateForm.status === 'completed') && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="vendorName">Nama Vendor *</Label>
-                      <Input
-                        id="vendorName"
-                        value={updateForm.vendorName}
-                        onChange={e => setUpdateForm({ ...updateForm, vendorName: e.target.value })}
-                        placeholder="Masukkan nama vendor"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="vendorContact">Kontak Vendor *</Label>
-                      <Input
-                        id="vendorContact"
-                        value={updateForm.vendorContact}
-                        onChange={e => setUpdateForm({ ...updateForm, vendorContact: e.target.value })}
-                        placeholder="No. telepon atau email vendor"
-                      />
-                    </div>
-                  </>
-                )}
+                {selectedWO.type === "vendor" &&
+                  (updateForm.status === "in_procurement" ||
+                    updateForm.status === "completed") && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorName">Nama Vendor *</Label>
+                        <Input
+                          id="vendorName"
+                          value={updateForm.vendorName}
+                          onChange={(e) =>
+                            setUpdateForm({
+                              ...updateForm,
+                              vendorName: e.target.value,
+                            })
+                          }
+                          placeholder="Masukkan nama vendor"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorContact">Kontak Vendor *</Label>
+                        <Input
+                          id="vendorContact"
+                          value={updateForm.vendorContact}
+                          onChange={(e) =>
+                            setUpdateForm({
+                              ...updateForm,
+                              vendorContact: e.target.value,
+                            })
+                          }
+                          placeholder="No. telepon atau email vendor"
+                        />
+                      </div>
+                    </>
+                  )}
 
-                {updateForm.status === 'delivered' && selectedWO.type === 'sparepart' && (
-                  <>
+                {updateForm.status === "completed" &&
+                  selectedWO.type === "vendor" && (
                     <div className="space-y-2">
-                      <Label htmlFor="receivedQty">Qty Diterima</Label>
-                      <Input
-                        id="receivedQty"
-                        type="number"
-                        value={updateForm.receivedQty}
-                        onChange={e => setUpdateForm({ ...updateForm, receivedQty: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="receivedRemarks">Keterangan Penerimaan</Label>
+                      <Label htmlFor="vendorCompletionNotes">
+                        Catatan Penyelesaian
+                      </Label>
                       <Textarea
-                        id="receivedRemarks"
-                        value={updateForm.receivedRemarks}
-                        onChange={e => setUpdateForm({ ...updateForm, receivedRemarks: e.target.value })}
+                        id="vendorCompletionNotes"
+                        value={updateForm.vendorCompletionNotes}
+                        onChange={(e) =>
+                          setUpdateForm({
+                            ...updateForm,
+                            vendorCompletionNotes: e.target.value,
+                          })
+                        }
                         rows={3}
+                        placeholder="Catatan hasil pekerjaan vendor..."
                       />
                     </div>
-                  </>
-                )}
+                  )}
 
-                {updateForm.status === 'completed' && selectedWO.type === 'vendor' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="vendorCompletionNotes">Catatan Penyelesaian</Label>
-                    <Textarea
-                      id="vendorCompletionNotes"
-                      value={updateForm.vendorCompletionNotes}
-                      onChange={e => setUpdateForm({ ...updateForm, vendorCompletionNotes: e.target.value })}
-                      rows={3}
-                      placeholder="Catatan hasil pekerjaan vendor..."
-                    />
-                  </div>
-                )}
-
-                {updateForm.status === 'failed' && (
+                {updateForm.status === "failed" && (
                   <div className="space-y-2">
                     <Label htmlFor="failureReason">Alasan Gagal *</Label>
                     <Textarea
                       id="failureReason"
                       value={updateForm.failureReason}
-                      onChange={e => setUpdateForm({ ...updateForm, failureReason: e.target.value })}
+                      onChange={(e) =>
+                        setUpdateForm({
+                          ...updateForm,
+                          failureReason: e.target.value,
+                        })
+                      }
                       rows={3}
                       placeholder="Jelaskan alasan work order gagal..."
                     />
@@ -567,17 +717,19 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
                   {selectedWO.timeline.map((event, idx) => (
                     <div key={event.id} className="flex gap-3 text-sm">
                       <div className="text-gray-500 min-w-[140px]">
-                        {new Date(event.timestamp).toLocaleDateString('id-ID', { 
-                          day: '2-digit', 
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                        {new Date(event.timestamp).toLocaleDateString("id-ID", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">{event.action}</div>
                         <div className="text-gray-600">{event.details}</div>
-                        <div className="text-xs text-gray-500">oleh {event.actor}</div>
+                        <div className="text-xs text-gray-500">
+                          oleh {event.actor}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -587,15 +739,45 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({ currentUser }) => 
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailDialog(false)}
+            >
               Tutup
             </Button>
-            <Button onClick={handleUpdateWorkOrder}>
-              Simpan Update
-            </Button>
+            <Button onClick={handleUpdateWorkOrder}>Simpan Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Kartu Kendali Form */}
+      {selectedWOForKartuKendali && (
+        <KartuKendaliForm
+          isOpen={showKartuKendaliForm}
+          onClose={() => {
+            setShowKartuKendaliForm(false);
+            setSelectedWOForKartuKendali(null);
+          }}
+          workOrderId={
+            typeof selectedWOForKartuKendali.id === "string"
+              ? parseInt(selectedWOForKartuKendali.id)
+              : selectedWOForKartuKendali.id
+          }
+          assetCode={(selectedWOForKartuKendali.ticket as any)?.assetCode || ""}
+          assetNup={(selectedWOForKartuKendali.ticket as any)?.assetNUP || ""}
+          onSuccess={() => {
+            toast.success("Kartu Kendali berhasil dibuat");
+            // Add the work order to the set of WOs with kartu kendali
+            const woId =
+              typeof selectedWOForKartuKendali.id === "string"
+                ? parseInt(selectedWOForKartuKendali.id)
+                : selectedWOForKartuKendali.id;
+            setWorkOrdersWithKartuKendali((prev) => new Set([...prev, woId]));
+            setShowKartuKendaliForm(false);
+            setSelectedWOForKartuKendali(null);
+          }}
+        />
+      )}
     </div>
   );
 };

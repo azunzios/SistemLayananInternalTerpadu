@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import {
   Search,
   Eye,
@@ -15,15 +21,15 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { api } from '../lib/api';
-import type { User, Ticket, UserRole } from '../types';
+} from "lucide-react";
+import { motion } from "motion/react";
+import { api } from "../lib/api";
+import type { User, Ticket, UserRole } from "../types";
 
 interface TicketListProps {
   currentUser: User;
   activeRole: UserRole;
-  viewMode: 'all' | 'my-tickets';
+  viewMode: "all" | "my-tickets";
   onViewTicket: (ticketId: string) => void;
 }
 
@@ -46,28 +52,34 @@ interface PaginationMeta {
   has_more: boolean;
 }
 
-export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUser, activeRole }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+export const TicketList: React.FC<TicketListProps> = ({
+  onViewTicket,
+  currentUser,
+  activeRole,
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [stats, setStats] = useState<TicketStats>({ 
-    total: 0, 
-    pending: 0, 
-    in_progress: 0, 
+  const [stats, setStats] = useState<TicketStats>({
+    total: 0,
+    pending: 0,
+    in_progress: 0,
     approved: 0,
-    completed: 0, 
-    rejected: 0 
+    completed: 0,
+    rejected: 0,
   });
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
-  
+
   // Role effective mengikuti activeRole (bukan sekadar daftar roles)
   const effectiveRole = activeRole || currentUser.role;
-  const isAdmin = effectiveRole === 'admin_layanan' || effectiveRole === 'super_admin';
-  const isTeknisiOnly = effectiveRole === 'teknisi';
-  const isPegawaiOnly = !isAdmin && !isTeknisiOnly;
+  const isAdmin =
+    effectiveRole === "admin_layanan" || effectiveRole === "super_admin";
+  const isTeknisiOnly = effectiveRole === "teknisi";
+  const isAdminPenyedia = effectiveRole === "admin_penyedia";
+  const isPegawaiOnly = !isAdmin && !isTeknisiOnly && !isAdminPenyedia;
 
   // Load statistics on mount and when filter type changes
   useEffect(() => {
@@ -85,19 +97,22 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
       const query: string[] = [];
       // Admin view hanya untuk super_admin/admin_layanan
       if (isAdmin) {
-        query.push('admin_view=true');
+        query.push("admin_view=true");
+      } else if (isAdminPenyedia) {
+        // Admin penyedia melihat tiket yang butuh work order
+        query.push("scope=work_order_needed");
       } else if (isPegawaiOnly) {
-        query.push('scope=my');
+        query.push("scope=my");
       } else if (isTeknisiOnly) {
-        query.push('scope=assigned');
+        query.push("scope=assigned");
       }
-      if (filterType !== 'all') {
+      if (filterType !== "all") {
         query.push(`type=${filterType}`);
       }
-      
-      const response = await api.get<any>(`tickets-counts?${query.join('&')}`);
+
+      const response = await api.get<any>(`tickets-counts?${query.join("&")}`);
       const statsData = response.counts || response;
-      
+
       setStats({
         total: statsData.total || 0,
         pending: statsData.pending || 0,
@@ -107,7 +122,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
         rejected: statsData.rejected || 0,
       });
     } catch (err) {
-      console.error('Failed to load ticket stats:', err);
+      console.error("Failed to load ticket stats:", err);
     } finally {
       setStatsLoading(false);
     }
@@ -119,60 +134,75 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
       const query = [];
       query.push(`page=${page}`);
       query.push(`per_page=15`);
-      
+
       // Add search parameter
       if (searchTerm) {
         query.push(`search=${encodeURIComponent(searchTerm)}`);
       }
-      
+
       // Add type filter
-      if (filterType !== 'all') {
+      if (filterType !== "all") {
         query.push(`type=${filterType}`);
       }
-      
+
       // Add status filter
-      if (filterStatus !== 'all') {
+      if (filterStatus !== "all") {
         query.push(`status=${filterStatus}`);
       }
 
       // Scope according to active role to force backend filtering even for multi-role users
       if (isPegawaiOnly) {
-        query.push('scope=my');
+        query.push("scope=my");
       } else if (isTeknisiOnly) {
-        query.push('scope=assigned');
+        query.push("scope=assigned");
+      } else if (isAdminPenyedia) {
+        // Admin penyedia melihat tiket yang butuh work order
+        query.push("scope=work_order_needed");
       }
 
-      const url = `tickets?${query.join('&')}`;
+      const url = `tickets?${query.join("&")}`;
       const res: any = await api.get(url);
-      
-      let data = Array.isArray(res) ? res : (res?.data || []);
+
+      let data = Array.isArray(res) ? res : res?.data || [];
       const responseMeta = res?.meta || res;
 
       // Safety: filter di frontend sesuai activeRole agar pegawai tidak melihat tiket orang lain
       if (isPegawaiOnly) {
-        data = data.filter((t: any) => (t.userId || t.user_id) === currentUser.id);
+        data = data.filter(
+          (t: any) => (t.userId || t.user_id) === currentUser.id
+        );
       } else if (isTeknisiOnly) {
-        data = data.filter((t: any) => (t.assignedTo || t.assigned_to) === currentUser.id);
+        data = data.filter(
+          (t: any) => (t.assignedTo || t.assigned_to) === currentUser.id
+        );
       }
-      
-      console.log('📊 Ticket List - Loaded tickets:', {
+
+      console.log("📊 Ticket List - Loaded tickets:", {
         count: data.length,
         firstTicket: data[0],
         hasMeta: !!responseMeta,
       });
-      
+
       setTickets(data);
       setPagination({
-        total: (isPegawaiOnly || isTeknisiOnly) ? data.length : (responseMeta.total || data.length),
+        total:
+          isPegawaiOnly || isTeknisiOnly
+            ? data.length
+            : responseMeta.total || data.length,
         per_page: responseMeta.per_page || 15,
         current_page: responseMeta.current_page || page,
         last_page: responseMeta.last_page || 1,
-        from: responseMeta.from || ((page - 1) * 15) + 1,
-        to: responseMeta.to || Math.min(page * 15, responseMeta.total || data.length),
-        has_more: responseMeta.has_more !== undefined ? responseMeta.has_more : responseMeta.current_page < responseMeta.last_page,
+        from: responseMeta.from || (page - 1) * 15 + 1,
+        to:
+          responseMeta.to ||
+          Math.min(page * 15, responseMeta.total || data.length),
+        has_more:
+          responseMeta.has_more !== undefined
+            ? responseMeta.has_more
+            : responseMeta.current_page < responseMeta.last_page,
       });
     } catch (err) {
-      console.error('Failed to load tickets:', err);
+      console.error("Failed to load tickets:", err);
       setTickets([]);
     } finally {
       setLoading(false);
@@ -196,30 +226,42 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {
-      submitted: { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800' },
-      assigned: { label: 'Assigned', color: 'bg-blue-100 text-blue-800' },
-      in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-800' },
-      on_hold: { label: 'On Hold', color: 'bg-orange-100 text-orange-800' },
-      resolved: { label: 'Resolved', color: 'bg-green-100 text-green-800' },
-      waiting_for_pegawai: { label: 'Waiting for Pegawai', color: 'bg-purple-100 text-purple-800' },
-      closed: { label: 'Closed', color: 'bg-green-100 text-green-800' },
-      closed_unrepairable: { label: 'Unrepairable', color: 'bg-red-100 text-red-800' },
-      pending_review: { label: 'Pending Review', color: 'bg-yellow-100 text-yellow-800' },
-      approved: { label: 'Approved', color: 'bg-green-100 text-green-800' },
-      completed: { label: 'Completed', color: 'bg-green-100 text-green-800' },
-      rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
-      cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-800' },
+      submitted: { label: "Submitted", color: "bg-yellow-100 text-yellow-800" },
+      assigned: { label: "Assigned", color: "bg-blue-100 text-blue-800" },
+      in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-800" },
+      on_hold: { label: "On Hold", color: "bg-orange-100 text-orange-800" },
+      resolved: { label: "Resolved", color: "bg-green-100 text-green-800" },
+      waiting_for_pegawai: {
+        label: "Waiting for Pegawai",
+        color: "bg-purple-100 text-purple-800",
+      },
+      closed: { label: "Closed", color: "bg-green-100 text-green-800" },
+      closed_unrepairable: {
+        label: "Unrepairable",
+        color: "bg-red-100 text-red-800",
+      },
+      pending_review: {
+        label: "Pending Review",
+        color: "bg-yellow-100 text-yellow-800",
+      },
+      approved: { label: "Approved", color: "bg-green-100 text-green-800" },
+      completed: { label: "Completed", color: "bg-green-100 text-green-800" },
+      rejected: { label: "Rejected", color: "bg-red-100 text-red-800" },
+      cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800" },
     };
 
-    const statusInfo = statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+    const statusInfo = statusMap[status] || {
+      label: status,
+      color: "bg-gray-100 text-gray-800",
+    };
     return <Badge className={statusInfo.color}>{statusInfo.label}</Badge>;
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'perbaikan':
+      case "perbaikan":
         return Wrench;
-      case 'zoom_meeting':
+      case "zoom_meeting":
         return Video;
       default:
         return AlertCircle;
@@ -228,29 +270,29 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getTypeLabel = (type: string) => {
     const labels = {
-      'perbaikan': 'Perbaikan',
-      'zoom_meeting': 'Zoom Meeting',
+      perbaikan: "Perbaikan",
+      zoom_meeting: "Zoom Meeting",
     };
     return labels[type as keyof typeof labels] || type;
   };
 
   const getTypeColor = (type: string) => {
     const colors = {
-      'perbaikan': 'bg-orange-100 text-orange-800',
-      'zoom_meeting': 'bg-purple-100 text-purple-800',
+      perbaikan: "bg-orange-100 text-orange-800",
+      zoom_meeting: "bg-purple-100 text-purple-800",
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -259,7 +301,9 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Kelola Tiket</h1>
-          <p className="text-muted-foreground">Review dan kelola semua tiket dari pengguna</p>
+          <p className="text-muted-foreground">
+            Review dan kelola semua tiket dari pengguna
+          </p>
         </div>
       </div>
 
@@ -277,7 +321,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
                 className="pl-9 h-10 text-sm"
               />
             </div>
-            
+
             {/* Type Filter */}
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="h-10 text-sm">
@@ -297,31 +341,35 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">
-                  Semua ({statsLoading ? '...' : stats.total})
+                  Semua ({statsLoading ? "..." : stats.total})
                 </SelectItem>
                 <SelectItem value="pending_review">
-                  Pending ({statsLoading ? '...' : stats.pending})
+                  Pending ({statsLoading ? "..." : stats.pending})
                 </SelectItem>
                 <SelectItem value="approved">
-                  Disetujui ({statsLoading ? '...' : stats.approved})
+                  Disetujui ({statsLoading ? "..." : stats.approved})
                 </SelectItem>
                 <SelectItem value="completed">
-                  Selesai ({statsLoading ? '...' : stats.completed})
+                  Selesai ({statsLoading ? "..." : stats.completed})
                 </SelectItem>
                 <SelectItem value="rejected">
-                  Ditolak ({statsLoading ? '...' : stats.rejected})
+                  Ditolak ({statsLoading ? "..." : stats.rejected})
                 </SelectItem>
               </SelectContent>
             </Select>
 
             {/* Refresh Button */}
-            <Button 
-              variant="outline" 
-              onClick={handleRefreshData} 
+            <Button
+              variant="outline"
+              onClick={handleRefreshData}
               disabled={loading || statsLoading}
               className="h-10"
             >
-              <RotateCcw className={`h-4 w-4 mr-2 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+              <RotateCcw
+                className={`h-4 w-4 mr-2 ${
+                  loading || statsLoading ? "animate-spin" : ""
+                }`}
+              />
               Refresh
             </Button>
           </div>
@@ -339,13 +387,15 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-3" />
               <p className="text-lg font-medium">Tidak ada tiket</p>
-              <p className="text-sm">Belum ada tiket yang sesuai dengan filter</p>
+              <p className="text-sm">
+                Belum ada tiket yang sesuai dengan filter
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {tickets.map((ticket, index) => {
                 const TypeIcon = getTypeIcon(ticket.type);
-                
+
                 return (
                   <motion.div
                     key={ticket.id}
@@ -353,7 +403,10 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewTicket(ticket.id)}>
+                    <Card
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => onViewTicket(String(ticket.id))}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
                           {/* Left: Icon & Content */}
@@ -363,7 +416,7 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
                                 <TypeIcon className="h-5 w-5 text-primary" />
                               </div>
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
                               {/* Title & Ticket Number */}
                               <div className="flex items-start gap-2 mb-1">
@@ -371,12 +424,12 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
                                   {ticket.title}
                                 </h3>
                               </div>
-                              
+
                               {/* Ticket Number */}
                               <p className="text-xs text-muted-foreground mb-2">
                                 #{ticket.ticketNumber}
                               </p>
-                              
+
                               {/* Metadata */}
                               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1">
@@ -399,14 +452,14 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
                               </Badge>
                               {getStatusBadge(ticket.status)}
                             </div>
-                            
+
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-8"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onViewTicket(ticket.id);
+                                onViewTicket(String(ticket.id));
                               }}
                             >
                               <Eye className="h-3 w-3 mr-1" />
@@ -427,28 +480,32 @@ export const TicketList: React.FC<TicketListProps> = ({ onViewTicket, currentUse
             <div className="text-sm text-muted-foreground">
               {pagination ? (
                 <>
-                  Menampilkan {pagination.from} - {pagination.to} dari {pagination.total} tiket
+                  Menampilkan {pagination.from} - {pagination.to} dari{" "}
+                  {pagination.total} tiket
                 </>
               ) : (
-                'Memuat...'
+                "Memuat..."
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
-                disabled={!pagination || pagination.current_page <= 1 || loading}
+                disabled={
+                  !pagination || pagination.current_page <= 1 || loading
+                }
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Sebelumnya
               </Button>
-              
+
               <div className="text-sm text-muted-foreground px-3">
-                Hal. {pagination?.current_page || 1} dari {pagination?.last_page || 1}
+                Hal. {pagination?.current_page || 1} dari{" "}
+                {pagination?.last_page || 1}
               </div>
-              
+
               <Button
                 variant="outline"
                 size="sm"

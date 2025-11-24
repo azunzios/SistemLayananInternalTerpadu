@@ -11,6 +11,7 @@ export type TicketType = "perbaikan" | "zoom_meeting";
 
 export type PerbaikanStatus =
   | "submitted" // Tiket baru diajukan
+  | "approved" // Disetujui admin layanan, menunggu assign teknisi
   | "assigned" // Ditugaskan ke teknisi
   | "in_progress" // Sedang dikerjakan teknisi
   | "on_hold" // Menunggu WO (sparepart/vendor)
@@ -131,7 +132,11 @@ export interface PerbaikanTicket extends BaseTicket {
   repairable?: boolean;
   unrepairableReason?: string;
 
-  workOrderId?: string; // Referensi ke Work Order
+  workOrderId?: string; // Referensi ke Work Order (deprecated - use workOrders array)
+  workOrders?: WorkOrder[]; // Array of work orders for this ticket
+
+  // Diagnosis relationship
+  diagnosis?: TicketDiagnosis;
 }
 
 // 3. Dibuat tipe spesifik untuk 'zoom_meeting'
@@ -182,7 +187,7 @@ export interface SparepartItem {
 }
 
 // Work Order Types
-export type WorkOrderType = "sparepart" | "vendor";
+export type WorkOrderType = "sparepart" | "vendor" | "license";
 export type WorkOrderStatus =
   | "requested"
   | "in_procurement"
@@ -198,11 +203,24 @@ export interface WorkOrder {
   type: WorkOrderType;
   status: WorkOrderStatus;
   createdBy: string; // teknisi ID
+  createdByUser?: User;
   createdAt: string;
   updatedAt: string;
-  spareparts?: SparepartItem[]; // Items dalam work order
 
-  // Vendor details
+  // Sparepart details
+  items?: any; // Can be array or JSON string
+  spareparts?: SparepartItem[]; // Deprecated, use items instead
+
+  // Vendor details (flattened structure from API)
+  vendorName?: string;
+  vendorContact?: string;
+  vendorDescription?: string;
+
+  // License details
+  licenseName?: string;
+  licenseDescription?: string;
+
+  // Vendor details (old structure - for backwards compatibility)
   vendorInfo?: {
     name?: string;
     contact?: string;
@@ -210,9 +228,10 @@ export interface WorkOrder {
     completionNotes?: string;
   };
 
+  // Ticket relation
+  ticket?: Ticket;
+
   // Delivery/completion info
-  receivedQty?: number; // Mungkin bisa dihapus jika info ada di 'spareparts'
-  receivedRemarks?: string;
   completedAt?: string;
   failureReason?: string;
 
@@ -239,6 +258,9 @@ export interface KartuKendaliEntry {
   vendorName?: string;
   vendorRef?: string;
 
+  licenseName?: string;
+  licenseDescription?: string;
+
   spareparts?: SparepartItem[]; // Items yang digunakan
   remarks?: string;
   createdAt: string;
@@ -257,6 +279,46 @@ export interface SparepartRequest {
   timeline: TimelineEvent[];
   estimatedDeliveryDate?: string;
   actualDeliveryDate?: string;
+}
+
+// Ticket Diagnosis - Hasil diagnosa perbaikan barang
+export interface TicketDiagnosis {
+  id: string;
+  ticketId: string;
+  technicianId: string;
+
+  // Teknisi info
+  technician?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+
+  // Identifikasi masalah
+  problemDescription: string;
+  problemCategory: "hardware" | "software" | "lainnya";
+
+  // Hasil diagnosis
+  repairType:
+    | "direct_repair"
+    | "need_sparepart"
+    | "need_vendor"
+    | "need_license"
+    | "unrepairable";
+
+  // Jika bisa diperbaiki langsung
+  repairDescription?: string;
+
+  // Jika tidak dapat diperbaiki
+  unrepairableReason?: string;
+  alternativeSolution?: string;
+
+  // Catatan teknisi
+  technicianNotes?: string;
+
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuditLog {

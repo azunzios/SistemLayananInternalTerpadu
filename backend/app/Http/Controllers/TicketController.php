@@ -24,7 +24,7 @@ class TicketController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Ticket::with('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments');
+        $query = Ticket::with('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments', 'diagnosis.technician');
 
         // Filter by type
         if ($request->has('type')) {
@@ -79,11 +79,15 @@ class TicketController extends Controller
         // Role-based filtering
         $user = auth()->user();
         $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
+        
         if ($user) {
             if ($scope === 'my') {
                 $query->where('user_id', $user->id);
             } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
+            } elseif ($scope === 'work_order_needed') {
+                // Admin penyedia: tiket yang punya work order atau butuh work order
+                $query->whereHas('workOrders');
             } else {
                 $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
                 if (!in_array('admin_layanan', $userRoles) && 
@@ -114,7 +118,7 @@ class TicketController extends Controller
         // Check authorization
         $this->authorizeTicketAccess($ticket);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user', 'diagnosis.technician', 'workOrders'));
     }
 
     /**
@@ -195,6 +199,9 @@ class TicketController extends Controller
                     $query->where('user_id', $user->id);
                 } elseif ($scope === 'assigned') {
                     $query->where('assigned_to', $user->id);
+                } elseif ($scope === 'work_order_needed') {
+                    // Admin penyedia: tiket yang punya work order
+                    $query->whereHas('workOrders');
                 } else {
                     $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
                     if (!in_array('admin_layanan', $userRoles) && 
@@ -222,13 +229,13 @@ class TicketController extends Controller
         ])->count();
         
         $inProgress = (clone $query)->whereIn('status', [
-            'assigned', 'in_progress', 'on_hold', 'waiting_for_pegawai'
+            'assigned', 'in_progress', 'in_diagnosis', 'in_repair', 'on_hold', 'waiting_for_pegawai'
         ])->count();
         
         $approved = (clone $query)->where('status', 'approved')->count();
         
         $completed = (clone $query)->whereIn('status', [
-            'closed', 'completed'
+            'closed', 'completed', 'resolved'
         ])->count();
         
         $rejected = (clone $query)->whereIn('status', [
@@ -409,6 +416,17 @@ class TicketController extends Controller
             $ticket->zoom_date = $validated['zoom_date'];
             $ticket->zoom_start_time = $validated['zoom_start_time'];
             $ticket->zoom_end_time = $validated['zoom_end_time'];
+            
+            // Hitung zoom_duration dari start_time dan end_time jika tidak dikirim dari frontend
+            if (isset($validated['zoom_duration'])) {
+                $ticket->zoom_duration = $validated['zoom_duration'];
+            } else {
+                // Hitung otomatis dari selisih waktu
+                $start = \Carbon\Carbon::createFromFormat('H:i', $validated['zoom_start_time']);
+                $end = \Carbon\Carbon::createFromFormat('H:i', $validated['zoom_end_time']);
+                $ticket->zoom_duration = $start->diffInMinutes($end);
+            }
+            
             $ticket->zoom_estimated_participants = $validated['zoom_estimated_participants'] ?? 0;
             $ticket->zoom_co_hosts = $validated['zoom_co_hosts'] ?? [];
             $ticket->zoom_breakout_rooms = $validated['zoom_breakout_rooms'] ?? 0;
@@ -497,7 +515,105 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Notifikasi ke teknisi yang ditugaskan
+        \App\Models\Notification::create([
+            'user_id' => $validated['assigned_to'],
+            'type' => 'info',
+            'title' => 'Tiket Baru Ditugaskan',
+            'message' => "Anda ditugaskan untuk menangani tiket perbaikan {$ticket->ticket_number}",
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+            'data' => [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'notification_type' => 'ticket_assigned',
+            ],
+        ]);
+
+        // Notifikasi ke user pengaju
+        \App\Models\Notification::create([
+            'user_id' => $ticket->user_id,
+            'type' => 'info',
+            'title' => 'Tiket Sedang Ditangani',
+            'message' => "Tiket {$ticket->ticket_number} sedang ditangani oleh teknisi {$assignedUser->name}",
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+            'data' => [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'technician_name' => $assignedUser->name,
+                'notification_type' => 'ticket_being_handled',
+            ],
+        ]);
+
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+    }
+
+    /**
+     * Approve perbaikan ticket (admin_layanan only)
+     */
+    public function approveTicket(Request $request, Ticket $ticket)
+    {
+        if (!$this->userHasRole(auth()->user(), 'admin_layanan')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Validasi tipe tiket
+        if ($ticket->type !== 'perbaikan') {
+            return response()->json([
+                'message' => 'Only perbaikan tickets can be approved using this endpoint'
+            ], 400);
+        }
+
+        // Validasi status - hanya tiket submitted yang bisa disetujui
+        if (!in_array($ticket->status, ['submitted', 'pending_review'])) {
+            return response()->json([
+                'message' => 'Only submitted or pending review tickets can be approved'
+            ], 400);
+        }
+
+        $oldStatus = $ticket->status;
+        $ticket->status = 'approved';
+        $ticket->save();
+        $ticket->refresh();
+
+        // Create timeline
+        Timeline::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => auth()->id(),
+            'action' => 'ticket_approved',
+            'details' => 'Tiket perbaikan disetujui oleh admin layanan',
+            'metadata' => [
+                'old_status' => $oldStatus,
+                'new_status' => 'approved',
+                'approved_by' => auth()->user()->name,
+            ],
+        ]);
+
+        // Audit log
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'TICKET_APPROVED',
+            'details' => "Ticket {$ticket->ticket_number} (perbaikan) approved",
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Notifikasi ke user yang mengajukan
+        \App\Models\Notification::create([
+            'user_id' => $ticket->user_id,
+            'type' => 'success',
+            'title' => 'Tiket Perbaikan Disetujui',
+            'message' => "Tiket perbaikan {$ticket->ticket_number} telah disetujui oleh admin. Teknisi akan segera ditugaskan.",
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+            'data' => [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->ticket_number,
+                'notification_type' => 'ticket_approved',
+            ],
+        ]);
+
+        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user'));
     }
 
     /**
@@ -507,6 +623,16 @@ class TicketController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|string',
+            'estimated_schedule' => 'nullable|string',
+            'reject_reason' => 'nullable|string',
+            'notes' => 'nullable|string',
+            'completion_data' => 'nullable|array', // Data form completion
+            'completion_data.tindakan_dilakukan' => 'nullable|string',
+            'completion_data.komponen_diganti' => 'nullable|string',
+            'completion_data.hasil_perbaikan' => 'nullable|string',
+            'completion_data.saran_perawatan' => 'nullable|string',
+            'completion_data.catatan_tambahan' => 'nullable|string',
+            'completion_data.foto_bukti' => 'nullable|string',
         ]);
 
         // Check if status transition is valid
@@ -518,10 +644,39 @@ class TicketController extends Controller
 
         $oldStatus = $ticket->status;
         $ticket->status = $validated['status'];
+        
+        // Save completion data if provided
+        if (isset($validated['completion_data'])) {
+            $formData = $ticket->form_data ?? [];
+            if (is_string($formData)) {
+                $formData = json_decode($formData, true) ?? [];
+            }
+            $formData['completion_info'] = $validated['completion_data'];
+            $formData['completed_at'] = now()->toIso8601String();
+            $formData['completed_by'] = auth()->user()->name;
+            $ticket->form_data = $formData;
+        }
+        
         $ticket->save();
 
-        // Create timeline entry
-        Timeline::logStatusChange($ticket->id, auth()->id(), $oldStatus, $validated['status']);
+        // Create timeline entry with additional details
+        $details = "Status changed to {$validated['status']}";
+        if (isset($validated['notes'])) {
+            $details .= " - {$validated['notes']}";
+        }
+        if (isset($validated['estimated_schedule'])) {
+            $details .= " - Estimated: {$validated['estimated_schedule']}";
+        }
+        if (isset($validated['reject_reason'])) {
+            $details .= " - Reason: {$validated['reject_reason']}";
+        }
+
+        Timeline::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => auth()->id(),
+            'action' => 'STATUS_UPDATED',
+            'details' => $details,
+        ]);
 
         // Audit log
         AuditLog::create([
@@ -741,6 +896,14 @@ class TicketController extends Controller
             return true;
         }
 
+        // Admin penyedia can see tickets with work orders
+        if (in_array('admin_penyedia', $userRoles)) {
+            // Check if ticket has work orders
+            if ($ticket->workOrders()->exists()) {
+                return true;
+            }
+        }
+
         // Teknisi can see assigned tickets
         if (in_array('teknisi', $userRoles) && $ticket->assigned_to === $user->id) {
             return true;
@@ -769,16 +932,9 @@ class TicketController extends Controller
             ->whereIn('status', ['approved', 'pending_review'])
             ->with('user', 'zoomAccount');
 
-        // Role-based filtering
+        // Role-based filtering - untuk calendarGrid, semua user bisa lihat semua booking
+        // Tapi detail sensitif (meeting link, passcode) akan disembunyikan untuk booking milik orang lain
         $user = auth()->user();
-        if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles)) {
-                // Pegawai can only see their own
-                $query->where('user_id', $user->id);
-            }
-        }
 
         // Filter by date/month based on view type
         if ($view === 'daily' && !empty($validated['date'])) {
@@ -798,12 +954,23 @@ class TicketController extends Controller
         $tickets = $query->orderBy('zoom_date', 'asc')->orderBy('zoom_start_time', 'asc')->get();
 
         // Transform tickets for calendar display
-        $calendarData = $tickets->map(function ($ticket) {
+        $calendarData = $tickets->map(function ($ticket) use ($user) {
+            $isOwner = $user && $ticket->user_id == $user->id;
+            $isAdmin = false;
+            
+            if ($user) {
+                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+                $isAdmin = in_array('admin_layanan', $userRoles) || in_array('super_admin', $userRoles);
+            }
+            
+            // Detail sensitif hanya untuk owner dan admin
+            $canSeeDetails = $isOwner || $isAdmin;
+            
             return [
                 'id' => $ticket->id,
                 'ticketNumber' => $ticket->ticket_number,
                 'title' => $ticket->title,
-                'description' => $ticket->description,
+                'description' => $canSeeDetails ? $ticket->description : null,
                 'date' => $ticket->zoom_date,
                 'startTime' => $ticket->zoom_start_time,
                 'endTime' => $ticket->zoom_end_time,
@@ -817,13 +984,15 @@ class TicketController extends Controller
                     'accountId' => $ticket->zoomAccount->account_id,
                     'name' => $ticket->zoomAccount->name,
                     'email' => $ticket->zoomAccount->email,
-                    'hostKey' => $ticket->zoomAccount->host_key,
+                    'hostKey' => $canSeeDetails ? $ticket->zoomAccount->host_key : null,
                     'color' => $ticket->zoomAccount->color,
                 ] : null,
-                'meetingLink' => $ticket->zoom_meeting_link,
-                'passcode' => $ticket->zoom_passcode,
-                'coHosts' => $ticket->zoom_co_hosts ? json_decode($ticket->zoom_co_hosts, true) : [],
+                'meetingLink' => $canSeeDetails ? $ticket->zoom_meeting_link : null,
+                'passcode' => $canSeeDetails ? $ticket->zoom_passcode : null,
+                'coHosts' => $canSeeDetails ? ($ticket->zoom_co_hosts ?? []) : [],
                 'rejectionReason' => $ticket->zoom_rejection_reason,
+                'isOwner' => $isOwner,
+                'canSeeDetails' => $canSeeDetails,
             ];
         });
 
@@ -996,7 +1165,7 @@ class TicketController extends Controller
                 ] : null,
                 'meetingLink' => $ticket->zoom_meeting_link,
                 'passcode' => $ticket->zoom_passcode,
-                'coHosts' => $ticket->zoom_co_hosts ? json_decode($ticket->zoom_co_hosts, true) : [],
+                'coHosts' => $ticket->zoom_co_hosts ?? [],
                 'rejectionReason' => $ticket->zoom_rejection_reason,
             ];
         });

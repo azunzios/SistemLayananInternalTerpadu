@@ -21,9 +21,9 @@ class WorkOrder extends Model
         'vendor_name',
         'vendor_contact',
         'vendor_description',
+        'license_name',
+        'license_description',
         'completion_notes',
-        'received_qty',
-        'received_remarks',
         'completed_at',
         'failure_reason',
     ];
@@ -88,7 +88,7 @@ class WorkOrder extends Model
      */
     public static function getTypes()
     {
-        return ['sparepart', 'vendor'];
+        return ['sparepart', 'vendor', 'license'];
     }
 
     /**
