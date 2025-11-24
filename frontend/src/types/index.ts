@@ -9,6 +9,7 @@ export type UserRole =
 
 export type TicketType = "perbaikan" | "zoom_meeting";
 
+<<<<<<< HEAD
 export type PerbaikanStatus =
   | "submitted" // Tiket baru diajukan
   | "approved" // Disetujui admin layanan, menunggu assign teknisi
@@ -20,13 +21,24 @@ export type PerbaikanStatus =
   | "closed" // Selesai & dikonfirmasi
   | "closed_unrepairable" // Tidak dapat diperbaiki sama sekali
   | "rejected"; // Ditolak oleh admin layanan
+=======
+export type PerbaikanStatus = 
+  | 'submitted'        // Tiket baru diajukan
+  | 'assigned'         // Ditugaskan ke teknisi
+  | 'in_progress'      // Sedang dikerjakan teknisi
+  | 'on_hold'          // Menunggu WO (sparepart/vendor)
+  | 'resolved'         // Selesai diperbaiki (oleh teknisi)
+  | 'waiting_for_pegawai' // Menunggu konfirmasi pegawai
+  | 'closed'           // Selesai & dikonfirmasi
+  | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
+>>>>>>> 19ca4dee1678a68ce46e0d0c34d8ba0489249934
 
-export type ZoomStatus =
-  | "pending_review" // Menggantikan 'menunggu_review' & 'pending_approval'
-  | "approved" // Disetujui
-  | "rejected" // Ditolak
-  | "cancelled" // Menggantikan 'dibatalkan'
-  | "completed"; // Acara zoom telah selesai
+export type ZoomStatus = 
+  | 'pending_review'   // Menggantikan 'menunggu_review' 
+  | 'approved'         // Disetujui
+  | 'rejected'         // Ditolak
+  | 'cancelled'        // Menggantikan 'dibatalkan'
+  | 'completed';       // Acara zoom telah selesai, otomatis oleh sistem -> belum di implementasikan, apabila sudah melebih waktu pengajuan
 
 export type SeverityLevel = "low" | "normal" | "high" | "critical";
 
