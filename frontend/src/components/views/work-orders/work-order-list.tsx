@@ -49,7 +49,7 @@ import {
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { WorkOrder, WorkOrderStatus, User } from "@/types";
-import { KartuKendaliForm } from "@/components/kartu-kendali-form";
+import { KartuKendaliForm } from "@/components/views/shared/kartu-kendali-form";
 
 interface WorkOrderListProps {
   currentUser: User;
@@ -320,7 +320,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="!pb-6">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

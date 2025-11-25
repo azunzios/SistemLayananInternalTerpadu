@@ -5,16 +5,16 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { Card, CardContent } from "./ui/card";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
 import { Package, Users, Key, Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 // Tipe sparepart item
 interface SparepartItem {

@@ -14,6 +14,22 @@ import type {
 } from "../types";
 import { api } from "./api";
 
+// Valid roles from backend - must match backend enum
+export const VALID_ROLES = [
+  'super_admin',
+  'admin_layanan',
+  'admin_penyedia',
+  'teknisi',
+  'pegawai',
+] as const;
+
+export type ValidRole = typeof VALID_ROLES[number];
+
+// Check if role is valid
+export const isValidRole = (role: any): role is ValidRole => {
+  return VALID_ROLES.includes(role);
+};
+
 // In-memory cache for synchronous getters (temporary until migration to async)
 const cache = {
   currentUser: null as User | null,
@@ -359,15 +375,22 @@ export const loginUser = async (
       : raw.role
       ? [raw.role]
       : ["pegawai"];
-    console.log(raw);
+    
+    // Validate that role from backend is in VALID_ROLES
+    const validRoles = roles.filter(r => isValidRole(r)) as ValidRole[];
+    if (validRoles.length === 0) {
+      console.warn('⚠️ Backend returned invalid role. Defaulting to pegawai');
+      validRoles.push('pegawai');
+    }
+
     const normalizedUser: User = {
       id: String(raw.id ?? ""),
       email: String(raw.email ?? ""),
       name: String(raw.name ?? ""),
       nip: String(raw.nip ?? ""),
       jabatan: String(raw.jabatan ?? ""),
-      role: (roles[0] ?? "pegawai") as any,
-      roles: roles as any,
+      role: (validRoles[0] ?? "pegawai") as any,
+      roles: validRoles as any,
       unitKerja: String(raw.unitKerja ?? raw.unit_kerja ?? ""),
       phone: String(raw.phone ?? ""),
       avatar: raw.avatar ?? undefined,

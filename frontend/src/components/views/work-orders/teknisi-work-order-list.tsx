@@ -372,7 +372,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
       </Card>
 
       {/* Work Orders Table */}
-      <Card>
+      <Card className="pb-6">
         <CardHeader>
           <CardTitle>Daftar Work Order ({filteredWorkOrders.length})</CardTitle>
           <CardDescription>

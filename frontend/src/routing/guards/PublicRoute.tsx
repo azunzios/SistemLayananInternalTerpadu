@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { ROUTES } from '../constants';
+import { ROUTES, buildRoute } from '../constants';
 import type { User } from '../../types';
 
 interface PublicRouteProps {
@@ -10,7 +10,8 @@ interface PublicRouteProps {
 // Route yang hanya bisa diakses kalau belum login (redirect ke dashboard kalau sudah login)
 export const PublicRoute: React.FC<PublicRouteProps> = ({ user, children }) => {
   if (user) {
-    return <Navigate to={ROUTES.DASHBOARD} replace />;
+    // Redirect ke dashboard dengan role yang sesuai
+    return <Navigate to={buildRoute(ROUTES.DASHBOARD, user.role)} replace />;
   }
 
   return <>{children}</>;

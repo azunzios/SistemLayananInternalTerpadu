@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -43,12 +43,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
 }) => {
   const location = useLocation();
+  const params = useParams<{ role?: string }>();
   
   // Derive current view from URL pathname
   const getViewFromPath = (): ViewType => {
-    const path = location.pathname.replace('/', '');
-    if (path.startsWith('ticket-detail')) return 'ticket-detail';
-    return (path || 'dashboard') as ViewType;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    // pathParts[0] = role, pathParts[1] = menu
+    if (pathParts.length >= 2) {
+      const menu = pathParts[1];
+      if (menu.startsWith('ticket-detail')) return 'ticket-detail';
+      return menu as ViewType;
+    }
+    return 'dashboard' as ViewType;
   };
   
   const currentView = getViewFromPath();

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DatePicker from '@/components/ui/date-picker';
 import { api } from '@/lib/api';
+import { getCurrentUser } from '@/lib/storage';
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
 import {
   Calendar,
   Clock,
-  User,
+  User as UserIcon,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
@@ -27,7 +28,7 @@ import {
 import { motion } from 'motion/react';
 import { ZoomMonthlyCalendar } from './zoom-monthly-calendar';
 import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
-import type { Ticket } from '@/types';
+import type { Ticket, User } from '@/types';
 
 interface ZoomAdminGridProps {
   tickets: Ticket[];
@@ -337,7 +338,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   }, [fetchCalendarData]);
 
   const [selectedBooking, setSelectedBooking] = useState<Ticket | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Get current user and check if admin
@@ -993,7 +994,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                     {style.height > 60 && (
                                       <>
                                         <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
-                                          <User className="h-3 w-3 flex-shrink-0" />
+                                          <UserIcon className="h-3 w-3 flex-shrink-0" />
                                           <span className="truncate">
                                             {booking.userName}
                                           </span>

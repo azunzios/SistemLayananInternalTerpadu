@@ -17,7 +17,7 @@ import {
   Truck,
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
-import { TicketDiagnosisDisplay } from "@/components/ticket-diagnosis-display";
+import { TicketDiagnosisDisplay } from "@/components/views/tickets/ticket-diagnosis-display";
 import { api } from "@/lib/api";
 
 interface TicketDetailHeaderProps {

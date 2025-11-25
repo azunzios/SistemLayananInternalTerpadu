@@ -46,7 +46,7 @@ import { api } from "@/lib/api";
 import {
   getUsersSync,
 } from "@/lib/storage";
-import { WorkOrderForm } from "@/components/work-order-form";
+import { WorkOrderForm } from "@/components/views/work-orders/work-order-form";
 import type {
   Ticket,
   User,

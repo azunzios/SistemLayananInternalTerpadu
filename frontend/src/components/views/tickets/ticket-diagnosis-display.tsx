@@ -1,7 +1,7 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle,
   XCircle,
@@ -13,7 +13,7 @@ import {
   Calendar,
   Key,
 } from "lucide-react";
-import type { TicketDiagnosis } from "../types";
+import type { TicketDiagnosis } from "@/types";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 

@@ -184,7 +184,7 @@ export const DetailDialog: React.FC<DetailDialogProps> = ({
             </div>
 
             {/* Co-Hosts Section */}
-            {booking.coHosts && booking.coHosts.length > 0 && (
+            {Array.isArray(booking.coHosts) && booking.coHosts.length > 0 && (
               <div className="border-t pt-4">
                 <p className="text-sm font-semibold mb-3">Co-Host</p>
                 <div className="space-y-2">

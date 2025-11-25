@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FileText, Package, Users, Key, CheckCircle2 } from "lucide-react";
-import { api } from "../lib/api";
-import { KartuKendaliForm } from "./kartu-kendali-form";
+import { api } from "@/lib/api";
+import { KartuKendaliForm } from "@/components/views/shared/kartu-kendali-form";
 import { toast } from "sonner";
 
 interface WorkOrder {

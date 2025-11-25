@@ -5,11 +5,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Card, CardContent } from "./ui/card";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Separator } from "./ui/separator";
+} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   FileText,
   ArrowLeft,
@@ -20,7 +20,7 @@ import {
   Building,
 } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 interface KartuKendaliEntry {
   id: number;

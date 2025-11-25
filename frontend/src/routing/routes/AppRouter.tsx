@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../../components/login-page';
+import { RegisterPage } from '../../components/register-page';
 import { MainLayout } from '../../components/main-layout';
 import { ProtectedRoute } from '../guards/ProtectedRoute';
 import { PublicRoute } from '../guards/PublicRoute';
-import { ROUTES } from '../constants';
+import { ROUTES, buildRoute, isValidRole } from '../constants';
 import type { User } from '../../types';
 
 interface AppRouterProps {
@@ -22,7 +23,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Route - Login */}
+        {/* Public Routes - Auth */}
         <Route
           path={ROUTES.LOGIN}
           element={
@@ -31,42 +32,39 @@ export const AppRouter: React.FC<AppRouterProps> = ({
             </PublicRoute>
           }
         />
-
-        {/* Protected Routes - All menu views under MainLayout */}
         <Route
-          path="/"
+          path={ROUTES.REGISTER}
           element={
-            <ProtectedRoute user={currentUser}>
-              <MainLayout
-                currentUser={currentUser!}
-                onLogout={onLogout}
-                onUserUpdate={onUserUpdate}
-              />
-            </ProtectedRoute>
+            <PublicRoute user={currentUser}>
+              <RegisterPage onLogin={onLogin} />
+            </PublicRoute>
           }
-        >
-          {/* Dashboard and menu routes */}
-          <Route path="dashboard" />
-          <Route path="my-tickets" />
-          <Route path="create-ticket-perbaikan" />
-          <Route path="create-ticket-zoom" />
-          <Route path="tickets" />
-          <Route path="ticket-detail/:id" />
-          <Route path="zoom-booking" />
-          <Route path="zoom-management" />
-          <Route path="work-orders" />
-          <Route path="users" />
-          <Route path="reports" />
-          <Route path="profile" />
-          <Route path="settings" />
-        </Route>
+        />
+
+        {/* Protected Routes - All menu views under MainLayout with role param */}
+        <Route
+          path="/:role/*"
+          element={
+            currentUser && isValidRole(currentUser.role) ? (
+              <ProtectedRoute user={currentUser}>
+                <MainLayout
+                  currentUser={currentUser!}
+                  onLogout={onLogout}
+                  onUserUpdate={onUserUpdate}
+                />
+              </ProtectedRoute>
+            ) : (
+              <Navigate to={ROUTES.LOGIN} replace />
+            )
+          }
+        />
 
         {/* Default redirect */}
         <Route
-          path={ROUTES.HOME}
+          path="/"
           element={
             currentUser ? (
-              <Navigate to={ROUTES.DASHBOARD} replace />
+              <Navigate to={buildRoute(ROUTES.DASHBOARD, currentUser.role)} replace />
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />
             )
@@ -74,7 +72,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         />
 
         {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

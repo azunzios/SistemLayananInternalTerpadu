@@ -6,12 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 interface KartuKendaliFormProps {
   isOpen: boolean;

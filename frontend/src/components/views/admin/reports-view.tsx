@@ -30,8 +30,8 @@ import {
   Truck,
 } from "lucide-react";
 import { getTickets, getWorkOrders } from "@/lib/storage";
-import { KartuKendaliList } from "@/components/kartu-kendali-list";
-import { KartuKendaliDetail } from "@/components/kartu-kendali-detail";
+import { KartuKendaliList } from "@/components/views/shared/kartu-kendali-list";
+import { KartuKendaliDetail } from "@/components/views/shared/kartu-kendali-detail";
 import type { User } from "@/types";
 
 interface ReportsViewProps {

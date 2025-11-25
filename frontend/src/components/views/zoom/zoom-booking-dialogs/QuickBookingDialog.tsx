@@ -168,7 +168,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                 </p>
                 <p className="text-xs text-gray-500">Tanggal yang sudah lewat tidak dapat dipilih.</p>
                 <p className="text-xs text-orange-600 font-medium">
-                  ⚠️ Sistem menggunakan Waktu Indonesia Tengah (WIT - NTB). Pastikan waktu yang dipilih belum lewat.
+                  ⚠️ Sistem menggunakan Waktu Indonesia Tengah (WITA - NTB). Pastikan waktu yang dipilih belum lewat.
                 </p>
               </div>
 
@@ -183,7 +183,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                     className="[&::-webkit-calendar-picker-indicator]:order-first [&::-webkit-calendar-picker-indicator]:mr-2 !p-1"
                     style={{ direction: 'ltr' }}
                   />
-                  <p className="text-xs text-gray-500">Waktu Indonesia Tengah (WIT)</p>
+                  <p className="text-xs text-gray-500">Waktu Indonesia Tengah (WITA)</p>
                 </div>
 
                 <div className="space-y-2">
@@ -196,7 +196,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                     className="[&::-webkit-calendar-picker-indicator]:order-first [&::-webkit-calendar-picker-indicator]:mr-2 !p-1"
                     style={{ direction: 'ltr' }}
                   />
-                  <p className="text-xs text-gray-500">Waktu Indonesia Tengah (WIT)</p>
+                  <p className="text-xs text-gray-500">Waktu Indonesia Tengah (WITA)</p>
                 </div>
               </div>
 
@@ -311,7 +311,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-gray-500">
-                  Maksimal 5 file. Format: PDF, DOC, XLS, PPT, JPG, PNG (Maks 10MB per file)
+                  Format: PDF, DOC, XLS, PPT, JPG, PNG (MAX: 2MB/file)
                 </p>
                 
                 {attachments && attachments.length > 0 && (

@@ -453,18 +453,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                               {getStatusBadge(ticket.status)}
                             </div>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onViewTicket(String(ticket.id));
-                              }}
-                            >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Lihat
-                            </Button>
+
                           </div>
                         </div>
                       </CardContent>

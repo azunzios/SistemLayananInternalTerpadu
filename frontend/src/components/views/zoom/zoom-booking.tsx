@@ -795,6 +795,9 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
   );
 
   const handleNavigateToTicket = (ticketId: string) => {
+    // Save current view (zoom-booking) ke sessionStorage sebelum navigate ke detail
+    // Ini memastikan ketika klik back, akan kembali ke zoom-booking, bukan tickets
+    sessionStorage.setItem('previousView', 'zoom-booking');
     if (onViewTicket) {
       onViewTicket(ticketId);
     }

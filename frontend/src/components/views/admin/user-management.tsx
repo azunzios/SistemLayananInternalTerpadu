@@ -386,7 +386,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="!pb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Search className="h-5 w-5" />
@@ -472,13 +472,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="hover:bg-gray-50"
+                    className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
                         <div>
                           <p className="font-medium">{user.name}</p>
                           {user.id === currentUser.id && (

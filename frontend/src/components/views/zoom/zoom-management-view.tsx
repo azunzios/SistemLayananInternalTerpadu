@@ -17,6 +17,8 @@ export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNaviga
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const handleViewTicketDetail = (ticketId: string) => {
+    // Save current view (zoom-management) ke sessionStorage sebelum navigate ke detail
+    sessionStorage.setItem('previousView', 'zoom-management');
     if (onNavigate) {
       onNavigate('ticket-detail', ticketId);
     }

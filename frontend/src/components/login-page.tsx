@@ -102,7 +102,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       toast.success(`Selamat datang, ${user.name}!`, {
         description: `Login sebagai ${roleLabel} dan Membuka ${viewName}`,
         style: {
-          background: '#209c73ff',
+          background: '#00a63e',
           color: '#fff',
           border: 'none',
         },

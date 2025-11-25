@@ -5,22 +5,22 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "./ui/card";
+} from "@/components/ui/card";
 import { FileText, Send } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
-import type { TicketDiagnosis } from "../types";
+import { api } from "@/lib/api";
+import type { TicketDiagnosis } from "@/types";
 
 interface TicketDiagnosisFormProps {
   ticketId: string;

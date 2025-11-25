@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
@@ -9,6 +9,7 @@ import { UserManagement, ReportsView } from '@/components/views/admin';
 import { ProfileSettings} from '@/components/views/shared';
 import { WorkOrderList, TeknisiWorkOrderList } from '@/components/views/work-orders';
 import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '@/lib/storage';
+import { buildRoute, isValidRole } from '@/routing/constants';
 import type { User } from '@/types';
 
 interface MainLayoutProps {
@@ -58,19 +59,58 @@ export const getDefaultViewForRole = (role: string): ViewType => {
 export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, onUserUpdate }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const params = useParams();
+  const params = useParams<{ role?: string }>();
+  const roleParam = params.role || '';
+  
+  // Parse ticket ID dari URL path jika ada (format: /:role/ticket-detail/:id)
+  const parseTicketId = (): string | null => {
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    // pathParts: [role, 'ticket-detail', id]
+    if (pathParts.length >= 3 && pathParts[1] === 'ticket-detail') {
+      return pathParts[2];
+    }
+    return null;
+  };
+  
+  const selectedTicketId = parseTicketId();
+  
+  // Validate role from URL matches user's role
+  useEffect(() => {
+    if (!roleParam || !isValidRole(roleParam)) {
+      // Invalid role, redirect to user's actual role
+      navigate(buildRoute('/:role/dashboard', currentUser.role), { replace: true });
+      return;
+    }
+    
+    if (roleParam !== currentUser.role) {
+      // Role in URL doesn't match user's role - redirect to correct role
+      navigate(buildRoute('/:role/dashboard', currentUser.role), { replace: true });
+      return;
+    }
+  }, [roleParam, currentUser.role, navigate]);
   
   // Derive current view from URL pathname
   const getViewFromPath = (): ViewType => {
-    const path = location.pathname.replace('/', '');
-    if (path.startsWith('ticket-detail')) return 'ticket-detail';
-    return (path || 'dashboard') as ViewType;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    // pathParts[0] = role, pathParts[1] = menu, pathParts[2+] = detail
+    if (pathParts.length >= 2) {
+      const menu = pathParts[1];
+      if (menu.startsWith('ticket-detail')) return 'ticket-detail';
+      return menu as ViewType;
+    }
+    return 'dashboard' as ViewType;
   };
   
   const currentView = getViewFromPath();
-  const selectedTicketId = params.id || null;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Track previous view di sessionStorage untuk persist saat navigate ke detail dari dialog
+  React.useEffect(() => {
+    if (currentView !== 'ticket-detail') {
+      sessionStorage.setItem('previousView', currentView);
+    }
+  }, [currentView]);
 
   // Centralized refresh: on refreshKey change, update tickets cache once
   React.useEffect(() => {
@@ -94,24 +134,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
 
   const handleNavigate = (view: ViewType, ticketId?: string) => {
     if (view === 'ticket-detail' && ticketId) {
-      navigate(`/ticket-detail/${ticketId}`);
+      navigate(buildRoute('/:role/ticket-detail/:id', roleParam, ticketId));
     } else {
       const routeMap: Record<ViewType, string> = {
-        'dashboard': '/dashboard',
-        'create-ticket-perbaikan': '/create-ticket-perbaikan',
-        'create-ticket-zoom': '/create-ticket-zoom',
-        'tickets': '/tickets',
-        'my-tickets': '/my-tickets',
-        'ticket-detail': '/tickets',
-        'zoom-booking': '/zoom-booking',
-        'zoom-management': '/zoom-management',
-        'work-orders': '/work-orders',
-        'users': '/users',
-        'reports': '/reports',
-        'profile': '/profile',
-        'settings': '/settings',
+        'dashboard': '/:role/dashboard',
+        'create-ticket-perbaikan': '/:role/create-ticket-perbaikan',
+        'create-ticket-zoom': '/:role/create-ticket-zoom',
+        'tickets': '/:role/tickets',
+        'my-tickets': '/:role/my-tickets',
+        'ticket-detail': '/:role/tickets',
+        'zoom-booking': '/:role/zoom-booking',
+        'zoom-management': '/:role/zoom-management',
+        'work-orders': '/:role/work-orders',
+        'users': '/:role/users',
+        'reports': '/:role/reports',
+        'profile': '/:role/profile',
+        'settings': '/:role/settings',
       };
-      navigate(routeMap[view]);
+      const path = buildRoute(routeMap[view], roleParam);
+      navigate(path);
     }
   };
 
@@ -121,21 +162,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
       console.warn('⚠️ Failed to load datasets for active role', err);
     });
     setRefreshKey(prev => prev + 1);
-    navigate(getDefaultViewForRole(activeRole) === 'ticket-detail' ? '/dashboard' : `/${getDefaultViewForRole(activeRole)}`);
+    const defaultView = getDefaultViewForRole(activeRole);
+    const path = buildRoute(defaultView === 'ticket-detail' ? '/:role/dashboard' : `/:role/${defaultView}`, roleParam);
+    navigate(path);
   };
 
   const handleViewTicketDetail = (ticketId: string) => {
-    navigate(`/ticket-detail/${ticketId}`);
+    navigate(buildRoute('/:role/ticket-detail/:id', roleParam, ticketId));
   };
 
   const handleBackToList = () => {
-    const backRoute = currentUser.role === 'pegawai' ? '/my-tickets' : '/tickets';
-    navigate(backRoute);
-  };
-
-  const handleCreateTicket = (ticketType: 'perbaikan' | 'zoom_meeting') => {
-    const view = ticketType === 'perbaikan' ? '/create-ticket-perbaikan' : '/create-ticket-zoom';
-    navigate(view);
+    // Baca previousView dari sessionStorage (di-set setiap kali view berubah)
+    // Ini memastikan back button selalu ke view yang sebelumnya
+    const savedPreviousView = sessionStorage.getItem('previousView');
+    
+    // Tentukan back view: jika sebelumnya ke my-tickets, kembali ke my-tickets
+    // Jika zoom-booking/zoom-management, kembali ke situ. Otherwise default ke tickets
+    let backView: ViewType = 'tickets';
+    if (savedPreviousView === 'my-tickets') {
+      backView = 'my-tickets';
+    } else if (savedPreviousView === 'zoom-booking') {
+      backView = 'zoom-booking';
+    } else if (savedPreviousView === 'zoom-management') {
+      backView = 'zoom-management';
+    }
+    
+    const path = buildRoute(`/:role/${backView}`, roleParam);
+    navigate(path);
   };
 
   const renderContent = () => {

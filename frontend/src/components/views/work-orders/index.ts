@@ -4,3 +4,4 @@ export { TeknisiWorkOrderList } from './teknisi-work-order-list';
 export { AdminPenyediaWorkOrderList } from './admin-penyedia-work-order-list';
 export { CreateWorkOrderDialog } from './create-work-order-dialog';
 export { TeknisiWorkflow } from './teknisi-workflow-new';
+export { WorkOrderForm } from './work-order-form';

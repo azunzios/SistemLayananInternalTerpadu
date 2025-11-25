@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { getTickets, saveTickets, getUsersSync, addNotification, createWorkOrder } from '@/lib/storage';
+import { getTickets, saveTickets, getUsersSync, addNotification} from '@/lib/storage';
 import type { User, TicketStatus } from '@/types';
 
 export const formatActorName = (actor: string, users: User[]): string => {

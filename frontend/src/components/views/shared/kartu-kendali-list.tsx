@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Input } from "./ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { FileText, Search, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 interface KartuKendaliAsset {
   id: number;
