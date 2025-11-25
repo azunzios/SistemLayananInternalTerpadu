@@ -1,8 +1,12 @@
 import React from 'react';
-import { UserDashboard, SuperAdminDashboard, AdminLayananDashboard, AdminPenyediaDashboard, TeknisiDashboard } from '@/components/views/dashboards';
+import { UserDashboard } from './user-dashboard';
+import { SuperAdminDashboard } from './super-admin-dashboard';
+import { AdminLayananDashboard } from './admin-layanan-dashboard';
+import { AdminPenyediaDashboard } from './admin-penyedia-dashboard';
+import { TeknisiDashboard } from './teknisi-dashboard';
 import { getActiveRole } from '@/lib/storage';
 import type { User } from '@/types';
-import type { ViewType } from './main-layout';
+import type { ViewType } from '@/components/main-layout';
 
 interface DashboardProps {
   currentUser: User;

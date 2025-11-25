@@ -1,6 +1,6 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import {
   LayoutDashboard,
@@ -12,9 +12,9 @@ import {
   FolderKanban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { User} from '../types';
+import type { User} from '@/types';
 import type { ViewType } from './main-layout';
-import { getTickets, getNotifications, getActiveRole, getWorkOrders } from '../lib/storage';
+import { getActiveRole } from '@/lib/storage';
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +24,6 @@ import {
 
 interface SidebarProps {
   currentUser: User;
-  currentView: ViewType;
   onNavigate: (view: ViewType) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -34,19 +33,27 @@ interface MenuItem {
   id: ViewType;
   label: string;
   icon: React.ElementType;
-  badge?: number;
   roles: string[];
   submenu?: MenuItem[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
-  currentView,
   onNavigate,
   collapsed,
 }) => {
+  const location = useLocation();
+  
+  // Derive current view from URL pathname
+  const getViewFromPath = (): ViewType => {
+    const path = location.pathname.replace('/', '');
+    if (path.startsWith('ticket-detail')) return 'ticket-detail';
+    return (path || 'dashboard') as ViewType;
+  };
+  
+  const currentView = getViewFromPath();
   const activeRole = getActiveRole(currentUser.id) || currentUser.role;
-  const menuItems = getMenuItemsForRole(activeRole, currentUser);
+  const menuItems = getMenuItemsForRole(activeRole as any);
 
   return (
     <motion.aside
@@ -117,17 +124,6 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
             className="flex items-center justify-between flex-1 overflow-hidden"
           >
             <span className="truncate text-sm">{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <Badge
-                className={`ml-2 flex-shrink-0 text-xs ${
-                  isActive 
-                    ? 'bg-white text-slate-900' 
-                    : 'bg-cyan-500 text-[#444746]'
-                }`}
-              >
-                {item.badge}
-              </Badge>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -141,14 +137,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
           <div>{buttonContent}</div>
         </TooltipTrigger>
         <TooltipContent side="right" className="bg-slate-900 text-white border-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <Badge className="bg-cyan-500 text-white text-xs">
-                {item.badge}
-              </Badge>
-            )}
-          </div>
+          <span className="text-sm">{item.label}</span>
         </TooltipContent>
       </Tooltip>
     );
@@ -159,41 +148,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
 type UserRole = 'super_admin' | 'admin_layanan' | 'admin_penyedia' | 'teknisi' | 'pegawai';
 
-const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
-  const tickets = getTickets();
-  const notifications = getNotifications(currentUser.id);
-  const workOrders = getWorkOrders();
-
-  // Calculate badges
-  const pendingTicketsCount = tickets.filter(t => {
-    if (role === 'admin_layanan') {
-      return t.status === 'menunggu_review';
-    }
-    if (role === 'admin_penyedia') {
-      return false; // Admin penyedia no longer has tickets to manage
-    }
-    if (role === 'teknisi') {
-      return t.assignedTo === currentUser.id && ['ditugaskan', 'diterima_teknisi'].includes(t.status);
-    }
-    return false;
-  }).length;
-
-  const myTicketsCount = tickets.filter(t => t.userId === currentUser.id).length;
-  
-  // Work order counts by role
-  let workOrdersCount = 0;
-  if (role === 'teknisi') {
-    // Teknisi: count their own work orders that are in progress
-    workOrdersCount = workOrders.filter(w => 
-      w.createdBy === currentUser.id && 
-      ['requested', 'in_procurement'].includes(w.status)
-    ).length;
-  } else if (role === 'admin_penyedia') {
-    // Admin Penyedia: count pending work orders
-    workOrdersCount = workOrders.filter(w => 
-      ['requested', 'in_procurement'].includes(w.status)
-    ).length;
-  }
+const getMenuItemsForRole = (role: UserRole): MenuItem[] => {
 
   // Define menu items based on roles
   const menuItems: MenuItem[] = [
@@ -219,14 +174,12 @@ const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
       id: 'my-tickets',
       label: 'Tiket Saya',
       icon: TicketIcon,
-      badge: myTicketsCount,
       roles: ['pegawai', 'teknisi'],
     },
     {
       id: 'tickets',
       label: 'Kelola Tiket',
       icon: TicketIcon,
-      badge: pendingTicketsCount,
       roles: ['super_admin', 'admin_layanan', 'admin_penyedia'],
     },
     {
@@ -239,7 +192,6 @@ const getMenuItemsForRole = (role: UserRole, currentUser: User): MenuItem[] => {
       id: 'work-orders',
       label: 'Work Order',
       icon: FolderKanban,
-      badge: workOrdersCount,
       roles: ['admin_penyedia', 'teknisi'],
     },
     {

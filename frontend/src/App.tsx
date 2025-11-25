@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LoginPage } from './components/login-page';
-import { MainLayout } from './components/main-layout';
-import { Toaster } from './components/ui/sonner';
-import { Spinner } from '@/components/ui/spinner'
-import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce, resetAllCaches } from './lib/storage';
-import type { User } from './types';
+import { AppRouter } from '@/routing';
+import { Toaster } from '@/components/ui/sonner';
+import { Spinner } from '@/components/ui/spinner';
+import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce, resetAllCaches } from '@/lib/storage';
+import type { User } from '@/types';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -60,17 +59,12 @@ const App: React.FC = () => {
   return (
     <>
       <div className="min-h-screen bg-gray-50">
-        {!currentUser ? (
-          <div className="relative">
-            <LoginPage onLogin={handleLogin} />
-          </div>
-        ) : (
-          <MainLayout 
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            onUserUpdate={handleUserUpdate}
-          />
-        )}
+        <AppRouter
+          currentUser={currentUser}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onUserUpdate={handleUserUpdate}
+        />
       </div>
       <Toaster position="top-right" />
     </>
