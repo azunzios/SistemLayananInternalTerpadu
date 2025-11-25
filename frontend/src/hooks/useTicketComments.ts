@@ -38,14 +38,14 @@ export const useTicketComments = (): UseTicketCommentsReturn => {
       const response = await getTicketComments(ticketId, page, 30);
       
       // Comments dari API berupa DESC (newest first)
-      // Prepend ke list agar oldest first, newest last
-      const newComments = response.data;
+      // Reverse agar oldest first, newest last
+      const newComments = response.data.reverse();
       
       if (page === 1) {
         setComments(newComments);
       } else {
-        // Untuk load more, prepend ke awal (oldest first)
-        setComments(prev => [...newComments, ...prev]);
+        // Untuk load more, append ke akhir (oldest first, newest last)
+        setComments(prev => [...prev, ...newComments]);
       }
       
       setCurrentPage(response.meta.current_page);
@@ -88,8 +88,8 @@ export const useTicketComments = (): UseTicketCommentsReturn => {
           return comment;
         }));
       } else {
-        // Jika main comment, add ke awal list (newest)
-        setComments(prev => [newComment, ...prev]);
+        // Jika main comment, add ke akhir list (newest at bottom)
+        setComments(prev => [...prev, newComment]);
       }
       
       setTotalComments(prev => prev + 1);

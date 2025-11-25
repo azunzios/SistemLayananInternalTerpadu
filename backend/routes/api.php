@@ -61,6 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/tickets/{ticket}/approve-zoom', [TicketController::class, 'approveZoom']);
     Route::patch('/tickets/{ticket}/reject-zoom', [TicketController::class, 'rejectZoom']);
     Route::patch('/tickets/{ticket}/reject', [TicketController::class, 'rejectTicket']);
+    Route::get('/technician-stats', [TicketController::class, 'technicianStats']);
+    Route::patch('/tickets/{ticket}/approve', [TicketController::class, 'approve']);
 
     // Comment Management Routes (Diskusi/Percakapan)
     Route::get('/tickets/{ticket}/comments', [CommentController::class, 'index']);

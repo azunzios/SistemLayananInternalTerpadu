@@ -186,37 +186,31 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const ticket = ticketDetail || tickets.find((t) => t.id === ticketId);
 
   // === COMPUTED VALUES (useMemo must be before conditional returns) ===
-  const technicians = useMemo(() => {
-    return users.filter((u) => u.role === "teknisi");
-  }, [users]);
+  const [technicianStats, setTechnicianStats] = React.useState<Record<string, number>>({});
 
-  const technicianActiveTickets = useMemo(() => {
-    const activeStatuses: TicketStatus[] = [
-      "assigned",
-      "in_progress",
-      "on_hold",
-      "ditugaskan",
-      "diterima_teknisi",
-      "sedang_diagnosa",
-      "dalam_perbaikan",
-      "menunggu_sparepart",
-      "approved", // Tambahkan status approved juga
-    ];
-    const counts = technicians.reduce((acc, tech) => {
-      const activeCount = allTickets.filter((t) => {
-        // Support both camelCase (assignedTo) and snake_case (assigned_to) from backend
-        const assignedUserId = t.assignedTo || t.assigned_to;
-        return (
-          t.type === "perbaikan" &&
-          assignedUserId === tech.id &&
-          activeStatuses.includes(t.status)
-        );
-      }).length;
-      acc[tech.id] = activeCount;
-      return acc;
-    }, {} as Record<string, number>);
-    return counts;
-  }, [technicians, allTickets]);
+  React.useEffect(() => {
+    const fetchTechnicianStats = async () => {
+      try {
+        const response = await api.get<any[]>('technician-stats');
+        const stats = response.reduce((acc, curr) => {
+          acc[curr.id] = curr.active_tickets;
+          return acc;
+        }, {} as Record<string, number>);
+        setTechnicianStats(stats);
+      } catch (error) {
+        console.error("Failed to fetch technician stats:", error);
+      }
+    };
+
+    if (adminDialogs.showAssignDialog) {
+      fetchTechnicianStats();
+    }
+  }, [adminDialogs.showAssignDialog]);
+
+  const technicians = useMemo(
+    () => users.filter((u) => u.role === "teknisi"),
+    [users]
+  );
 
   // === EARLY RETURN IF TICKET NOT FOUND (AFTER ALL HOOKS) ===
   if (loadingDetail) {
@@ -253,7 +247,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     String(ticket.userId) === String(currentUser.id) &&
     ["resolved", "selesai_diperbaiki", "dalam_pengiriman"].includes(
       ticket.status as any
-    );
+    )
+    ;
 
   // === HANDLERS (KEPT INLINE) ===
   const handleApprove = async () => {
@@ -541,6 +536,81 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     setRefreshKey((prev) => prev + 1);
   };
 
+  const handleCreateWorkOrder = () => {
+    if (workOrderDialog.workOrderType === "sparepart") {
+      if (
+        !workOrderDialog.sparepartName.trim() ||
+        !workOrderDialog.sparepartDescription.trim()
+      ) {
+        toast.error("Nama sparepart dan deskripsi harus diisi");
+        return;
+      }
+    } else {
+      if (!workOrderDialog.sparepartDescription.trim()) {
+        toast.error("Deskripsi pekerjaan harus diisi");
+        return;
+      }
+    }
+    createWorkOrder({
+      ticketId: ticket.id,
+      type: workOrderDialog.workOrderType,
+      createdBy: currentUser.id,
+      spareparts:
+        workOrderDialog.workOrderType === "sparepart"
+          ? [
+            {
+              name: workOrderDialog.sparepartName,
+              quantity: 1,
+              unit: "unit",
+              remarks: workOrderDialog.sparepartDescription,
+            },
+          ]
+          : undefined,
+      vendorInfo:
+        workOrderDialog.workOrderType === "vendor"
+          ? {
+            description: workOrderDialog.sparepartDescription,
+          }
+          : undefined,
+    });
+    const updatedTickets = tickets.map((t) => {
+      if (t.id === ticketId) {
+        return {
+          ...t,
+          status: "on_hold" as TicketStatus,
+          updatedAt: new Date().toISOString(),
+          timeline: [
+            ...t.timeline,
+            {
+              id: Date.now().toString(),
+              timestamp: new Date().toISOString(),
+              action: "WORK_ORDER_CREATED",
+              actor: currentUser.name,
+              details: `Work order ${workOrderDialog.workOrderType} dibuat`,
+            },
+          ],
+        };
+      }
+      return t;
+    });
+    saveTickets(updatedTickets);
+    const adminLayanan = users.filter((u) => u.role === "admin_layanan");
+    adminLayanan.forEach((admin) => {
+      addNotification({
+        userId: admin.id,
+        title: "Work Order Baru",
+        message: `Work order ${workOrderDialog.workOrderType} untuk tiket ${ticket.ticketNumber}`,
+        type: "info",
+        read: false,
+      });
+    });
+    toast.success(`Work Order berhasil dibuat`);
+    workOrderDialog.setShowSparepartDialog(false);
+    workOrderDialog.setSparepartName("");
+    workOrderDialog.setSparepartDescription("");
+    setRefreshKey((prev) => prev + 1);
+  };
+
   const handleUpdateProgress = () => {
     if (
       progressDialog.newStatus === "tidak_dapat_diperbaiki" &&
@@ -624,7 +694,13 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       <TicketDetailAlerts
         ticket={ticket}
         currentUser={currentUser}
-        onShowReviewDialog={() => adminDialogs.setShowApproveDialog(true)}
+        onShowReviewDialog={() => {
+          if (ticket.type === "perbaikan") {
+            adminDialogs.setShowAssignDialog(true);
+          } else {
+            adminDialogs.setShowApproveDialog(true);
+          }
+        }}
         onShowRejectDialog={() => adminDialogs.setShowRejectDialog(true)}
         onShowAssignDialog={() => adminDialogs.setShowAssignDialog(true)}
         onShowDiagnosaDialog={() => setShowDiagnosisForm(true)}
@@ -655,6 +731,18 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       {ticket.type === "zoom_meeting" && (
         <TicketProgressTrackerZoom ticket={ticket} />
       )}
+        
+      {/* Teknisi Workflow */}
+      {currentUser.role === "teknisi" &&
+        ticket.type === "perbaikan" &&
+        ticket.assignedTo === currentUser.id &&
+        ["assigned", "in_progress", "sedang_diagnosa", "dalam_perbaikan", "menunggu_sparepart"].includes(ticket.status as any) && (
+          <TeknisiWorkflow
+            ticket={ticket}
+            currentUser={currentUser}
+            onUpdate={() => setRefreshKey((prev) => prev + 1)}
+          />
+        )}
 
       {/* ============== DIALOGS ============== */}
 
@@ -725,7 +813,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               <SelectContent>
                 {technicians.map((tech) => (
                   <SelectItem key={tech.id} value={tech.id}>
-                    {tech.name} ({technicianActiveTickets[tech.id] || 0} aktif)
+                    {tech.name} ({technicianStats[tech.id] || 0} aktif)
                   </SelectItem>
                 ))}
               </SelectContent>

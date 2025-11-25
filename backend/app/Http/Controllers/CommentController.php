@@ -130,7 +130,7 @@ class CommentController extends Controller
             return;
         }
 
-        // Admin penyedia bisa akses
+        // Admin t bisa akses
         if ($this->userHasRole($user, 'admin_penyedia')) {
             return;
         }

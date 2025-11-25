@@ -269,7 +269,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   </div>
                   <div className="absolute top-0 right-0 flex items-center gap-1 text-blue-400 text-sm">
                     <ArrowDownLeftFromSquareIcon className="h-4 w-4" />
-                    <span>Login ke web</span>
                   </div>
                 </div>
                 </div>
