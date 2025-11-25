@@ -14,6 +14,7 @@ class KartuKendali extends Model
         'asset_code',
         'asset_nup',
         'asset_name',
+        'asset_merk',
         'asset_description',
         'condition',
         'condition_notes',
@@ -50,14 +51,6 @@ class KartuKendali extends Model
     public function latestEntry()
     {
         return $this->entries()->latest('maintenance_date')->first();
-    }
-
-    /**
-     * Get total maintenance cost
-     */
-    public function getTotalCostAttribute(): float
-    {
-        return $this->entries()->sum('total_cost') ?? 0;
     }
 
     /**

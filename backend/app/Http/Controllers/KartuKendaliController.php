@@ -249,6 +249,141 @@ class KartuKendaliController extends Controller
     }
 
     /**
+     * Create Kartu Kendali entry from completed Work Order
+     * POST /kartu-kendali/from-work-order
+     */
+    public function createFromWorkOrder(Request $request): JsonResponse
+    {
+        // Only admin_penyedia can create entries from work orders
+        if (!$this->userHasAnyRole(auth()->user(), ['admin_penyedia', 'super_admin'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only admin penyedia can create kartu kendali entries.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'work_order_id' => 'required|exists:work_orders,id',
+            'asset_code' => 'required|string|max:50',
+            'asset_nup' => 'required|string|max:50',
+            'asset_name' => 'required|string|max:255',
+            'asset_merk' => 'nullable|string|max:255',
+            'maintenance_date' => 'required|date',
+        ]);
+
+        $workOrder = \App\Models\WorkOrder::with('ticket')->find($validated['work_order_id']);
+
+        if (!$workOrder) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Work order not found',
+            ], 404);
+        }
+
+        // Check if work order is completed
+        if ($workOrder->status !== 'completed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Work order must be completed before creating kartu kendali entry',
+            ], 422);
+        }
+
+        // Check if this work order already has a kartu kendali entry
+        $existingEntry = KartuKendaliEntry::where('work_order_id', $workOrder->id)->first();
+        if ($existingEntry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kartu kendali entry already exists for this work order',
+            ], 422);
+        }
+
+        // Find or create Kartu Kendali for this asset
+        $kartuKendali = KartuKendali::firstOrCreate(
+            ['asset_code' => $validated['asset_code']],
+            [
+                'asset_nup' => $validated['asset_nup'],
+                'asset_name' => $validated['asset_name'],
+                'asset_merk' => $validated['asset_merk'] ?? null,
+                'condition' => 'baik',
+                'location' => $workOrder->ticket->data['asset_location'] ?? null,
+            ]
+        );
+
+        // Get technician from work order
+        $technicianId = $workOrder->created_by;
+        $technician = \App\Models\User::find($technicianId);
+
+        // Prepare spareparts, vendor, and license data from work order
+        $spareparts = [];
+        $vendorName = null;
+        $vendorReference = null;
+        $vendorContact = null;
+        $vendorDescription = null;
+        $licenseName = null;
+        $licenseDescription = null;
+
+        if ($workOrder->type === 'sparepart') {
+            $items = is_string($workOrder->items) ? json_decode($workOrder->items, true) : $workOrder->items;
+            $spareparts = $items ?? [];
+        } elseif ($workOrder->type === 'vendor') {
+            $vendorName = $workOrder->vendor_name;
+            $vendorReference = $workOrder->vendor_reference ?? $workOrder->id;
+            $vendorContact = $workOrder->vendor_contact;
+            $vendorDescription = $workOrder->vendor_description;
+        } elseif ($workOrder->type === 'license') {
+            $licenseName = $workOrder->license_name;
+            $licenseDescription = $workOrder->license_description;
+        }
+
+        // Create entry
+        $entry = KartuKendaliEntry::create([
+            'kartu_kendali_id' => $kartuKendali->id,
+            'ticket_id' => $workOrder->ticket_id,
+            'work_order_id' => $workOrder->id,
+            'maintenance_date' => $validated['maintenance_date'],
+            'maintenance_type' => 'corrective',
+            'vendor_name' => $vendorName,
+            'vendor_reference' => $vendorReference,
+            'vendor_contact' => $vendorContact,
+            'vendor_description' => $vendorDescription,
+            'license_name' => $licenseName,
+            'license_description' => $licenseDescription,
+            'spareparts' => $spareparts,
+            'technician_id' => $technicianId,
+            'technician_name' => $technician?->name,
+            'recorded_by' => auth()->id(),
+            'asset_condition_after' => 'baik',
+        ]);
+
+        $kartuKendali->load('responsibleUser', 'entries');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kartu Kendali entry created successfully',
+            'data' => [
+                'kartu_kendali' => new KartuKendaliResource($kartuKendali),
+                'entry' => $entry,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Check if work order already has kartu kendali entry
+     * GET /kartu-kendali/check-work-order/{work_order_id}
+     */
+    public function checkWorkOrder($workOrderId): JsonResponse
+    {
+        $exists = KartuKendaliEntry::where('work_order_id', $workOrderId)->exists();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'has_kartu_kendali' => $exists,
+            ],
+        ], 200);
+    }
+
+    /**
      * Get statistics
      * GET /kartu-kendali/stats/summary
      */
@@ -258,7 +393,6 @@ class KartuKendaliController extends Controller
             'total_assets' => KartuKendali::count(),
             'by_condition' => KartuKendali::groupBy('condition')->selectRaw('condition, count(*) as count')->pluck('count', 'condition'),
             'total_maintenance_records' => KartuKendaliEntry::count(),
-            'total_maintenance_cost' => KartuKendaliEntry::sum('total_cost'),
             'by_maintenance_type' => KartuKendaliEntry::groupBy('maintenance_type')->selectRaw('maintenance_type, count(*) as count')->pluck('count', 'maintenance_type'),
         ];
 

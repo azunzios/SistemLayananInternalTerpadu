@@ -37,67 +37,98 @@ interface ZoomAdminGridProps {
 
 // Time slots from 06:00 - 23:00, then 00:00 - 05:00 (24 hours total)
 const TIME_HOURS = [
-  6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, // 6 AM - 11 PM
-  0, 1, 2, 3, 4, 5 // Midnight - 5 AM
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19,
+  20,
+  21,
+  22,
+  23, // 6 AM - 11 PM
+  0,
+  1,
+  2,
+  3,
+  4,
+  5, // Midnight - 5 AM
 ];
 
 // Color mapping for different colors
-const COLOR_MAP: Record<string, { color: string; lightColor: string; borderColor: string; hoverColor: string; dotColor: string }> = {
+const COLOR_MAP: Record<
+  string,
+  {
+    color: string;
+    lightColor: string;
+    borderColor: string;
+    hoverColor: string;
+    dotColor: string;
+  }
+> = {
   blue: {
-    color: 'bg-blue-500',
-    lightColor: 'bg-blue-100',
-    borderColor: 'border-blue-300',
-    hoverColor: 'hover:bg-blue-50',
-    dotColor: 'bg-blue-600'
+    color: "bg-blue-500",
+    lightColor: "bg-blue-100",
+    borderColor: "border-blue-300",
+    hoverColor: "hover:bg-blue-50",
+    dotColor: "bg-blue-600",
   },
   purple: {
-    color: 'bg-purple-500',
-    lightColor: 'bg-purple-100',
-    borderColor: 'border-purple-300',
-    hoverColor: 'hover:bg-purple-50',
-    dotColor: 'bg-purple-600'
+    color: "bg-purple-500",
+    lightColor: "bg-purple-100",
+    borderColor: "border-purple-300",
+    hoverColor: "hover:bg-purple-50",
+    dotColor: "bg-purple-600",
   },
   green: {
-    color: 'bg-green-500',
-    lightColor: 'bg-green-100',
-    borderColor: 'border-green-300',
-    hoverColor: 'hover:bg-green-50',
-    dotColor: 'bg-green-600'
+    color: "bg-green-500",
+    lightColor: "bg-green-100",
+    borderColor: "border-green-300",
+    hoverColor: "hover:bg-green-50",
+    dotColor: "bg-green-600",
   },
   orange: {
-    color: 'bg-orange-500',
-    lightColor: 'bg-orange-100',
-    borderColor: 'border-orange-300',
-    hoverColor: 'hover:bg-orange-50',
-    dotColor: 'bg-orange-600'
+    color: "bg-orange-500",
+    lightColor: "bg-orange-100",
+    borderColor: "border-orange-300",
+    hoverColor: "hover:bg-orange-50",
+    dotColor: "bg-orange-600",
   },
   red: {
-    color: 'bg-red-500',
-    lightColor: 'bg-red-100',
-    borderColor: 'border-red-300',
-    hoverColor: 'hover:bg-red-50',
-    dotColor: 'bg-red-600'
+    color: "bg-red-500",
+    lightColor: "bg-red-100",
+    borderColor: "border-red-300",
+    hoverColor: "hover:bg-red-50",
+    dotColor: "bg-red-600",
   },
   teal: {
-    color: 'bg-teal-500',
-    lightColor: 'bg-teal-100',
-    borderColor: 'border-teal-300',
-    hoverColor: 'hover:bg-teal-50',
-    dotColor: 'bg-teal-600'
+    color: "bg-teal-500",
+    lightColor: "bg-teal-100",
+    borderColor: "border-teal-300",
+    hoverColor: "hover:bg-teal-50",
+    dotColor: "bg-teal-600",
   },
   indigo: {
-    color: 'bg-indigo-500',
-    lightColor: 'bg-indigo-100',
-    borderColor: 'border-indigo-300',
-    hoverColor: 'hover:bg-indigo-50',
-    dotColor: 'bg-indigo-600'
+    color: "bg-indigo-500",
+    lightColor: "bg-indigo-100",
+    borderColor: "border-indigo-300",
+    hoverColor: "hover:bg-indigo-50",
+    dotColor: "bg-indigo-600",
   },
   pink: {
-    color: 'bg-pink-500',
-    lightColor: 'bg-pink-100',
-    borderColor: 'border-pink-300',
-    hoverColor: 'hover:bg-pink-50',
-    dotColor: 'bg-pink-600'
+    color: "bg-pink-500",
+    lightColor: "bg-pink-100",
+    borderColor: "border-pink-300",
+    hoverColor: "hover:bg-pink-50",
+    dotColor: "bg-pink-600",
   },
 };
 
@@ -117,8 +148,8 @@ const getGridIndex = (hour: number): number => {
 // Local date formatter to ensure consistent date format for API
 const formatLocalDate = (date: Date) => {
   const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 };
 
@@ -128,10 +159,12 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   onDateChange,
 }) => {
   // View mode state (daily or monthly)
-  const [viewMode, setViewMode] = useState<'daily' | 'monthly'>('daily');
+  const [viewMode, setViewMode] = useState<"daily" | "monthly">("daily");
 
   // Display mode state (calendar or list) - for entire view
-  const [displayMode, setDisplayMode] = useState<'calendar' | 'list'>('calendar');
+  const [displayMode, setDisplayMode] = useState<"calendar" | "list">(
+    "calendar"
+  );
 
   // Calendar data from backend
   const [calendarTickets, setCalendarTickets] = useState<any[]>([]);
@@ -142,9 +175,39 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   const [zoomAccounts, setZoomAccounts] = useState<any[]>(() => {
     // Initial state - will be loaded from API
     return [
-      { id: 1, accountId: 'zoom1', name: 'Akun Zoom 1', isActive: true, color: 'bg-blue-500', lightColor: 'bg-blue-100', borderColor: 'border-blue-300', hoverColor: 'hover:bg-blue-50', dotColor: 'bg-blue-600' },
-      { id: 2, accountId: 'zoom2', name: 'Akun Zoom 2', isActive: true, color: 'bg-purple-500', lightColor: 'bg-purple-100', borderColor: 'border-purple-300', hoverColor: 'hover:bg-purple-50', dotColor: 'bg-purple-600' },
-      { id: 3, accountId: 'zoom3', name: 'Akun Zoom 3', isActive: true, color: 'bg-green-500', lightColor: 'bg-green-100', borderColor: 'border-green-300', hoverColor: 'hover:bg-green-50', dotColor: 'bg-green-600' },
+      {
+        id: 1,
+        accountId: "zoom1",
+        name: "Akun Zoom 1",
+        isActive: true,
+        color: "bg-blue-500",
+        lightColor: "bg-blue-100",
+        borderColor: "border-blue-300",
+        hoverColor: "hover:bg-blue-50",
+        dotColor: "bg-blue-600",
+      },
+      {
+        id: 2,
+        accountId: "zoom2",
+        name: "Akun Zoom 2",
+        isActive: true,
+        color: "bg-purple-500",
+        lightColor: "bg-purple-100",
+        borderColor: "border-purple-300",
+        hoverColor: "hover:bg-purple-50",
+        dotColor: "bg-purple-600",
+      },
+      {
+        id: 3,
+        accountId: "zoom3",
+        name: "Akun Zoom 3",
+        isActive: true,
+        color: "bg-green-500",
+        lightColor: "bg-green-100",
+        borderColor: "border-green-300",
+        hoverColor: "hover:bg-green-50",
+        dotColor: "bg-green-600",
+      },
     ];
   });
 
@@ -152,7 +215,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   useEffect(() => {
     const loadZoomAccounts = async () => {
       try {
-        const accounts = await api.get('zoom/accounts');
+        const accounts = await api.get("zoom/accounts");
         if (Array.isArray(accounts)) {
           const mappedAccounts = accounts.map((acc: any) => {
             const colorConfig = COLOR_MAP[acc.color] || COLOR_MAP.blue;
@@ -171,7 +234,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
           setZoomAccounts(mappedAccounts);
         }
       } catch (err) {
-        console.error('Failed to load zoom accounts:', err);
+        console.error("Failed to load zoom accounts:", err);
       }
     };
 
@@ -186,21 +249,21 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
 
   // Normalize API ticket data to trim time fields, unify dates, and retain account identifiers
   const normalizeTime = (value: string | undefined | null) => {
-    if (typeof value !== 'string' || value.length === 0) return value;
-    const [hour = '00', minute = '00'] = value.split(':');
-    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+    if (typeof value !== "string" || value.length === 0) return value;
+    const [hour = "00", minute = "00"] = value.split(":");
+    return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
   };
 
   const normalizeCalendarTicket = (ticket: any, fallbackDate: string) => {
     const rawDate = ticket.date ?? ticket.startDate ?? fallbackDate;
     let normalizedDate = fallbackDate;
 
-    if (typeof rawDate === 'string') {
+    if (typeof rawDate === "string") {
       const isoCandidate = new Date(rawDate);
       if (!Number.isNaN(isoCandidate.getTime())) {
-        normalizedDate = isoCandidate.toISOString().split('T')[0];
+        normalizedDate = isoCandidate.toISOString().split("T")[0];
       } else {
-        normalizedDate = rawDate.split('T')[0] || fallbackDate;
+        normalizedDate = rawDate.split("T")[0] || fallbackDate;
       }
     }
 
@@ -211,9 +274,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
       null;
 
     const zoomAccountKey =
-      ticket.zoomAccount?.accountId ??
-      ticket.zoom_account?.account_id ??
-      null;
+      ticket.zoomAccount?.accountId ?? ticket.zoom_account?.account_id ?? null;
 
     return {
       ...ticket,
@@ -232,16 +293,23 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
     const dateStr = formatLocalDate(selectedDate);
     const monthStr = dateStr.substring(0, 7);
     const params = new URLSearchParams();
-    if (viewMode === 'daily') {
-      params.append('date', dateStr);
-      params.append('view', 'daily');
+    if (viewMode === "daily") {
+      params.append("date", dateStr);
+      params.append("view", "daily");
     } else {
-      params.append('month', monthStr);
-      params.append('view', 'monthly');
+      params.append("month", monthStr);
+      params.append("view", "monthly");
     }
     try {
-      const response = await api.get(`tickets/calendar/grid?${params.toString()}`);
-      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+      const response = await api.get(
+        `tickets/calendar/grid?${params.toString()}`
+      );
+      if (
+        response &&
+        typeof response === "object" &&
+        "success" in response &&
+        "data" in response
+      ) {
         const { success, data } = response as any;
         if (success && Array.isArray(data)) {
           const normalized = data.map((ticket: any) =>
@@ -255,8 +323,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
         setCalendarTickets([]);
       }
     } catch (err) {
-      console.error('Failed to load calendar data:', err);
-      setCalendarError('Gagal memuat data kalender');
+      console.error("Failed to load calendar data:", err);
+      setCalendarError("Gagal memuat data kalender");
       setCalendarTickets([]);
     } finally {
       setIsLoadingCalendar(false);
@@ -269,6 +337,20 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   }, [fetchCalendarData]);
 
   const [selectedBooking, setSelectedBooking] = useState<Ticket | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Get current user and check if admin
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+    if (user) {
+      const roles = user.roles || [];
+      setIsAdmin(
+        roles.includes("admin_layanan") || roles.includes("super_admin")
+      );
+    }
+  }, []);
 
   // Set default date to today if no date is selected
   useEffect(() => {
@@ -332,12 +414,12 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   const getBookingsForDate = () => {
     if (!selectedDate) return [];
 
-    if (viewMode === 'daily') {
+    if (viewMode === "daily") {
       const dateStr = formatLocalDate(selectedDate);
       return calendarTickets.filter((ticket) => {
         const ticketDate =
-          typeof ticket.date === 'string'
-            ? ticket.date.split('T')[0]
+          typeof ticket.date === "string"
+            ? ticket.date.split("T")[0]
             : ticket.date;
         return ticketDate === dateStr;
       });
@@ -349,8 +431,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
 
   // Calculate booking position and height based on time (vertical layout)
   const getBookingStyle = (startTime: string, endTime: string) => {
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
 
     // Get grid indices for start and end times
     const startIndex = getGridIndex(startHour);
@@ -373,7 +455,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
 
     return {
       top: topPx,
-      height: heightPx
+      height: heightPx,
     };
   };
 
@@ -388,13 +470,13 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
         booking.zoomAccountId,
         booking.zoomAccount?.id,
         booking.zoomAccount?.accountId,
-        booking.zoomAccountKey
+        booking.zoomAccountKey,
       ]
         .filter(Boolean)
         .map((value: any) => String(value));
 
       if (bookingIdentifiers.length === 0) {
-        return identifiers.some((id) => id === '1' || id === 'zoom1');
+        return identifiers.some((id) => id === "1" || id === "zoom1");
       }
 
       return bookingIdentifiers.some((id) => identifiers.includes(id));
@@ -406,39 +488,39 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
   // Get status styling
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'approved':
+      case "approved":
         return {
-          bg: 'bg-green-500',
-          border: 'border-green-600',
-          text: 'text-white',
-          label: 'Disetujui',
-          icon: CheckCircle
+          bg: "bg-green-500",
+          border: "border-green-600",
+          text: "text-white",
+          label: "Disetujui",
+          icon: CheckCircle,
         };
-      case 'menunggu_review':
-      case 'pending_approval':
-      case 'pending_review':
+      case "menunggu_review":
+      case "pending_approval":
+      case "pending_review":
         return {
-          bg: 'bg-yellow-400',
-          border: 'border-yellow-600',
-          text: 'text-gray-900',
-          label: 'Pending',
-          icon: Clock
+          bg: "bg-yellow-400",
+          border: "border-yellow-600",
+          text: "text-gray-900",
+          label: "Pending",
+          icon: Clock,
         };
-      case 'ditolak':
+      case "ditolak":
         return {
-          bg: 'bg-red-500',
-          border: 'border-red-600',
-          text: 'text-white',
-          label: 'Ditolak',
-          icon: XCircle
+          bg: "bg-red-500",
+          border: "border-red-600",
+          text: "text-white",
+          label: "Ditolak",
+          icon: XCircle,
         };
       default:
         return {
-          bg: 'bg-gray-400',
-          border: 'border-gray-600',
-          text: 'text-white',
+          bg: "bg-gray-400",
+          border: "border-gray-600",
+          text: "text-white",
           label: status,
-          icon: AlertCircle
+          icon: AlertCircle,
         };
     }
   };
@@ -457,7 +539,9 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 <Calendar className="h-5 w-5" />
                 Pilih Tanggal
               </CardTitle>
-              <CardDescription>Pilih tanggal untuk melihat dan mengelola jadwal Zoom</CardDescription>
+              <CardDescription>
+                Pilih tanggal untuk melihat dan mengelola jadwal Zoom
+              </CardDescription>
             </div>
             <div className="flex justify-end">
               <DatePicker
@@ -476,7 +560,9 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
             <div className="text-center text-gray-500">
               <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
               <p className="text-lg">Silakan pilih tanggal terlebih dahulu</p>
-              <p className="text-sm mt-2">Gunakan form di atas untuk memilih tanggal yang ingin Anda lihat</p>
+              <p className="text-sm mt-2">
+                Gunakan form di atas untuk memilih tanggal yang ingin Anda lihat
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -490,7 +576,9 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 <div className="flex-1">
                   <CardTitle>Jadwal Zoom - Admin Control</CardTitle>
                   {isLoadingCalendar && (
-                    <p className="text-sm text-gray-500 mt-1">Memuat data kalender...</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Memuat data kalender...
+                    </p>
                   )}
                   {calendarError && (
                     <p className="text-sm text-red-600 mt-1">{calendarError}</p>
@@ -498,9 +586,14 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {/* View Mode Selector - Only show in calendar mode */}
-                  {displayMode === 'calendar' && (
+                  {displayMode === "calendar" && (
                     <>
-                      <Select value={viewMode} onValueChange={(value: 'daily' | 'monthly') => setViewMode(value)}>
+                      <Select
+                        value={viewMode}
+                        onValueChange={(value: "daily" | "monthly") =>
+                          setViewMode(value)
+                        }
+                      >
                         <SelectTrigger className="w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
@@ -522,44 +615,83 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                     </>
                   )}
 
-                  {viewMode === 'daily' && displayMode === 'calendar' && (
+                  {viewMode === "daily" && displayMode === "calendar" && (
                     <>
-                      <Button variant="outline" size="sm" onClick={handlePreviousDay}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousDay}
+                      >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleToday} className="w-[100px]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleToday}
+                        className="w-[100px]"
+                      >
                         Hari Ini
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleNextDay}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextDay}
+                      >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </>
                   )}
 
-                  {viewMode === 'monthly' && displayMode === 'calendar' && (
+                  {viewMode === "monthly" && displayMode === "calendar" && (
                     <>
-                      <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousMonth}
+                      >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleThisMonth} className="w-[100px]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleThisMonth}
+                        className="w-[100px]"
+                      >
                         Bulan Ini
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleNextMonth}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextMonth}
+                      >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </>
                   )}
 
                   {/* Navigation for List View */}
-                  {displayMode === 'list' && (
+                  {displayMode === "list" && (
                     <>
-                      <Button variant="outline" size="sm" onClick={handlePreviousDay}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousDay}
+                      >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleToday} className="w-[100px]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleToday}
+                        className="w-[100px]"
+                      >
                         Hari Ini
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleNextDay}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextDay}
+                      >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </>
@@ -568,84 +700,114 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
               </div>
             </CardHeader>
             <CardContent>
-              {viewMode === 'monthly' ? (
+              {viewMode === "monthly" ? (
                 <ZoomMonthlyCalendar
                   tickets={calendarTickets}
                   selectedDate={selectedDate}
                 />
-              ) : displayMode === 'list' ? (
+              ) : displayMode === "list" ? (
                 /* List View - All Tickets */
                 <div className="space-y-3">
                   {bookings.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       <AlertCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg">Tidak ada booking untuk tanggal ini</p>
+                      <p className="text-lg">
+                        Tidak ada booking untuk tanggal ini
+                      </p>
                     </div>
-                    ) : (
-                      bookings
-                        .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                        .map((booking, index) => {
-                          const statusStyle = getStatusStyle(booking.status);
-                          const StatusIcon = statusStyle.icon;
-                          const account = zoomAccounts.find(acc => {
-                            const accIds = [acc.id, acc.accountId]
-                              .filter(Boolean)
-                              .map((value: any) => String(value));
-                            const bookingIds = [
-                              booking.zoomAccountId,
-                              booking.zoomAccount?.id,
-                              booking.zoomAccount?.accountId,
-                              booking.zoomAccountKey
-                            ]
-                              .filter(Boolean)
-                              .map((value: any) => String(value));
-                            return bookingIds.some((id) => accIds.includes(id));
-                          });
+                  ) : (
+                    bookings
+                      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                      .map((booking, index) => {
+                        const statusStyle = getStatusStyle(booking.status);
+                        const StatusIcon = statusStyle.icon;
+                        const account = zoomAccounts.find((acc) => {
+                          const accIds = [acc.id, acc.accountId]
+                            .filter(Boolean)
+                            .map((value: any) => String(value));
+                          const bookingIds = [
+                            booking.zoomAccountId,
+                            booking.zoomAccount?.id,
+                            booking.zoomAccount?.accountId,
+                            booking.zoomAccountKey,
+                          ]
+                            .filter(Boolean)
+                            .map((value: any) => String(value));
+                          return bookingIds.some((id) => accIds.includes(id));
+                        });
 
-                          return (
-                            <motion.div
-                              key={booking.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.05 }}
-                              className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all bg-white"
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                {/* Left Side - Booking Info */}
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`h-8 w-8 ${statusStyle.bg} rounded-lg flex items-center justify-center`}>
-                                      <StatusIcon className={`h-4 w-4 ${statusStyle.text === 'text-gray-900' ? 'text-gray-900' : 'text-white'}`} />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-semibold">{booking.title}</h4>
-                                      <p className="text-sm text-gray-500">{booking.userName}</p>
-                                    </div>
+                        return (
+                          <motion.div
+                            key={booking.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all bg-white"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              {/* Left Side - Booking Info */}
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`h-8 w-8 ${statusStyle.bg} rounded-lg flex items-center justify-center`}
+                                  >
+                                    <StatusIcon
+                                      className={`h-4 w-4 ${
+                                        statusStyle.text === "text-gray-900"
+                                          ? "text-gray-900"
+                                          : "text-white"
+                                      }`}
+                                    />
                                   </div>
+                                  <div>
+                                    <h4 className="font-semibold">
+                                      {booking.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-500">
+                                      {booking.userName}
+                                    </p>
+                                  </div>
+                                </div>
 
-                                  <div className="flex items-center gap-4 text-sm">
-                                    <div className="flex items-center gap-1.5 text-gray-700">
-                                      <Clock className="h-4 w-4" />
-                                      <span>{booking.startTime} - {booking.endTime}</span>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <div className="flex items-center gap-1.5 text-gray-700">
+                                    <Clock className="h-4 w-4" />
+                                    <span>
+                                      {booking.startTime} - {booking.endTime}
+                                    </span>
+                                  </div>
+                                  {account && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div
+                                        className={`w-3 h-3 rounded-full ${account.color}`}
+                                      />
+                                      <span className="text-gray-700">
+                                        {account.name}
+                                      </span>
+                                      {!account.isActive && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-xs"
+                                        >
+                                          Nonaktif
+                                        </Badge>
+                                      )}
                                     </div>
-
-                                    {account && (
-                                      <div className="flex items-center gap-1.5">
-                                        <div className={`w-3 h-3 rounded-full ${account.color}`} />
-                                        <span className="text-gray-700">{account.name}</span>
-                                        {!account.isActive && (
-                                          <Badge variant="secondary" className="text-xs">Nonaktif</Badge>
-                                        )}
-                                      </div>
-                                    )}                                  {!account && (
-                                    <Badge variant="outline" className="text-xs">
+                                  )}{" "}
+                                  {!account && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       Belum di-assign
                                     </Badge>
                                   )}
                                 </div>
 
                                 {booking.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2">{booking.description}</p>
+                                  <p className="text-sm text-gray-600 line-clamp-2">
+                                    {booking.description}
+                                  </p>
                                 )}
                               </div>
 
@@ -653,11 +815,11 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                               <div className="flex flex-col items-end gap-2">
                                 <Badge
                                   variant={
-                                    booking.status === 'approved'
-                                      ? 'default'
-                                      : booking.status === 'ditolak'
-                                        ? 'destructive'
-                                        : 'secondary'
+                                    booking.status === "approved"
+                                      ? "default"
+                                      : booking.status === "ditolak"
+                                      ? "destructive"
+                                      : "secondary"
                                   }
                                 >
                                   {statusStyle.label}
@@ -686,8 +848,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                     {/* Time Column - Sticky */}
                     <div className="sticky left-0 z-10 flex-shrink-0 w-24 bg-white border-r border-gray-300">
                       {/* Header Cell - Empty for mathematical axis look */}
-                      <div className="h-12 border-b border-gray-300 flex items-center justify-center">
-                      </div>
+                      <div className="h-12 border-b border-gray-300 flex items-center justify-center"></div>
                       {/* Time Labels */}
                       {TIME_HOURS.map((hour) => (
                         <div
@@ -697,7 +858,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                         >
                           {hour !== 6 && (
                             <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-gray-700 bg-white px-2">
-                              {hour.toString().padStart(2, '0')}:00
+                              {hour.toString().padStart(2, "0")}:00
                             </span>
                           )}
                         </div>
@@ -705,159 +866,234 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                     </div>
 
                     {/* Account Columns - with horizontal scroll if more than 3 accounts */}
-                    <div className="flex border-l border-gray-300" style={{ minWidth: zoomAccounts.length > 3 ? 'auto' : 'calc(100vw - 900px)' }}>
+                    <div
+                      className="flex border-l border-gray-300"
+                      style={{
+                        minWidth:
+                          zoomAccounts.length > 3
+                            ? "auto"
+                            : "calc(100vw - 900px)",
+                      }}
+                    >
                       {zoomAccounts.map((account, accountIndex) => {
                         const accountBookings = getAccountBookings(account);
                         // Hitung width: jika <= 3 akun bagi rata fit viewport, jika > 3 gunakan fixed width
-                        const baseWidth = zoomAccounts.length <= 3 ? `calc((100vw - 320px) / ${zoomAccounts.length})` : '320px';
-                          
-                          return (
+                        const baseWidth =
+                          zoomAccounts.length <= 3
+                            ? `calc((100vw - 320px) / ${zoomAccounts.length})`
+                            : "320px";
+
+                        return (
+                          <div
+                            key={account.id}
+                            className={`border-r last:border-r-0 border-gray-300 relative shrink-0 ${
+                              accountIndex % 2 === 0
+                                ? "bg-gray-50/30"
+                                : "bg-white"
+                            }`}
+                            style={{
+                              width: baseWidth,
+                              minWidth: baseWidth,
+                              flex: "none",
+                            }}
+                          >
+                            {/* Header Cell */}
                             <div
-                              key={account.id}
-                              className={`border-r last:border-r-0 border-gray-300 relative shrink-0 ${
-                                accountIndex % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'
-                                }`}
-                                style={{
-                                  width: baseWidth,
-                                  minWidth: baseWidth,
-                                  flex: 'none'
-                                }}
-                              >
-                                {/* Header Cell */}
-                                <div className={`h-12 border-b border-gray-300 flex items-center justify-center px-2 ${account.isActive ? 'bg-gray-100' : 'bg-gray-200'
-                                  }`}>
+                              className={`h-12 border-b border-gray-300 flex items-center justify-center px-2 ${
+                                account.isActive ? "bg-gray-100" : "bg-gray-200"
+                              }`}
+                            >
+                              <div className="text-center">
+                                <span className="text-sm font-medium block">
+                                  {account.name}
+                                </span>
+                                <span
+                                  className={`text-xs ${
+                                    account.isActive
+                                      ? "text-green-600"
+                                      : "text-gray-500"
+                                  }`}
+                                >
+                                  {account.isActive ? "● Aktif" : "● Nonaktif"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Grid Cells Container - Relative positioning for bookings */}
+                            <div
+                              className="relative"
+                              style={{ height: `${totalGridHeight}px` }}
+                            >
+                              {/* Inactive Overlay */}
+                              {!account.isActive && (
+                                <div className="absolute inset-0 bg-gray-100/60 z-20 flex items-center justify-center pointer-events-none">
                                   <div className="text-center">
-                                    <span className="text-sm font-medium block">{account.name}</span>
-                                    <span className={`text-xs ${account.isActive ? 'text-green-600' : 'text-gray-500'}`}>
-                                      {account.isActive ? '● Aktif' : '● Nonaktif'}
-                                    </span>
+                                    <PowerOff className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                    <p className="text-sm text-gray-600 font-semibold">
+                                      Akun Nonaktif
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      Tidak menerima booking baru
+                                    </p>
                                   </div>
                                 </div>
+                              )}
 
-                                {/* Grid Cells Container - Relative positioning for bookings */}
-                                <div className="relative" style={{ height: `${totalGridHeight}px` }}>
-                                  {/* Inactive Overlay */}
-                                  {!account.isActive && (
-                                    <div className="absolute inset-0 bg-gray-100/60 z-20 flex items-center justify-center pointer-events-none">
-                                      <div className="text-center">
-                                        <PowerOff className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                        <p className="text-sm text-gray-600 font-semibold">Akun Nonaktif</p>
-                                        <p className="text-xs text-gray-500">Tidak menerima booking baru</p>
-                                      </div>
+                              {/* Hour Grid Lines */}
+                              {TIME_HOURS.map((hour, index) => (
+                                <div
+                                  key={hour}
+                                  className="absolute left-0 right-0 border-b border-gray-200"
+                                  style={{
+                                    top: `${index * PIXELS_PER_HOUR}px`,
+                                    height: `${PIXELS_PER_HOUR}px`,
+                                  }}
+                                />
+                              ))}
+
+                              {/* Booking Blocks */}
+                              {accountBookings.map((booking, index) => {
+                                const style = getBookingStyle(
+                                  booking.startTime,
+                                  booking.endTime
+                                );
+                                const statusStyle = getStatusStyle(
+                                  booking.status
+                                );
+                                const StatusIcon = statusStyle.icon;
+
+                                return (
+                                  <motion.div
+                                    key={booking.id}
+                                    initial={{ scale: 0.95, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className={`absolute left-2 right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} rounded-lg p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
+                                    style={{
+                                      top: `${style.top}px`,
+                                      height: `${style.height}px`,
+                                      minHeight: "60px",
+                                    }}
+                                    onClick={() => setSelectedBooking(booking)}
+                                  >
+                                    {/* Status Badge */}
+                                    <div className="absolute top-1 right-1">
+                                      <StatusIcon className="h-4 w-4" />
                                     </div>
-                                  )}
 
-                                  {/* Hour Grid Lines */}
-                                  {TIME_HOURS.map((hour, index) => (
-                                    <div
-                                      key={hour}
-                                      className="absolute left-0 right-0 border-b border-gray-200"
-                                      style={{
-                                        top: `${index * PIXELS_PER_HOUR}px`,
-                                        height: `${PIXELS_PER_HOUR}px`
-                                      }}
-                                    />
-                                  ))}
-
-                                  {/* Booking Blocks */}
-                                  {accountBookings.map((booking, index) => {
-                                    const style = getBookingStyle(booking.startTime, booking.endTime);
-                                    const statusStyle = getStatusStyle(booking.status);
-                                    const StatusIcon = statusStyle.icon;
-
-                                    return (
-                                      <motion.div
-                                        key={booking.id}
-                                        initial={{ scale: 0.95, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className={`absolute left-2 right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} rounded-lg p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
-                                        style={{
-                                          top: `${style.top}px`,
-                                          height: `${style.height}px`,
-                                          minHeight: '60px'
-                                        }}
-                                        onClick={() => setSelectedBooking(booking)}
-                                      >
-                                        {/* Status Badge */}
-                                        <div className="absolute top-1 right-1">
-                                          <StatusIcon className="h-4 w-4" />
-                                        </div>
-
-                                        <div className="text-xs font-semibold truncate pr-6">
-                                          {booking.title}
-                                        </div>
+                                    <div className="text-xs font-semibold truncate pr-6">
+                                      {booking.title}
+                                    </div>
+                                    <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
+                                      <Clock className="h-3 w-3 flex-shrink-0" />
+                                      <span className="truncate">
+                                        {booking.startTime} - {booking.endTime}
+                                      </span>
+                                    </div>
+                                    {style.height > 60 && (
+                                      <>
                                         <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
-                                          <Clock className="h-3 w-3 flex-shrink-0" />
+                                          <User className="h-3 w-3 flex-shrink-0" />
                                           <span className="truncate">
-                                            {booking.startTime} - {booking.endTime}
+                                            {booking.userName}
                                           </span>
                                         </div>
-                                        {style.height > 60 && (
-                                          <>
-                                            <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
-                                              <User className="h-3 w-3 flex-shrink-0" />
-                                              <span className="truncate">{booking.userName}</span>
-                                            </div>
-                                            <div className="text-xs mt-1 px-1.5 py-0.5 bg-white/20 rounded inline-block">
-                                              {statusStyle.label}
-                                            </div>
-                                          </>
-                                        )}
-                                      </motion.div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                                        <div className="text-xs mt-1 px-1.5 py-0.5 bg-white/20 rounded inline-block">
+                                          {statusStyle.label}
+                                        </div>
+                                      </>
+                                    )}
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                    {/* Legend */}
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-semibold mb-3">Keterangan Status:</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-white" />
-                          </div>
-                          <span className="text-sm">Disetujui</span>
+                  {/* Legend */}
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-semibold mb-3">
+                      Keterangan Status:
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
+                          <CheckCircle className="h-4 w-4 text-white" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                            <Clock className="h-4 w-4 text-gray-900" />
-                          </div>
-                          <span className="text-sm">Pending Review</span>
+                        <span className="text-sm">Disetujui</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
+                          <Clock className="h-4 w-4 text-gray-900" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center">
-                            <XCircle className="h-4 w-4 text-white" />
-                          </div>
-                          <span className="text-sm">Ditolak</span>
+                        <span className="text-sm">Pending Review</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center">
+                          <XCircle className="h-4 w-4 text-white" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-gray-200 border-2 border-gray-400 rounded flex items-center justify-center">
-                            <PowerOff className="h-4 w-4 text-gray-600" />
-                          </div>
-                          <span className="text-sm">Akun Nonaktif</span>
+                        <span className="text-sm">Ditolak</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gray-200 border-2 border-gray-400 rounded flex items-center justify-center">
+                          <PowerOff className="h-4 w-4 text-gray-600" />
                         </div>
+                        <span className="text-sm">Akun Nonaktif</span>
                       </div>
                     </div>
                   </div>
+                </div>
               )}
             </CardContent>
           </Card>
         </>
       )}
 
-      {selectedBooking && (
+      {selectedBooking && isAdmin && (
         <ZoomAdminReviewModal
           booking={selectedBooking}
           onClose={() => setSelectedBooking(null)}
           onUpdate={() => {
             fetchCalendarData();
           }}
+        />
+      )}
+
+      {selectedBooking && !isAdmin && currentUser && (
+        <DetailDialog
+          open={true}
+          onOpenChange={(open) => !open && setSelectedBooking(null)}
+          booking={selectedBooking}
+          isManagement={false}
+          renderStatusBadge={(status) => {
+            const statusMap: Record<
+              string,
+              {
+                label: string;
+                variant: "default" | "secondary" | "destructive" | "outline";
+              }
+            > = {
+              pending_review: {
+                label: "Menunggu Review",
+                variant: "secondary",
+              },
+              approved: { label: "Disetujui", variant: "default" },
+              rejected: { label: "Ditolak", variant: "destructive" },
+            };
+            const config = statusMap[status] || {
+              label: status,
+              variant: "outline",
+            };
+            return <Badge variant={config.variant}>{config.label}</Badge>;
+          }}
+          zoomAccountDisplay={{} as any}
+          onRequestApprove={() => {}}
+          onRequestReject={() => {}}
+          onClose={() => setSelectedBooking(null)}
+          currentUser={currentUser}
         />
       )}
     </div>

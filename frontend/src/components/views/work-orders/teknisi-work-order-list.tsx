@@ -1,8 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import React, { useMemo, useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,111 +16,250 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import { Package, Truck, Search, Eye, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { getWorkOrders, getTickets } from '@/lib/storage';
-import type { User, WorkOrder, WorkOrderStatus } from '@/types';
-import { motion } from 'motion/react';
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import {
+  Package,
+  Truck,
+  Search,
+  Eye,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
+import { api } from "@/lib/api";
+import type { User, WorkOrder, WorkOrderStatus } from "@/types";
+import { motion } from "motion/react";
+import { Spinner } from "@/components/ui/spinner";
 
 interface TeknisiWorkOrderListProps {
   currentUser: User;
   onViewDetail?: (workOrderId: string) => void;
 }
 
-const statusConfig: Record<WorkOrderStatus, { label: string; color: string; icon: any }> = {
-  requested: { label: 'Diminta', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-  in_procurement: { label: 'Dalam Pengadaan', color: 'bg-blue-100 text-blue-800', icon: Package },
-  delivered: { label: 'Sudah Dikirim', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  completed: { label: 'Selesai', color: 'bg-gray-100 text-gray-800', icon: CheckCircle },
-  failed: { label: 'Gagal', color: 'bg-red-100 text-red-800', icon: XCircle },
-  cancelled: { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-600', icon: XCircle },
+const statusConfig: Record<
+  WorkOrderStatus,
+  { label: string; color: string; icon: any }
+> = {
+  requested: {
+    label: "Diminta",
+    color: "bg-yellow-100 text-yellow-800",
+    icon: Clock,
+  },
+  in_procurement: {
+    label: "Dalam Pengadaan",
+    color: "bg-blue-100 text-blue-800",
+    icon: Package,
+  },
+  delivered: {
+    label: "Sudah Dikirim",
+    color: "bg-green-100 text-green-800",
+    icon: CheckCircle,
+  },
+  completed: {
+    label: "Selesai",
+    color: "bg-gray-100 text-gray-800",
+    icon: CheckCircle,
+  },
+  failed: { label: "Gagal", color: "bg-red-100 text-red-800", icon: XCircle },
+  cancelled: {
+    label: "Dibatalkan",
+    color: "bg-gray-100 text-gray-600",
+    icon: XCircle,
+  },
 };
 
 export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
   currentUser,
   onViewDetail,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const tickets = getTickets();
-  const allWorkOrders = getWorkOrders();
+  // Helper: parse items (handle both array and JSON string)
+  const parseItems = (items: any) => {
+    if (!items) return [];
+    if (Array.isArray(items)) return items;
+    if (typeof items === "string") {
+      try {
+        return JSON.parse(items);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  // Fetch work orders from API
+  useEffect(() => {
+    fetchWorkOrders();
+  }, []);
+
+  const fetchWorkOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get<any>("work-orders");
+      console.log("Work orders API response:", response);
+      console.log("Work orders data:", response.data);
+      console.log("Current user ID:", currentUser.id);
+
+      // Transform snake_case to camelCase for top-level fields
+      const transformedData =
+        response.data?.map((wo: any) => ({
+          ...wo,
+          createdBy: wo.created_by,
+          createdByUser: wo.created_by_user,
+          ticketId: wo.ticket_id,
+          ticketNumber: wo.ticket_number,
+          vendorName: wo.vendor_name,
+          vendorContact: wo.vendor_contact,
+          vendorDescription: wo.vendor_description,
+          licenseName: wo.license_name,
+          licenseDescription: wo.license_description,
+          createdAt: wo.created_at,
+          updatedAt: wo.updated_at,
+        })) || [];
+
+      console.log("Transformed data:", transformedData);
+      setWorkOrders(transformedData);
+    } catch (error) {
+      console.error("Failed to fetch work orders:", error);
+      setWorkOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter work orders created by current user
   const myWorkOrders = useMemo(() => {
-    return allWorkOrders.filter(wo => wo.createdBy === currentUser.id);
-  }, [allWorkOrders, currentUser.id]);
+    console.log("=== FILTERING WORK ORDERS ===");
+    console.log("Total work orders:", workOrders.length);
+    console.log(
+      "Current user ID:",
+      currentUser.id,
+      "Type:",
+      typeof currentUser.id
+    );
+
+    const filtered = workOrders.filter((wo) => {
+      console.log(
+        "WO:",
+        wo.id,
+        "createdBy:",
+        wo.createdBy,
+        "Type:",
+        typeof wo.createdBy
+      );
+      console.log(
+        "createdByUser?.id:",
+        wo.createdByUser?.id,
+        "Type:",
+        typeof wo.createdByUser?.id
+      );
+
+      const isCreator =
+        wo.createdBy == currentUser.id ||
+        wo.createdByUser?.id == currentUser.id;
+      console.log("Match result:", isCreator);
+      return isCreator;
+    });
+
+    console.log("Filtered work orders:", filtered.length);
+    console.log("=== END FILTERING ===");
+    return filtered;
+  }, [workOrders, currentUser.id]);
 
   // Apply filters
   const filteredWorkOrders = useMemo(() => {
-    return myWorkOrders.filter(wo => {
+    return myWorkOrders.filter((wo) => {
       // Status filter
-      if (statusFilter !== 'all' && wo.status !== statusFilter) return false;
-      
+      if (statusFilter !== "all" && wo.status !== statusFilter) return false;
+
       // Type filter
-      if (typeFilter !== 'all' && wo.type !== typeFilter) return false;
-      
+      if (typeFilter !== "all" && wo.type !== typeFilter) return false;
+
       // Search filter
       if (searchQuery) {
-        const ticket = tickets.find(t => t.id === wo.ticketId);
         const searchLower = searchQuery.toLowerCase();
-        
-        const matchesTicket = ticket?.ticketNumber.toLowerCase().includes(searchLower) ||
-                             ticket?.title.toLowerCase().includes(searchLower);
-        
-        const matchesSparepart = wo.spareparts?.some(sp => 
-          sp.name.toLowerCase().includes(searchLower)
+
+        const matchesTicket =
+          wo.ticket?.ticketNumber?.toLowerCase().includes(searchLower) ||
+          wo.ticket?.title?.toLowerCase().includes(searchLower) ||
+          wo.ticketNumber?.toLowerCase().includes(searchLower);
+
+        const itemsArray = parseItems(wo.items);
+        const matchesSparepart = itemsArray.some((item: any) =>
+          item.name?.toLowerCase().includes(searchLower)
         );
-        
-        const matchesVendor = wo.vendorInfo?.name?.toLowerCase().includes(searchLower) ||
-                             wo.vendorInfo?.description?.toLowerCase().includes(searchLower);
-        
-        if (!matchesTicket && !matchesSparepart && !matchesVendor) return false;
+
+        const matchesVendor =
+          wo.vendorName?.toLowerCase().includes(searchLower) ||
+          wo.vendorDescription?.toLowerCase().includes(searchLower);
+
+        const matchesLicense =
+          wo.licenseName?.toLowerCase().includes(searchLower) ||
+          wo.licenseDescription?.toLowerCase().includes(searchLower);
+
+        if (
+          !matchesTicket &&
+          !matchesSparepart &&
+          !matchesVendor &&
+          !matchesLicense
+        )
+          return false;
       }
-      
+
       return true;
     });
-  }, [myWorkOrders, statusFilter, typeFilter, searchQuery, tickets]);
+  }, [myWorkOrders, statusFilter, typeFilter, searchQuery]);
 
   // Statistics
   const stats = useMemo(() => {
     return {
       total: myWorkOrders.length,
-      requested: myWorkOrders.filter(wo => wo.status === 'requested').length,
-      in_procurement: myWorkOrders.filter(wo => wo.status === 'in_procurement').length,
-      completed: myWorkOrders.filter(wo => wo.status === 'completed').length,
+      requested: myWorkOrders.filter((wo) => wo.status === "requested").length,
+      in_procurement: myWorkOrders.filter(
+        (wo) => wo.status === "in_procurement"
+      ).length,
+      completed: myWorkOrders.filter((wo) => wo.status === "completed").length,
     };
   }, [myWorkOrders]);
 
-  const getTicketInfo = (ticketId: string) => {
-    return tickets.find(t => t.id === ticketId);
-  };
-
-  const handleViewDetail = (woId: string) => {
-    const wo = allWorkOrders.find(w => w.id === woId);
+  const handleViewDetail = (woId: string | number) => {
+    const wo = workOrders.find((w) => w.id === woId);
     if (wo) {
       setSelectedWO(wo);
       setShowDetailDialog(true);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Spinner className="w-8 h-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -255,9 +400,14 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                 </TableHeader>
                 <TableBody>
                   {filteredWorkOrders.map((wo, index) => {
-                    const ticket = getTicketInfo(wo.ticketId);
-                    const StatusIcon = statusConfig[wo.status].icon;
-                    const TypeIcon = wo.type === 'sparepart' ? Package : Truck;
+                    const ticket = wo.ticket;
+                    const StatusIcon = statusConfig[wo.status]?.icon;
+                    const getTypeIcon = () => {
+                      if (wo.type === "sparepart")
+                        return <Package className="h-3 w-3" />;
+                      if (wo.type === "license") return <span>🔑</span>;
+                      return <Truck className="h-3 w-3" />;
+                    };
 
                     return (
                       <motion.tr
@@ -270,47 +420,72 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                       >
                         <TableCell>
                           <div className="text-sm">
-                            {new Date(wo.createdAt).toLocaleDateString('id-ID', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
+                            {new Date(wo.createdAt).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {new Date(wo.createdAt).toLocaleTimeString('id-ID', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {new Date(wo.createdAt).toLocaleTimeString(
+                              "id-ID",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <div className="font-mono text-sm">{ticket?.ticketNumber}</div>
+                          <div className="font-mono text-sm">
+                            {ticket?.ticketNumber || wo.ticketNumber}
+                          </div>
                           <div className="text-xs text-gray-500 max-w-[200px] truncate">
                             {ticket?.title}
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                            <TypeIcon className="h-3 w-3" />
-                            {wo.type === 'sparepart' ? 'Sparepart' : 'Vendor'}
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-1 w-fit"
+                          >
+                            {getTypeIcon()}
+                            {wo.type === "sparepart"
+                              ? "Sparepart"
+                              : wo.type === "license"
+                              ? "Lisensi"
+                              : "Vendor"}
                           </Badge>
                         </TableCell>
 
                         <TableCell>
-                          {wo.type === 'sparepart' && wo.spareparts && (
+                          {wo.type === "sparepart" && wo.items && (
                             <div className="text-sm">
-                              {wo.spareparts.length > 1 ? (
-                                <span>{wo.spareparts.length} item sparepart</span>
-                              ) : (
-                                <span>{wo.spareparts[0]?.name}</span>
-                              )}
+                              {(() => {
+                                const itemsArray = parseItems(wo.items);
+                                return itemsArray.length > 1 ? (
+                                  <span>
+                                    {itemsArray.length} item sparepart
+                                  </span>
+                                ) : itemsArray.length === 1 ? (
+                                  <span>{itemsArray[0]?.name}</span>
+                                ) : null;
+                              })()}
                             </div>
                           )}
-                          {wo.type === 'vendor' && wo.vendorInfo && (
+                          {wo.type === "vendor" && (
                             <div className="text-sm max-w-[200px] truncate">
-                              {wo.vendorInfo.name || wo.vendorInfo.description}
+                              {wo.vendorName || wo.vendorDescription}
+                            </div>
+                          )}
+                          {wo.type === "license" && (
+                            <div className="text-sm max-w-[200px] truncate">
+                              {wo.licenseName}
                             </div>
                           )}
                         </TableCell>
@@ -359,13 +534,19 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
               {/* Status & Type */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {selectedWO.type === 'sparepart' ? (
+                  {selectedWO.type === "sparepart" ? (
                     <Package className="h-5 w-5 text-gray-500" />
+                  ) : selectedWO.type === "license" ? (
+                    <span className="text-2xl">🔑</span>
                   ) : (
                     <Truck className="h-5 w-5 text-gray-500" />
                   )}
                   <span className="font-medium">
-                    {selectedWO.type === 'sparepart' ? 'Work Order Sparepart' : 'Work Order Vendor'}
+                    {selectedWO.type === "sparepart"
+                      ? "Work Order Sparepart"
+                      : selectedWO.type === "license"
+                      ? "Work Order Lisensi"
+                      : "Work Order Vendor"}
                   </span>
                 </div>
                 <Badge className={statusConfig[selectedWO.status].color}>
@@ -381,11 +562,14 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <span className="text-gray-600">Nomor Tiket:</span>
-                    <span className="font-mono">{getTicketInfo(selectedWO.ticketId)?.ticketNumber}</span>
+                    <span className="font-mono">
+                      {selectedWO.ticket?.ticketNumber ||
+                        selectedWO.ticketNumber}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <span className="text-gray-600">Judul:</span>
-                    <span>{getTicketInfo(selectedWO.ticketId)?.title}</span>
+                    <span>{selectedWO.ticket?.title}</span>
                   </div>
                 </div>
               </div>
@@ -393,52 +577,65 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
               <Separator />
 
               {/* Sparepart Details */}
-              {selectedWO.type === 'sparepart' && selectedWO.spareparts && (
+              {selectedWO.type === "sparepart" && selectedWO.items && (
                 <div>
                   <h4 className="font-semibold mb-3">Daftar Sparepart</h4>
                   <div className="space-y-2">
-                    {selectedWO.spareparts.map((sp, idx) => (
-                      <div key={idx} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{sp.name}</p>
-                            {sp.specifications && (
-                              <p className="text-sm text-gray-600 mt-1">{sp.specifications}</p>
-                            )}
+                    {parseItems(selectedWO.items).map(
+                      (item: any, idx: number) => (
+                        <div key={idx} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-sm text-gray-600">
+                                Unit: {item.unit}
+                              </p>
+                            </div>
+                            <span className="text-sm font-medium">
+                              Qty: {item.quantity}
+                            </span>
                           </div>
-                          <span className="text-sm font-medium">Qty: {sp.quantity}</span>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Vendor Details */}
-              {selectedWO.type === 'vendor' && selectedWO.vendorInfo && (
+              {selectedWO.type === "vendor" && (
                 <div>
-                  <h4 className="font-semibold mb-3">Informasi Vendor</h4>
+                  <h4 className="font-semibold mb-3">Detail Vendor</h4>
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    {selectedWO.vendorInfo.name && (
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <span className="text-gray-600">Nama Vendor:</span>
-                        <span>{selectedWO.vendorInfo.name}</span>
-                      </div>
-                    )}
-                    {selectedWO.vendorInfo.description && (
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <span className="text-gray-600">Deskripsi:</span>
-                        <span>{selectedWO.vendorInfo.description}</span>
-                      </div>
-                    )}
-                    {selectedWO.vendorInfo.estimatedCost && (
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <span className="text-gray-600">Estimasi Biaya:</span>
-                        <span className="font-medium">
-                          Rp {selectedWO.vendorInfo.estimatedCost.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    )}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-gray-600">Nama Vendor:</span>
+                      <span>{selectedWO.vendorName}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-gray-600">Kontak:</span>
+                      <span>{selectedWO.vendorContact}</span>
+                    </div>
+                    <div className="text-sm mt-2">
+                      <span className="text-gray-600">Deskripsi:</span>
+                      <p className="mt-1">{selectedWO.vendorDescription}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* License Details */}
+              {selectedWO.type === "license" && (
+                <div>
+                  <h4 className="font-semibold mb-3">Detail Lisensi</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="text-gray-600">Nama Lisensi:</span>
+                      <span>{selectedWO.licenseName}</span>
+                    </div>
+                    <div className="text-sm mt-2">
+                      <span className="text-gray-600">Deskripsi:</span>
+                      <p className="mt-1">{selectedWO.licenseDescription}</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -450,26 +647,26 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                 <h4 className="font-semibold mb-3">Timeline</h4>
                 <div className="space-y-3">
                   <div className="text-sm">
-                    <span className="text-gray-600">Dibuat:</span>{' '}
+                    <span className="text-gray-600">Dibuat:</span>{" "}
                     <span>
-                      {new Date(selectedWO.createdAt).toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                      {new Date(selectedWO.createdAt).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-600">Terakhir Diupdate:</span>{' '}
+                    <span className="text-gray-600">Terakhir Diupdate:</span>{" "}
                     <span>
-                      {new Date(selectedWO.updatedAt).toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                      {new Date(selectedWO.updatedAt).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   </div>

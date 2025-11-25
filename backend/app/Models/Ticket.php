@@ -94,11 +94,19 @@ class Ticket extends Model
     }
 
     /**
-     * Get the work order
+     * Get the work order (old single work order - deprecated)
      */
     public function workOrder(): BelongsTo
     {
         return $this->belongsTo(WorkOrder::class);
+    }
+
+    /**
+     * Get all work orders for this ticket
+     */
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
     }
 
     /**
@@ -123,6 +131,14 @@ class Ticket extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the diagnosis (for perbaikan tickets)
+     */
+    public function diagnosis(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TicketDiagnosis::class);
     }
 
     /**
@@ -218,14 +234,18 @@ class Ticket extends Model
         // Define allowed transitions
         $allowedTransitions = [
             'submitted' => ['assigned', 'rejected'],
-            'assigned' => ['in_progress', 'on_hold'],
+            'assigned' => ['accepted', 'rejected', 'in_progress', 'on_hold'],
+            'accepted' => ['in_diagnosis', 'rejected', 'in_progress'],
+            'in_diagnosis' => ['in_repair', 'unrepairable', 'on_hold'],
+            'in_repair' => ['resolved', 'on_hold'],
             'in_progress' => ['resolved', 'on_hold'],
-            'on_hold' => ['in_progress'],
-            'resolved' => ['waiting_for_pegawai'],
+            'on_hold' => ['in_progress', 'in_repair', 'in_diagnosis'],
+            'resolved' => ['waiting_for_pegawai', 'closed'],
             'waiting_for_pegawai' => ['closed', 'in_progress'],
+            'unrepairable' => ['closed_unrepairable'],
             'pending_review' => ['approved', 'rejected'],
             'approved' => ['completed', 'cancelled'],
-            'rejected' => ['cancelled'],
+            'rejected' => ['cancelled', 'assigned'],
             'cancelled' => [],
             'closed' => [],
             'closed_unrepairable' => [],

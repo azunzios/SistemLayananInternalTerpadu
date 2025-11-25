@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,8 @@ import {
   Truck,
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
+import { TicketDiagnosisDisplay } from "@/components/ticket-diagnosis-display";
+import { api } from "@/lib/api";
 
 interface TicketDetailHeaderProps {
   ticket: Ticket;
@@ -47,7 +49,10 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
 
       <div className="flex items-center gap-3">
         {canComplete && (
-          <Button onClick={onShowCompleteDialog}>
+          <Button
+            onClick={onShowCompleteDialog}
+            className="bg-green-600 hover:bg-green-700"
+          >
             <CheckCircle className="h-4 w-4 mr-2" />
             Konfirmasi Selesai
           </Button>
@@ -84,6 +89,38 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
   hasMore,
   onLoadMoreComments,
 }) => {
+  const [assetData, setAssetData] = useState<any>(null);
+  const [loadingAsset, setLoadingAsset] = useState(false);
+
+  // Fetch asset data for perbaikan tickets
+  useEffect(() => {
+    const fetchAssetData = async () => {
+      if (
+        ticket.type !== "perbaikan" ||
+        !ticket.assetCode ||
+        !ticket.assetNUP
+      ) {
+        return;
+      }
+
+      try {
+        setLoadingAsset(true);
+        const response = await api.get(
+          `assets/search/by-code-nup?asset_code=${ticket.assetCode}&asset_nup=${ticket.assetNUP}`
+        );
+        if (response.asset) {
+          setAssetData(response.asset);
+        }
+      } catch (error) {
+        console.error("Error fetching asset data:", error);
+      } finally {
+        setLoadingAsset(false);
+      }
+    };
+
+    fetchAssetData();
+  }, [ticket.type, ticket.assetCode, ticket.assetNUP]);
+
   const attachmentList = Array.isArray((ticket as any).attachments)
     ? (ticket as any).attachments
     : [];
@@ -231,32 +268,47 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
               <>
                 <Separator />
                 <div>
-                  <h4 className="text-sm mb-3">Informasi Tambahan</h4>
+                  <h4 className="text-sm mb-3">Informasi Barang</h4>
                   <div className="space-y-2 text-sm">
                     {ticket.assetCode && (
                       <div className="flex gap-2">
-                        <span className="text-gray-500 w-32">Asset Code:</span>
-                        <span>{ticket.assetCode}</span>
+                        <span className="text-gray-500 w-32">Kode Barang:</span>
+                        <span className="font-mono">{ticket.assetCode}</span>
                       </div>
                     )}
                     {ticket.assetNUP && (
                       <div className="flex gap-2">
-                        <span className="text-gray-500 w-32">Asset N U P:</span>
-                        <span>{ticket.assetNUP}</span>
+                        <span className="text-gray-500 w-32">NUP:</span>
+                        <span className="font-mono">{ticket.assetNUP}</span>
+                      </div>
+                    )}
+                    {loadingAsset ? (
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-32">Nama Barang:</span>
+                        <span className="text-gray-400">Memuat...</span>
+                      </div>
+                    ) : (
+                      assetData?.asset_name && (
+                        <div className="flex gap-2">
+                          <span className="text-gray-500 w-32">
+                            Nama Barang:
+                          </span>
+                          <span className="font-medium">
+                            {assetData.asset_name}
+                          </span>
+                        </div>
+                      )
+                    )}
+                    {assetData?.merk_tipe && (
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-32">Merek/Tipe:</span>
+                        <span>{assetData.merk_tipe}</span>
                       </div>
                     )}
                     {ticket.assetLocation && (
                       <div className="flex gap-2">
-                        <span className="text-gray-500 w-32">
-                          Asset Location:
-                        </span>
+                        <span className="text-gray-500 w-32">Lokasi:</span>
                         <span>{ticket.assetLocation}</span>
-                      </div>
-                    )}
-                    {ticket.data?.itemName && (
-                      <div className="flex gap-2">
-                        <span className="text-gray-500 w-32">Item Name:</span>
-                        <span>{ticket.data.itemName}</span>
                       </div>
                     )}
                   </div>
@@ -267,6 +319,11 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
           {/* Right Column - Work Orders & Discussion */}
           <div className="space-y-4 col-span-2">
+            {/* Diagnosis Display */}
+            {ticket.type === "perbaikan" && ticket.diagnosis && (
+              <TicketDiagnosisDisplay diagnosis={ticket.diagnosis} />
+            )}
+
             {/* Work Orders Section */}
             {ticket.type === "perbaikan" &&
               (() => {
