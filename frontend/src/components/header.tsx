@@ -178,8 +178,8 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
               </div>
               <div className="flex items-center gap-2">
                 <div>
-                  <h1 className="text-gray-900 leading-tight" style={{fontFamily: "var(--font-logo)"}}>SIGAP-TI</h1>
-                  <p className="text-xs text-gray-500 leading-tight" style={{fontFamily: "var(--font-logo)"}}>BPS Provinsi Nusa Tenggara Barat</p>
+                  <h1 className="text-gray-900 leading-tight">SIGAP-TI</h1>
+                  <p className="text-xs text-gray-500 leading-tight">BPS Provinsi Nusa Tenggara Barat</p>
                 </div>
                 <Badge variant="secondary" className="ml-2 bg-cyan-50 text-cyan-700 border-0 hover:bg-cyan-50">
                   {activeRole === 'super_admin' ? 'SUPER ADMIN' : 

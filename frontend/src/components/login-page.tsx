@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,9 +8,8 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Eye, EyeOff, AlertCircle, Mail, ArrowUpRight, ArrowDownLeftFromSquareIcon } from 'lucide-react';
 import { toast, Toaster } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
-import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '@/lib/storage';
-import { ROUTES } from '@/routing';
-import type { User } from '@/types';
+import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '../lib/storage';
+import type { User } from '../types';
 
 /**
  * Mendapatkan nama view yang akan dibuka berdasarkan role
@@ -38,8 +36,6 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const navigate = useNavigate();
-  
   //INI NANTI DIUBAH
   const [formData, setFormData] = useState({
     login: 'pegawai@example.com',
@@ -113,9 +109,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       });
 
       onLogin(user);
-      
-      // Navigate ke dashboard setelah login sukses
-      navigate(ROUTES.DASHBOARD);
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err?.body?.message || err?.body?.errors?.email?.[0] || 'Email atau password tidak valid';
@@ -265,19 +258,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
                 {/* Title Bar */}
                 <div className="relative">
-                <div className="flex justify-betwen flex-row gap-3 text-blue-500">
-                  <div>
-                    <CardTitle
-                      className="text-2xl font-bold bg-[#e8f0fe] rounded-full px-4"
-                      style={{ fontFamily: "var(--font-logo)" }}
-                    >
-                      SIGAP-TI
-                    </CardTitle>
+                  <div className="flex justify-betwen flex-row gap-3 text-blue-500">
+                    <div>
+                      <CardTitle className="text-2xl font-bold bg-[#e8f0fe] rounded-full px-4 flex items-center gap-2">
+                        Sigap-TI
+                      </CardTitle>
+                    </div>
                   </div>
-                  <div className="absolute top-0 right-0 flex items-center gap-1 text-blue-400 text-sm">
-                    <ArrowDownLeftFromSquareIcon className="h-4 w-4" />
-                  </div>
-                </div>
                 </div>
                 {/* Logo */}
                 <div className="flex justify-center md:justify-start">
@@ -405,10 +392,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 alt="Image"
                 className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale z-10"
               />
-              <div className="absolute bottom-4 right-4 z-20 bg-black-30 backdrop-blur-sm rounded-full px-4 flex flex-col gap-0">
+              <div className="absolute bottom-4 z-20 bg-black-30 backdrop-blur-sm w-[100%] px-4 flex flex-col gap-0">
                 <div className="flex items-start gap-1 text-black text-sm font-medium">
-                  <span className='leading-none' style={{ fontFamily: "var(--font-logo)" }}>SIGAP-TI 2025</span>
-                  <span className="text-xs leading-none relative top-[-2px]">©</span>
+                  <span className='leading-none'>Sistem Layan Internal Terpadu Badan Pusat Statistik Nusa Tenggara Barat</span>
                 </div>
                 <p className='text-[10px] text-gray-800 leading-none'>Tim 2 RPL Kelas 3SI2 </p>
               </div>

@@ -6,10 +6,9 @@ import { Dashboard } from './dashboard';
 import { CreateTicket, TicketList, TicketDetail, MyTicketsView } from '@/components/views/tickets';
 import { ZoomBooking, ZoomManagementView } from '@/components/views/zoom';
 import { UserManagement, ReportsView } from '@/components/views/admin';
-import { ProfileSettings, RoleSwitcherDialog } from '@/components/views/shared';
+import { ProfileSettings} from '@/components/views/shared';
 import { WorkOrderList, TeknisiWorkOrderList } from '@/components/views/work-orders';
 import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '@/lib/storage';
-import { ROUTES } from '@/routing/constants';
 import type { User } from '@/types';
 
 interface MainLayoutProps {
