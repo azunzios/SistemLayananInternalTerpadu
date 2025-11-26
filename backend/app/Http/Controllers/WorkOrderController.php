@@ -72,6 +72,22 @@ class WorkOrderController extends Controller
     }
 
     /**
+     * Get work orders by ticket
+     */
+    public function listByTicket(Ticket $ticket): JsonResponse
+    {
+        $workOrders = $ticket->workOrders()
+            ->with(['createdBy', 'timeline'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => WorkOrderResource::collection($workOrders),
+        ], 200);
+    }
+
+    /**
      * Create a new work order
      * POST /work-orders
      * Request body:
@@ -358,27 +374,8 @@ class WorkOrderController extends Controller
             ],
         ]);
 
-        // If work order is completed, update ticket status
-        if ($newStatus === 'completed') {
-            $ticket = $workOrder->ticket;
-            if ($ticket && in_array($ticket->status, ['on_hold', 'in_progress'])) {
-                $oldStatus = $ticket->status;
-                $ticket->status = 'resolved';
-                $ticket->save();
-
-                Timeline::create([
-                    'ticket_id' => $ticket->id,
-                    'user_id' => $user->id,
-                    'action' => 'ticket_status_changed',
-                    'details' => 'Ticket status auto-updated to resolved (work order completed)',
-                    'metadata' => [
-                        'from' => $oldStatus,
-                        'to' => 'resolved',
-                        'trigger' => 'work_order_completion',
-                    ],
-                ]);
-            }
-        }
+        // Note: Work order completion does NOT automatically change ticket status
+        // Ticket status can only be changed by teknisi via the "Selesaikan" button (completion form)
 
         return response()->json([
             'success' => true,

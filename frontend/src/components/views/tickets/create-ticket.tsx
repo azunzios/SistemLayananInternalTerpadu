@@ -350,9 +350,8 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="link" size="sm" onClick={onCancel}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Kembali
+          <Button variant="outline" size="icon" onClick={onCancel} className="rounded-full">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </div>
 

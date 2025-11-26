@@ -65,13 +65,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <motion.aside
       initial={false}
       animate={{
-        width: collapsed ? '72px' : '272px',
+        width: collapsed ? '72px' : '228px',
       }}
       transition={{
         duration: 0.3,
         ease: [0.4, 0, 0.2, 1],
       }}
-      className="bg-[#f0f4f4f9] flex flex-col shadow-xl"
+      className="bg-white flex flex-col outline-1"
     >
       {/* Navigation Menu */}
       <ScrollArea className={`flex-1 py-4 ${collapsed ? 'px-3' : 'px-3'}`}>
@@ -112,11 +112,11 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
   const buttonContent = (
     <Button
-      variant="link"
+      variant="outline"
       className={`w-full ${collapsed ? 'h-11 p-2 justify-center' : 'h-11 justify-start px-4'} ${
         isActive
-          ? 'bg-slate-700 text-white hover:text-[#0842A0] hover:bg-[#D3E3FD]'
-          : 'text-[#4444746] hover:text-[#0842A0] hover:bg-[#D3E3FD]'
+          ? 'text-blue-700 bg-[#D3E3FD]'
+          : 'text-[#4444746] bg-transparent !border-none !backdrop-none !shadow-none hover:text-black hover:bg-[#f0f0f4f9]'
       } transition-colors`}
       onClick={onClick}
     >

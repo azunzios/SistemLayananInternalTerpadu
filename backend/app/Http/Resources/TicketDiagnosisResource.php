@@ -17,6 +17,7 @@ class TicketDiagnosisResource extends JsonResource
         return [
             'id' => $this->id,
             'ticketId' => $this->ticket_id,
+            'technicianId' => $this->technician_id,
             'diagnosedBy' => $this->diagnosed_by,
             'diagnosedAt' => $this->diagnosed_at?->toIso8601String(),
             
@@ -44,8 +45,11 @@ class TicketDiagnosisResource extends JsonResource
             
             // Estimasi perbaikan
             'isRepairable' => $this->is_repairable,
+            'repairType' => $this->repair_type,
             'repairDifficulty' => $this->repair_difficulty,
             'estimatedRepairHours' => $this->estimated_repair_hours,
+            'repairDescription' => $this->repair_description,
+            'estimasiHari' => $this->estimasi_hari,
             
             // Rekomendasi
             'repairRecommendation' => $this->repair_recommendation,

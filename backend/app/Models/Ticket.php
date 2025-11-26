@@ -48,6 +48,7 @@ class Ticket extends Model
         'attachments', // File lampiran perbaikan
         'form_data',
         'status',
+        'work_orders_ready', // Flag untuk indicate work orders sudah ready
     ];
 
     protected $casts = [
@@ -56,6 +57,7 @@ class Ticket extends Model
         'attachments' => 'array',
         'form_data' => 'array',
         'repairable' => 'boolean',
+        'work_orders_ready' => 'boolean',
         'zoom_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -199,14 +201,15 @@ class Ticket extends Model
     public static function getPerbaikanStatuses()
     {
         return [
+            'pending_review',
             'submitted',
             'assigned',
             'in_progress',
             'on_hold',
-            'resolved',
-            'waiting_for_pegawai',
+            'waiting_for_submitter',
             'closed',
-            'closed_unrepairable',
+            'approved',
+            'rejected',
         ];
     }
 
@@ -231,24 +234,17 @@ class Ticket extends Model
     {
         $currentStatus = $this->status;
         
-        // Define allowed transitions
+        // Define allowed transitions for simplified status enum
         $allowedTransitions = [
-            'submitted' => ['assigned', 'rejected'],
-            'assigned' => ['accepted', 'rejected', 'in_progress', 'on_hold'],
-            'accepted' => ['in_diagnosis', 'rejected', 'in_progress'],
-            'in_diagnosis' => ['in_repair', 'unrepairable', 'on_hold'],
-            'in_repair' => ['resolved', 'on_hold'],
-            'in_progress' => ['resolved', 'on_hold'],
-            'on_hold' => ['in_progress', 'in_repair', 'in_diagnosis'],
-            'resolved' => ['waiting_for_pegawai', 'closed'],
-            'waiting_for_pegawai' => ['closed', 'in_progress'],
-            'unrepairable' => ['closed_unrepairable'],
             'pending_review' => ['approved', 'rejected'],
-            'approved' => ['completed', 'cancelled'],
-            'rejected' => ['cancelled', 'assigned'],
-            'cancelled' => [],
+            'submitted' => ['assigned', 'rejected', 'pending_review'],
+            'assigned' => ['in_progress', 'on_hold', 'rejected'],
+            'in_progress' => ['on_hold', 'waiting_for_submitter', 'rejected'],
+            'on_hold' => ['in_progress', 'waiting_for_submitter', 'rejected'],
+            'waiting_for_submitter' => ['closed', 'in_progress', 'rejected'],
             'closed' => [],
-            'closed_unrepairable' => [],
+            'approved' => ['in_progress', 'on_hold'],
+            'rejected' => ['submitted'],
         ];
 
         return in_array($newStatus, $allowedTransitions[$currentStatus] ?? []);

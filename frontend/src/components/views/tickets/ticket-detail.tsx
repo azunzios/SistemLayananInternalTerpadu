@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TicketProgressTracker } from "./ticket-progress-tracker";
 import { TicketProgressTrackerZoom } from "./ticket-progress-tracker-zoom";
-import { TeknisiWorkflow } from "@/components/views/work-orders";
+import { WorkOrderForm } from "@/components/views/work-orders/work-order-form";
 import { ZoomAdminReviewModal } from '@/components/views/zoom';
 import {
   Dialog,
@@ -49,38 +49,16 @@ import {
 import type { ViewType } from "@/components/main-layout";
 import { TicketDetailHeader, TicketDetailInfo } from "./ticket-detail-info";
 import { TicketDetailAlerts } from "./ticket-detail-alerts";
-import { formatActorName } from "./ticket-detail-utils";
+import { TicketDiagnosisForm } from "./ticket-diagnosis-form";
 import { useTicketComments } from "@/hooks/useTicketComments";
 import {
   useAdminLayananDialogs,
-  useTeknisiDialogs,
   useDiagnosaDialogs,
   useWorkOrderDialogs,
   useProgressDialog,
   useCommentState,
   useZoomReviewModal,
 } from "./ticket-detail-hooks";
-
-const ZOOM_PRO_ACCOUNTS = [
-  {
-    id: "zoom1",
-    name: "Zoom Pro 1",
-    email: "zoom1@bps-ntb.go.id",
-    hostKey: "4567891",
-  },
-  {
-    id: "zoom2",
-    name: "Zoom Pro 2",
-    email: "zoom2@bps-ntb.go.id",
-    hostKey: "7891234",
-  },
-  {
-    id: "zoom3",
-    name: "Zoom Pro 3",
-    email: "zoom3@bps-ntb.go.id",
-    hostKey: "2345678",
-  },
-];
 
 interface TicketDetailProps {
   ticketId: string;
@@ -98,12 +76,13 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [ticketDetail, setTicketDetail] = React.useState<any>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(true);
+  const [diagnosisSubmitCallback, setDiagnosisSubmitCallback] = React.useState<(() => Promise<void>) | null>(null);
+  const [showDiagnosisConfirm, setShowDiagnosisConfirm] = React.useState(false);
   const tickets = useMemo(() => getTickets(), [refreshKey]);
   const users = getUsersSync();
 
   // Import state dari custom hooks
   const adminDialogs = useAdminLayananDialogs();
-  const tekDialogs = useTeknisiDialogs();
   const diagnosaDialog = useDiagnosaDialogs();
   const workOrderDialog = useWorkOrderDialogs();
   const progressDialog = useProgressDialog();
@@ -203,9 +182,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const canComplete =
     currentUser.role === "pegawai" &&
     ticket.userId === currentUser.id &&
-    ["resolved", "selesai_diperbaiki", "dalam_pengiriman"].includes(
-      ticket.status as any
-    )
+    ["waiting_for_submitter"].includes(ticket.status as any)
     ;
 
   // === HANDLERS (KEPT INLINE) ===
@@ -272,7 +249,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       toast.success("Tiket berhasil ditugaskan");
       adminDialogs.setShowAssignDialog(false);
       adminDialogs.setSelectedTechnician("");
-      adminDialogs.setAssignNotes("");
       setRefreshKey((prev) => prev + 1);
     } catch (error: any) {
       console.error("Failed to assign ticket:", error);
@@ -281,39 +257,21 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   };
 
-  const handleComplete = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "closed" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "CLOSED",
-              actor: currentUser.name,
-              details: "Tiket dikonfirmasi selesai oleh user",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    if (ticket.assignedTo) {
-      addNotification({
-        userId: ticket.assignedTo,
-        title: "Tiket Diselesaikan",
-        message: `Tiket ${ticket.ticketNumber} telah dikonfirmasi selesai oleh user`,
-        type: "success",
-        read: false,
+  const handleComplete = async () => {
+    try {
+      // Update ticket status to closed via API
+      await api.patch(`tickets/${ticketId}/status`, {
+        status: "closed",
+        notes: "Tiket dikonfirmasi selesai oleh pegawai",
       });
+
+      toast.success("Terima kasih atas konfirmasinya! Tiket telah ditutup.");
+      setRefreshKey((prev) => prev + 1);
+      setTimeout(() => onBack(), 1000);
+    } catch (error: any) {
+      console.error("Failed to complete ticket:", error);
+      toast.error(error.response?.data?.message || "Gagal menutup tiket");
     }
-    toast.success("Terima kasih atas konfirmasinya!");
-    onBack();
   };
 
   const handleAddComment = async () => {
@@ -331,262 +289,43 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   };
 
+  // Handler untuk menampilkan konfirmasi status change sebelum submit diagnosis
+  const handleRequestStatusChange = (callback: () => Promise<void>) => {
+    // Simpan callback untuk diexecute setelah status change
+    setDiagnosisSubmitCallback(() => callback);
+    // Tampilkan dialog konfirmasi
+    diagnosaDialog.setShowStatusChangeConfirm(true);
+  };
+
+  // Handler untuk confirm status change dan execute diagnosis submit
+  const handleStatusChangeOnDiagnosisSubmit = async () => {
+    if (ticket.status === "assigned") {
+      try {
+        await api.patch(`tickets/${ticketId}/status`, {
+          status: "in_progress",
+        });
+        toast.success("Status tiket berhasil diubah menjadi In Progress");
+        diagnosaDialog.setShowStatusChangeConfirm(false);
+        setRefreshKey((prev) => prev + 1);
+        
+        // Execute diagnosis submission after status is changed
+        setTimeout(async () => {
+          if (diagnosisSubmitCallback) {
+            await diagnosisSubmitCallback();
+            setDiagnosisSubmitCallback(null);
+          }
+        }, 500);
+      } catch (error: any) {
+        console.error("Failed to change status:", error);
+        const errorMsg = error?.body?.message || "Gagal mengubah status tiket";
+        toast.error(errorMsg);
+        diagnosaDialog.setShowStatusChangeConfirm(false);
+        setDiagnosisSubmitCallback(null);
+      }
+    }
+  };
+
   // === TEKNISI HANDLERS ===
-  const handleTeknisiAcceptTicket = () => {
-    if (!tekDialogs.estimatedSchedule) {
-      toast.error("Estimasi jadwal harus diisi");
-      return;
-    }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "diterima_teknisi" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "ACCEPTED",
-              actor: currentUser.name,
-              details: `Tiket diterima. Estimasi: ${tekDialogs.estimatedSchedule}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Tiket Diterima Teknisi",
-      message: `Teknisi ${currentUser.name} telah menerima tiket Anda. Estimasi: ${tekDialogs.estimatedSchedule}`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Tiket berhasil diterima");
-    tekDialogs.setShowTeknisiAcceptDialog(false);
-    tekDialogs.setEstimatedSchedule("");
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleTeknisiRejectTicket = () => {
-    if (!tekDialogs.teknisiRejectReason.trim()) {
-      toast.error("Alasan penolakan harus diisi");
-      return;
-    }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "rejected" as TicketStatus,
-          assignedTo: undefined,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "REJECTED",
-              actor: currentUser.name,
-              details: `Tiket ditolak: ${tekDialogs.teknisiRejectReason}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    const adminLayanan = users.filter((u) => u.role === "admin_layanan");
-    adminLayanan.forEach((admin) => {
-      addNotification({
-        userId: admin.id,
-        title: "Tiket Ditolak Teknisi",
-        message: `${currentUser.name} menolak tiket ${ticket.ticketNumber}`,
-        type: "warning",
-        read: false,
-      });
-    });
-    toast.success("Tiket telah ditolak");
-    tekDialogs.setShowTeknisiRejectDialog(false);
-    tekDialogs.setTeknisiRejectReason("");
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleTeknisiStartDiagnosa = () => {
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "sedang_diagnosa" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: "Memulai diagnosa",
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Diagnosa Dimulai",
-      message: `Teknisi sedang melakukan diagnosa`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Status diubah ke Sedang Diagnosa");
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleSubmitDiagnosa = () => {
-    if (
-      !diagnosaDialog.diagnosaForm.pemeriksaanFisik ||
-      !diagnosaDialog.diagnosaForm.hasilTesting ||
-      !diagnosaDialog.diagnosaForm.dapatDiperbaiki
-    ) {
-      toast.error("Semua field diagnosa wajib diisi");
-      return;
-    }
-    if (diagnosaDialog.diagnosaForm.dapatDiperbaiki === "tidak") {
-      diagnosaDialog.setShowDiagnosaDialog(false);
-      diagnosaDialog.setShowCannotRepairDialog(true);
-    } else {
-      diagnosaDialog.setShowDiagnosaDialog(false);
-      diagnosaDialog.setShowStartRepairDialog(true);
-    }
-  };
-
-  const handleCannotRepair = () => {
-    if (
-      !diagnosaDialog.cannotRepairForm.alasanTidakBisa ||
-      !diagnosaDialog.cannotRepairForm.rekomendasiSolusi
-    ) {
-      toast.error("Alasan dan rekomendasi solusi harus diisi");
-      return;
-    }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "tidak_dapat_diperbaiki" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: `Barang tidak dapat diperbaiki: ${diagnosaDialog.cannotRepairForm.alasanTidakBisa}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Barang Tidak Dapat Diperbaiki",
-      message: `Saran: ${diagnosaDialog.cannotRepairForm.rekomendasiSolusi}`,
-      type: "warning",
-      read: false,
-    });
-    toast.success("Status diubah ke Tidak Dapat Diperbaiki");
-    diagnosaDialog.setShowCannotRepairDialog(false);
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleStartRepair = () => {
-    if (
-      !diagnosaDialog.repairForm.rencanaPerbaikan ||
-      !diagnosaDialog.repairForm.estimasiWaktu
-    ) {
-      toast.error("Rencana perbaikan dan estimasi waktu harus diisi");
-      return;
-    }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "dalam_perbaikan" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: `Memulai perbaikan. Estimasi: ${diagnosaDialog.repairForm.estimasiWaktu}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Perbaikan Dimulai",
-      message: `Estimasi waktu: ${diagnosaDialog.repairForm.estimasiWaktu}`,
-      type: "info",
-      read: false,
-    });
-    toast.success("Status diubah ke Dalam Perbaikan");
-    diagnosaDialog.setShowStartRepairDialog(false);
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleCompleteRepair = () => {
-    if (
-      !diagnosaDialog.completionForm.tindakanDilakukan ||
-      !diagnosaDialog.completionForm.hasilPerbaikan
-    ) {
-      toast.error("Tindakan dan hasil perbaikan harus diisi");
-      return;
-    }
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "selesai_diperbaiki" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: `Perbaikan selesai: ${diagnosaDialog.completionForm.hasilPerbaikan}`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: "Perbaikan Selesai",
-      message: `Perbaikan telah diselesaikan`,
-      type: "success",
-      read: false,
-    });
-    toast.success("Perbaikan selesai!");
-    diagnosaDialog.setShowCompletionDialog(false);
-    setRefreshKey((prev) => prev + 1);
-  };
 
   const handleCreateWorkOrder = () => {
     if (workOrderDialog.workOrderType === "sparepart") {
@@ -735,21 +474,12 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         }}
         onShowRejectDialog={() => adminDialogs.setShowRejectDialog(true)}
         onShowAssignDialog={() => adminDialogs.setShowAssignDialog(true)}
-        onShowTeknisiAcceptDialog={() =>
-          tekDialogs.setShowTeknisiAcceptDialog(true)
-        }
-        onShowTeknisiRejectDialog={() =>
-          tekDialogs.setShowTeknisiRejectDialog(true)
-        }
-        onShowTeknisiStartDiagnosa={handleTeknisiStartDiagnosa}
-        onShowDiagnosaDialog={() => diagnosaDialog.setShowDiagnosaDialog(true)}
-        onShowCompletionDialog={() =>
-          diagnosaDialog.setShowCompletionDialog(true)
-        }
+        onShowDiagnosaDialog={() => setShowDiagnosisConfirm(true)}
         onShowSparepartDialog={() =>
           workOrderDialog.setShowSparepartDialog(true)
         }
         getWorkOrdersByTicket={getWorkOrdersByTicket}
+        onUpdate={() => setRefreshKey((prev) => prev + 1)}
       />
 
       {/* Info */}
@@ -772,19 +502,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       {ticket.type === "zoom_meeting" && (
         <TicketProgressTrackerZoom ticket={ticket} />
       )}
-
-      {/* Teknisi Workflow */}
-      {/* Teknisi Workflow */}
-      {currentUser.role === "teknisi" &&
-        ticket.type === "perbaikan" &&
-        ticket.assignedTo === currentUser.id &&
-        ["assigned", "in_progress", "sedang_diagnosa", "dalam_perbaikan", "menunggu_sparepart"].includes(ticket.status as any) && (
-          <TeknisiWorkflow
-            ticket={ticket}
-            currentUser={currentUser}
-            onUpdate={() => setRefreshKey((prev) => prev + 1)}
-          />
-        )}
+      {/* Teknisi Workflow - Removed: all alerts and actions moved to TicketDetailAlerts */}
 
       {/* ============== DIALOGS ============== */}
 
@@ -860,12 +578,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <Textarea
-              placeholder="Catatan..."
-              value={adminDialogs.assignNotes}
-              onChange={(e) => adminDialogs.setAssignNotes(e.target.value)}
-              rows={3}
-            />
           </div>
           <DialogFooter>
             <Button
@@ -879,312 +591,79 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Teknisi Accept */}
-      <Dialog
-        open={tekDialogs.showTeknisiAcceptDialog}
-        onOpenChange={tekDialogs.setShowTeknisiAcceptDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Terima Tiket</DialogTitle>
-          </DialogHeader>
-          <Input
-            placeholder="Estimasi jadwal..."
-            value={tekDialogs.estimatedSchedule}
-            onChange={(e) => tekDialogs.setEstimatedSchedule(e.target.value)}
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => tekDialogs.setShowTeknisiAcceptDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleTeknisiAcceptTicket}>Terima</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Teknisi Reject */}
-      <AlertDialog
-        open={tekDialogs.showTeknisiRejectDialog}
-        onOpenChange={tekDialogs.setShowTeknisiRejectDialog}
-      >
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={diagnosaDialog.showStatusChangeConfirm} onOpenChange={diagnosaDialog.setShowStatusChangeConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tolak Tiket</AlertDialogTitle>
+            <AlertDialogTitle>Ubah Status Tiket</AlertDialogTitle>
           </AlertDialogHeader>
-          <Textarea
-            placeholder="Alasan..."
-            value={tekDialogs.teknisiRejectReason}
-            onChange={(e) => tekDialogs.setTeknisiRejectReason(e.target.value)}
-            rows={4}
-          />
+          <p className="text-sm text-gray-600">
+            Ini akan mengubah status tiket menjadi <span className="font-semibold text-blue-600">In Progress</span>. Lanjutkan?
+          </p>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleTeknisiRejectTicket}>
-              Tolak
+            <AlertDialogAction onClick={handleStatusChangeOnDiagnosisSubmit} className="bg-blue-600 hover:bg-blue-700">
+              Lanjutkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diagnosa */}
-      <Dialog
+      {/* Diagnosis Confirmation Dialog */}
+      <AlertDialog open={showDiagnosisConfirm} onOpenChange={setShowDiagnosisConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {ticket?.diagnosis ? "Ubah Diagnosis?" : "Isi Diagnosis?"}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <p className="text-sm text-gray-600">
+            {ticket?.diagnosis
+              ? "Anda akan mengubah hasil diagnosis sebelumnya. Pastikan informasi baru sudah diperiksa dengan teliti."
+              : "Mulai dengan mengisi form diagnosis untuk menentukan kondisi barang dan opsi perbaikan."}
+          </p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowDiagnosisConfirm(false);
+                diagnosaDialog.setShowDiagnosaDialog(true);
+              }}
+            >
+              Lanjutkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diagnosa Form - Full featured diagnosis form */}
+      <TicketDiagnosisForm
+        ticketId={ticketId}
+        ticketNumber={ticket.ticketNumber}
         open={diagnosaDialog.showDiagnosaDialog}
-        onOpenChange={diagnosaDialog.setShowDiagnosaDialog}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Form Diagnosa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Pemeriksaan fisik..."
-              value={diagnosaDialog.diagnosaForm.pemeriksaanFisik}
-              onChange={(e) =>
-                diagnosaDialog.setDiagnosaForm({
-                  ...diagnosaDialog.diagnosaForm,
-                  pemeriksaanFisik: e.target.value,
-                })
-              }
-              rows={3}
-            />
-            <Textarea
-              placeholder="Hasil testing..."
-              value={diagnosaDialog.diagnosaForm.hasilTesting}
-              onChange={(e) =>
-                diagnosaDialog.setDiagnosaForm({
-                  ...diagnosaDialog.diagnosaForm,
-                  hasilTesting: e.target.value,
-                })
-              }
-              rows={3}
-            />
-            <div>
-              <Label>Dapat diperbaiki?</Label>
-              <RadioGroup
-                value={diagnosaDialog.diagnosaForm.dapatDiperbaiki}
-                onValueChange={(val) =>
-                  diagnosaDialog.setDiagnosaForm({
-                    ...diagnosaDialog.diagnosaForm,
-                    dapatDiperbaiki: val as any,
-                  })
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ya" id="ya" />
-                  <Label htmlFor="ya">Ya</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="tidak" id="tidak" />
-                  <Label htmlFor="tidak">Tidak</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => diagnosaDialog.setShowDiagnosaDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleSubmitDiagnosa}>Submit</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => {
+          diagnosaDialog.setShowDiagnosaDialog(open);
+        }}
+        existingDiagnosis={ticket.diagnosis || null}
+        onDiagnosisSubmitted={() => {
+          setRefreshKey((prev) => prev + 1);
+        }}
+        ticketStatus={ticket.status}
+        onRequestStatusChange={handleRequestStatusChange}
+      />
 
-      {/* Cannot Repair */}
-      <Dialog
-        open={diagnosaDialog.showCannotRepairDialog}
-        onOpenChange={diagnosaDialog.setShowCannotRepairDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tidak Dapat Diperbaiki</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Alasan..."
-              value={diagnosaDialog.cannotRepairForm.alasanTidakBisa}
-              onChange={(e) =>
-                diagnosaDialog.setCannotRepairForm({
-                  ...diagnosaDialog.cannotRepairForm,
-                  alasanTidakBisa: e.target.value,
-                })
-              }
-              rows={3}
-            />
-            <Textarea
-              placeholder="Rekomendasi..."
-              value={diagnosaDialog.cannotRepairForm.rekomendasiSolusi}
-              onChange={(e) =>
-                diagnosaDialog.setCannotRepairForm({
-                  ...diagnosaDialog.cannotRepairForm,
-                  rekomendasiSolusi: e.target.value,
-                })
-              }
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => diagnosaDialog.setShowCannotRepairDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button variant="destructive" onClick={handleCannotRepair}>
-              Konfirmasi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Start Repair */}
-      <Dialog
-        open={diagnosaDialog.showStartRepairDialog}
-        onOpenChange={diagnosaDialog.setShowStartRepairDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mulai Perbaikan</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Rencana perbaikan..."
-              value={diagnosaDialog.repairForm.rencanaPerbaikan}
-              onChange={(e) =>
-                diagnosaDialog.setRepairForm({
-                  ...diagnosaDialog.repairForm,
-                  rencanaPerbaikan: e.target.value,
-                })
-              }
-              rows={3}
-            />
-            <Input
-              placeholder="Estimasi waktu..."
-              value={diagnosaDialog.repairForm.estimasiWaktu}
-              onChange={(e) =>
-                diagnosaDialog.setRepairForm({
-                  ...diagnosaDialog.repairForm,
-                  estimasiWaktu: e.target.value,
-                })
-              }
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => diagnosaDialog.setShowStartRepairDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleStartRepair}>Mulai</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Completion */}
-      <Dialog
-        open={diagnosaDialog.showCompletionDialog}
-        onOpenChange={diagnosaDialog.setShowCompletionDialog}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Penyelesaian Perbaikan</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Tindakan..."
-              value={diagnosaDialog.completionForm.tindakanDilakukan}
-              onChange={(e) =>
-                diagnosaDialog.setCompletionForm({
-                  ...diagnosaDialog.completionForm,
-                  tindakanDilakukan: e.target.value,
-                })
-              }
-              rows={3}
-            />
-            <Textarea
-              placeholder="Hasil..."
-              value={diagnosaDialog.completionForm.hasilPerbaikan}
-              onChange={(e) =>
-                diagnosaDialog.setCompletionForm({
-                  ...diagnosaDialog.completionForm,
-                  hasilPerbaikan: e.target.value,
-                })
-              }
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => diagnosaDialog.setShowCompletionDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleCompleteRepair}>Selesai</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Work Order */}
-      <Dialog
-        open={workOrderDialog.showSparepartDialog}
-        onOpenChange={workOrderDialog.setShowSparepartDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Work Order</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <RadioGroup
-              value={workOrderDialog.workOrderType}
-              onValueChange={(val) =>
-                workOrderDialog.setWorkOrderType(val as any)
-              }
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sparepart" id="sp" />
-                <Label htmlFor="sp">Sparepart</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="vendor" id="vn" />
-                <Label htmlFor="vn">Vendor</Label>
-              </div>
-            </RadioGroup>
-            {workOrderDialog.workOrderType === "sparepart" && (
-              <Input
-                placeholder="Nama sparepart..."
-                value={workOrderDialog.sparepartName}
-                onChange={(e) =>
-                  workOrderDialog.setSparepartName(e.target.value)
-                }
-              />
-            )}
-            <Textarea
-              placeholder="Deskripsi..."
-              value={workOrderDialog.sparepartDescription}
-              onChange={(e) =>
-                workOrderDialog.setSparepartDescription(e.target.value)
-              }
-              rows={4}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => workOrderDialog.setShowSparepartDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleCreateWorkOrder}>Buat</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Work Order - Form Dialog */}
+      <WorkOrderForm
+        isOpen={workOrderDialog.showSparepartDialog}
+        onClose={() => workOrderDialog.setShowSparepartDialog(false)}
+        ticketId={Number(ticketId)}
+        ticketStatus={ticket?.status || "in_progress"}
+        workOrderCount={getWorkOrdersByTicket(ticketId).length}
+        existingWorkOrders={getWorkOrdersByTicket(ticketId)}
+        onSuccess={() => {
+          setRefreshKey((prev) => prev + 1);
+        }}
+      />
 
       {/* Progress */}
       <Dialog

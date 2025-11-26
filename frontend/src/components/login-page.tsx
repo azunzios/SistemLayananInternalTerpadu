@@ -394,9 +394,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               />
               <div className="absolute bottom-4 z-20 bg-black-30 backdrop-blur-sm w-[100%] px-4 flex flex-col gap-0">
                 <div className="flex items-start gap-1 text-black text-sm font-medium">
-                  <span className='leading-none'>Sistem Layan Internal Terpadu Badan Pusat Statistik Nusa Tenggara Barat</span>
+                  <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Nusa Tenggara Barat</span>
                 </div>
-                <p className='text-[10px] text-gray-800 leading-none'>Tim 2 RPL Kelas 3SI2 </p>
+                <p className='text-[10px] text-gray-800'>Tim 2 RPL Kelas 3SI2 </p>
               </div>
 
             </div>

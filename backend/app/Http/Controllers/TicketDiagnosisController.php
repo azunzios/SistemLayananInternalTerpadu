@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\TicketDiagnosis;
 use App\Models\Timeline;
 use App\Models\AuditLog;
+use App\Http\Resources\TicketDiagnosisResource;
 use App\Traits\HasRoleHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -29,9 +30,27 @@ class TicketDiagnosisController extends Controller
             ], 404);
         }
 
+        // Format response dengan semua jawaban
+        $diagnosisData = [
+            'id' => $diagnosis->id,
+            'ticket_id' => $diagnosis->ticket_id,
+            'technician_id' => $diagnosis->technician_id,
+            'technician' => $diagnosis->technician,
+            'problem_description' => $diagnosis->problem_description,
+            'problem_category' => $diagnosis->problem_category,
+            'repair_type' => $diagnosis->repair_type,
+            'repair_description' => $diagnosis->repair_description,
+            'unrepairable_reason' => $diagnosis->unrepairable_reason,
+            'alternative_solution' => $diagnosis->alternative_solution,
+            'technician_notes' => $diagnosis->technician_notes,
+            'estimasi_hari' => $diagnosis->estimasi_hari,
+            'created_at' => $diagnosis->created_at,
+            'updated_at' => $diagnosis->updated_at,
+        ];
+
         return response()->json([
             'success' => true,
-            'data' => $diagnosis,
+            'data' => $diagnosisData,
         ]);
     }
 
@@ -60,6 +79,7 @@ class TicketDiagnosisController extends Controller
             'unrepairable_reason' => 'required_if:repair_type,unrepairable|nullable|string',
             'alternative_solution' => 'nullable|string',
             'technician_notes' => 'nullable|string',
+            'estimasi_hari' => 'nullable|string',
         ]);
 
         // Check if diagnosis already exists
@@ -80,8 +100,10 @@ class TicketDiagnosisController extends Controller
             $message = 'Diagnosis saved successfully';
         }
 
-        // Update ticket status based on repair type
-        $this->updateTicketStatus($ticket, $validated['repair_type']);
+        // If this is the first diagnosis and ticket is in 'assigned' status, change to 'in_progress'
+        if ($ticket->status === 'assigned' && !$diagnosis) {
+            $ticket->update(['status' => 'in_progress']);
+        }
 
         // Create timeline
         Timeline::create([
@@ -136,24 +158,6 @@ class TicketDiagnosisController extends Controller
             'success' => true,
             'message' => 'Diagnosis deleted successfully',
         ]);
-    }
-
-    /**
-     * Update ticket status based on repair type
-     */
-    private function updateTicketStatus(Ticket $ticket, string $repairType): void
-    {
-        $statusMap = [
-            'direct_repair' => 'in_progress',
-            'need_sparepart' => 'on_hold',
-            'need_vendor' => 'on_hold',
-            'need_license' => 'on_hold',
-            'unrepairable' => 'unrepairable',
-        ];
-
-        if (isset($statusMap[$repairType])) {
-            $ticket->update(['status' => $statusMap[$repairType]]);
-        }
     }
 
     /**

@@ -6,6 +6,13 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   CheckCircle,
@@ -15,6 +22,7 @@ import {
   FolderKanban,
   Package,
   Truck,
+  FileText
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
 import { TicketDiagnosisDisplay } from "@/components/views/tickets/ticket-diagnosis-display";
@@ -37,9 +45,8 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <Button variant="link" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Kembali
+        <Button variant="outline" size="icon" onClick={onBack} className="rounded-full">
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
           <h1 className="text-3xl">{ticket.title}</h1>
@@ -91,6 +98,9 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 }) => {
   const [assetData, setAssetData] = useState<any>(null);
   const [loadingAsset, setLoadingAsset] = useState(false);
+  const [showDiagnosisModal, setShowDiagnosisModal] = useState(false);
+  const [diagnosisData, setDiagnosisData] = useState<any>(null);
+  const [loadingDiagnosis, setLoadingDiagnosis] = useState(false);
 
   // Fetch asset data for perbaikan tickets
   useEffect(() => {
@@ -120,6 +130,25 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
     fetchAssetData();
   }, [ticket.type, ticket.assetCode, ticket.assetNUP]);
+
+  // Fetch complete diagnosis data when modal opens
+  const handleOpenDiagnosisModal = async () => {
+    if (!ticket.id) return;
+
+    try {
+      setLoadingDiagnosis(true);
+      const response = await api.get(`/tickets/${ticket.id}/diagnosis`);
+      if (response.success && response.data) {
+        setDiagnosisData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching diagnosis data:", error);
+    } finally {
+      setLoadingDiagnosis(false);
+    }
+
+    setShowDiagnosisModal(true);
+  };
 
   const attachmentList = Array.isArray((ticket as any).attachments)
     ? (ticket as any).attachments
@@ -293,7 +322,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                           <span className="text-gray-500 w-32">
                             Nama Barang:
                           </span>
-                          <span className="font-medium">
+                          <span className="text-sm overflow-wrap w-32">
                             {assetData.asset_name}
                           </span>
                         </div>
@@ -313,16 +342,25 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Diagnosis Button */}
+                {ticket.type === "perbaikan" && ticket.diagnosis && (
+                  <Button
+                    variant="outline"
+                    onClick={handleOpenDiagnosisModal}
+                    disabled={loadingDiagnosis}
+                    className="w-full justify-start"
+                  >
+                    <FileText className="h-5 w-5" />
+                    Lihat Hasil Diagnosis
+                  </Button>
+                )}
               </>
             )}
           </div>
 
           {/* Right Column - Work Orders & Discussion */}
           <div className="space-y-4 col-span-2">
-            {/* Diagnosis Display */}
-            {ticket.type === "perbaikan" && ticket.diagnosis && (
-              <TicketDiagnosisDisplay diagnosis={ticket.diagnosis} />
-            )}
 
             {/* Work Orders Section */}
             {ticket.type === "perbaikan" &&
@@ -514,6 +552,22 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
           </div>
         </div>
       </CardContent>
+
+      {/* Diagnosis Modal */}
+      <Dialog open={showDiagnosisModal} onOpenChange={setShowDiagnosisModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Hasil Diagnosis</DialogTitle>
+          </DialogHeader>
+          {loadingDiagnosis ? (
+            <div className="flex justify-center items-center py-8">
+              <Spinner />
+            </div>
+          ) : diagnosisData ? (
+            <TicketDiagnosisDisplay diagnosis={diagnosisData} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

@@ -359,7 +359,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       </Card>
 
       {/* Work Order List */}
-      <Card>
+      <Card className="pb-6">
         <CardHeader>
           <CardTitle>Daftar Work Order</CardTitle>
           <CardDescription>

@@ -38,9 +38,9 @@ class TicketController extends Controller
             if ($status === 'pending') {
                 $query->whereIn('status', ['submitted', 'pending_review']);
             } elseif ($status === 'in_progress') {
-                $query->whereIn('status', ['assigned', 'in_progress', 'on_hold', 'waiting_for_pegawai']);
+                $query->whereIn('status', ['assigned', 'in_progress', 'on_hold']);
             } elseif ($status === 'completed') {
-                $query->whereIn('status', ['closed', 'closed_unrepairable', 'rejected', 'cancelled', 'completed', 'approved']);
+                $query->whereIn('status', ['closed', 'rejected']);
             } else {
                 // Allow comma separated
                 $statuses = explode(',', $status);
@@ -180,6 +180,72 @@ class TicketController extends Controller
             'completion_rate' => $completionRate,
             'perbaikan' => $perbaikan,
             'zoom' => $zoomMeeting,
+        ]);
+    }
+
+    /**
+     * Get comprehensive admin layanan dashboard data dengan statistik dan 7-hari trend
+     * statistik: total, perbaikan (submitted), zoom (pending_review), closed (dengan %), trend 7 hari
+     */
+    public function adminLayananDashboardData(Request $request)
+    {
+        // Total tiket
+        $total = Ticket::count();
+        
+        // Perbaikan submitted
+        $perbaikanSubmitted = Ticket::where('type', 'perbaikan')
+            ->where('status', 'submitted')
+            ->count();
+        
+        // Zoom pending_review
+        $zoomPendingReview = Ticket::where('type', 'zoom_meeting')
+            ->where('status', 'pending_review')
+            ->count();
+        
+        // Closed tiket
+        $closedCount = Ticket::where('status', 'closed')->count();
+        $closureRate = $total > 0 ? round(($closedCount / $total) * 100, 2) : 0;
+        
+        // Last 7 days trend data
+        $last7Days = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->startOfDay();
+            $dateEnd = $date->copy()->endOfDay();
+            $dateStr = $date->format('d M');
+            
+            $perbaikanCount = Ticket::where('type', 'perbaikan')
+                ->whereBetween('created_at', [$date, $dateEnd])
+                ->count();
+            
+            $zoomCount = Ticket::where('type', 'zoom_meeting')
+                ->whereBetween('created_at', [$date, $dateEnd])
+                ->count();
+            
+            $last7Days[] = [
+                'date' => $dateStr,
+                'perbaikan' => $perbaikanCount,
+                'zoom' => $zoomCount,
+            ];
+        }
+
+        return response()->json([
+            'statistics' => [
+                'total' => $total,
+                'perbaikan' => [
+                    'count' => $perbaikanSubmitted,
+                    'status' => 'submitted',
+                ],
+                'zoom' => [
+                    'count' => $zoomPendingReview,
+                    'status' => 'pending_review',
+                ],
+                'closed' => [
+                    'count' => $closedCount,
+                    'percentage' => $closureRate,
+                    'description' => "{$closureRate}% dari total tiket",
+                ],
+            ],
+            'trend' => $last7Days,
         ]);
     }
 
@@ -665,6 +731,7 @@ class TicketController extends Controller
             'estimated_schedule' => 'nullable|string',
             'reject_reason' => 'nullable|string',
             'notes' => 'nullable|string',
+            'mark_work_orders_ready' => 'nullable|boolean',
             'completion_data' => 'nullable|array', // Data form completion
             'completion_data.tindakan_dilakukan' => 'nullable|string',
             'completion_data.komponen_diganti' => 'nullable|string',
@@ -679,6 +746,56 @@ class TicketController extends Controller
             throw ValidationException::withMessages([
                 'status' => ["Cannot transition from '{$ticket->status}' to '{$validated['status']}'"],
             ]);
+        }
+
+        // Additional validation for closed transition (completion)
+        if ($validated['status'] === 'closed') {
+            $diagnosis = $ticket->diagnosis;
+            
+            // Check if diagnosis exists
+            if (!$diagnosis) {
+                throw ValidationException::withMessages([
+                    'status' => 'Diagnosis must be completed before closing ticket',
+                ]);
+            }
+            
+            // If diagnosis needs work order, check work_orders_ready flag
+            $repairType = $diagnosis->repair_type;
+            $needsWorkOrder = in_array($repairType, ['need_sparepart', 'need_vendor', 'need_license']);
+            
+            if ($needsWorkOrder && !$ticket->work_orders_ready) {
+                throw ValidationException::withMessages([
+                    'status' => 'Work orders must be ready. Click "Lanjutkan Perbaikan" first.',
+                ]);
+            }
+        }
+
+        // Additional validation for waiting_for_submitter transition
+        if ($validated['status'] === 'waiting_for_submitter') {
+            $diagnosis = $ticket->diagnosis;
+            
+            // Check if diagnosis exists
+            if (!$diagnosis) {
+                throw ValidationException::withMessages([
+                    'status' => 'Diagnosis must be completed before waiting for submitter',
+                ]);
+            }
+            
+            // If diagnosis needs work order, check work_orders_ready flag
+            $repairType = $diagnosis->repair_type;
+            $needsWorkOrder = in_array($repairType, ['need_sparepart', 'need_vendor', 'need_license']);
+            
+            if ($needsWorkOrder && !$ticket->work_orders_ready) {
+                throw ValidationException::withMessages([
+                    'status' => 'Work orders must be ready. Click "Lanjutkan Perbaikan" first.',
+                ]);
+            }
+        }
+
+        // Special handling for marking work orders ready (from "Lanjutkan Perbaikan" button)
+        if (isset($validated['mark_work_orders_ready']) && $validated['mark_work_orders_ready']) {
+            $ticket->work_orders_ready = true;
+            $validated['notes'] = 'Work orders ready, siap melanjutkan perbaikan';
         }
 
         $oldStatus = $ticket->status;

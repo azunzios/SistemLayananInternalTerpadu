@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Wrench,
   Clock,
@@ -15,6 +16,9 @@ import {
   AlertCircle,
   Package,
   Settings,
+  Sparkles,
+  ArrowUpRight,
+  Loader,
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
@@ -73,23 +77,15 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     });
   }, [tickets, currentUser.id]);
 
-  // Teknisi Stats
+  // Teknisi Stats - Updated to match new status values
   const stats = useMemo(() => {
-    const newAssignments = myTickets.filter((t) =>
-      ["assigned", "ditugaskan"].includes(t.status)
+    const needsDiagnosis = myTickets.filter((t) =>
+      ["assigned", "submitted", "pending_review"].includes(t.status)
     );
-    const inDiagnosis = myTickets.filter((t) =>
-      ["diterima_teknisi", "sedang_diagnosa"].includes(t.status)
-    );
-    const inRepair = myTickets.filter((t) => t.status === "dalam_perbaikan");
-    const waitingSparepart = myTickets.filter((t) =>
-      ["on_hold", "menunggu_sparepart"].includes(t.status)
-    );
+    const inProgress = myTickets.filter((t) => t.status === "in_progress");
+    const waitingSparepart = myTickets.filter((t) => t.status === "on_hold");
     const completed = myTickets.filter((t) =>
-      ["resolved", "selesai_diperbaiki", "selesai", "closed"].includes(t.status)
-    );
-    const cannotRepair = myTickets.filter((t) =>
-      ["closed_unrepairable", "tidak_dapat_diperbaiki"].includes(t.status)
+      ["waiting_for_submitter", "closed"].includes(t.status)
     );
 
     const today = new Date();
@@ -99,55 +95,46 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     });
 
     return {
-      newAssignments: newAssignments.length,
-      inDiagnosis: inDiagnosis.length,
-      inRepair: inRepair.length,
+      total: myTickets.length,
+      needsDiagnosis: needsDiagnosis.length,
+      inProgress: inProgress.length,
       waitingSparepart: waitingSparepart.length,
       completed: completed.length,
-      cannotRepair: cannotRepair.length,
       completedToday: completedToday.length,
-      activeJobs: newAssignments.length + inDiagnosis.length + inRepair.length,
+      activeJobs: needsDiagnosis.length + inProgress.length + waitingSparepart.length,
     };
   }, [myTickets]);
 
-  // Recent assignments
+  // Recent assignments - Updated for new status values
   const recentAssignments = useMemo(() => {
     return myTickets
       .filter((t) =>
         [
           "assigned",
-          "ditugaskan",
-          "diterima_teknisi",
-          "accepted",
-          "sedang_diagnosa",
-          "in_diagnosis",
-          "dalam_perbaikan",
-          "in_repair",
-          "menunggu_sparepart",
+          "submitted",
+          "pending_review",
+          "in_progress",
           "on_hold",
         ].includes(t.status)
       )
       .sort((a, b) => {
-        // Priority: ditugaskan/assigned > sedang_diagnosa > dalam_perbaikan > menunggu_sparepart
+        // Priority: assigned > submitted/pending_review > in_progress > on_hold
         const statusOrder: Record<string, number> = {
-          ditugaskan: 0,
           assigned: 0,
-          diterima_teknisi: 1,
-          accepted: 1,
-          sedang_diagnosa: 2,
-          in_diagnosis: 2,
-          dalam_perbaikan: 3,
-          in_repair: 3,
-          menunggu_sparepart: 4,
-          on_hold: 4,
+          submitted: 1,
+          pending_review: 1,
+          in_progress: 2,
+          on_hold: 3,
         };
         const statusDiff =
           (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
         if (statusDiff !== 0) return statusDiff;
 
-        // Then by urgency
-        const urgencyOrder = { sangat_mendesak: 0, mendesak: 1, normal: 2 };
-        return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+        // Then by creation date (newest first)
+        return (
+          new Date(b.createdAt || b.created_at).getTime() -
+          new Date(a.createdAt || a.created_at).getTime()
+        );
       })
       .slice(0, 8);
   }, [myTickets]);
@@ -167,12 +154,10 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
         const ticketDate = new Date(t.updatedAt || t.updated_at);
         return (
           ticketDate.toDateString() === date.toDateString() &&
-          ["resolved", "selesai_diperbaiki", "selesai", "closed"].includes(
-            t.status
-          )
+          ["waiting_for_submitter", "closed"].includes(t.status)
         );
-      });
-
+      });      
+      
       last7Days.push({
         date: dateStr,
         completed: dayTickets.length,
@@ -181,31 +166,39 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     return last7Days;
   }, [myTickets]);
 
-  // Work status breakdown
-  const workStatus = useMemo(() => {
-    return [
-      { name: "Diagnosis", value: stats.inDiagnosis },
-      { name: "Repair", value: stats.inRepair },
-      { name: "Waiting WO", value: stats.waitingSparepart },
-      { name: "Completed", value: stats.completed },
-    ].filter((item) => item.value > 0);
-  }, [stats]);
+  // Incoming tickets trend (per hari)
+  const incomingTrend = useMemo(() => {
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+      });
+
+      const dayTickets = myTickets.filter((t) => {
+        const ticketDate = new Date(t.createdAt || t.created_at);
+        return ticketDate.toDateString() === date.toDateString();
+      });
+
+      last7Days.push({
+        date: dateStr,
+        assigned: dayTickets.length,
+      });
+    }
+    return last7Days;
+  }, [myTickets]);
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { variant: any; label: string }> = {
-      assigned: { variant: "secondary", label: "Baru" },
-      ditugaskan: { variant: "secondary", label: "Baru" },
-      accepted: { variant: "default", label: "Diterima" },
-      diterima_teknisi: { variant: "default", label: "Diterima" },
-      in_diagnosis: { variant: "default", label: "Diagnosa" },
-      sedang_diagnosa: { variant: "default", label: "Diagnosa" },
-      in_repair: { variant: "default", label: "Perbaikan" },
-      dalam_perbaikan: { variant: "default", label: "Perbaikan" },
-      on_hold: { variant: "secondary", label: "Waiting Parts" },
-      menunggu_sparepart: { variant: "secondary", label: "Waiting Parts" },
-      resolved: { variant: "default", label: "Selesai" },
-      selesai_diperbaiki: { variant: "default", label: "Selesai" },
-      closed: { variant: "default", label: "Selesai" },
+      assigned: { variant: "secondary", label: "Assigned" },
+      submitted: { variant: "secondary", label: "Submitted" },
+      pending_review: { variant: "secondary", label: "Pending Review" },
+      in_progress: { variant: "default", label: "In Progress" },
+      on_hold: { variant: "secondary", label: "On Hold" },
+      waiting_for_submitter: { variant: "default", label: "Waiting Confirmation" },
+      closed: { variant: "default", label: "Closed" },
     };
     const statusConfig = config[status] || {
       variant: "secondary",
@@ -230,228 +223,132 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            Teknisi Dashboard
-            <Wrench className="h-8 w-8 text-orange-600" />
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Kelola tugas perbaikan dan tracking progress
-          </p>
-        </div>
-      </div>
-
-      {/* New Assignments Alert */}
-      {stats.newAssignments > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-6 w-6 text-orange-600 animate-pulse" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-orange-900">
-                    {stats.newAssignments} Tugas Baru Ditugaskan!
-                  </h3>
-                  <p className="text-sm text-orange-700">
-                    Segera terima dan mulai diagnosa
-                  </p>
-                </div>
-                <Button onClick={() => onNavigate("my-tickets")}>
-                  Lihat Tugas
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <>
+      <div className="space-y-6">
+        {/* Welcome Section - styled like user dashboard */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
         >
-          <Card className="border-2 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">New Assignments</p>
-                  <p className="text-4xl text-orange-600">
-                    {stats.newAssignments}
-                  </p>
-                  <p className="text-xs text-orange-700 mt-1">Perlu diterima</p>
-                </div>
-                <div className="h-14 w-14 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Clock className="h-7 w-7 text-orange-600" />
-                </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl mb-2">
+                Teknisi Dashboard
+              </h1>
+              <p className="text-blue-600">
+                Kelola tugas perbaikan dan tracking progress
+              </p>
+            </div>
+            <div className="hidden md:block">
+              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
+            </div>
+          </div>
+
+          <Separator className="my-6 bg-blue-300" />
+
+          {/* Statistics Grid - matching user dashboard style */}
+          <div className="flex items-center justify-between">
+            {loading ? (
+              <div className="w-full flex items-center justify-center py-8">
+                <Loader className="h-6 w-6 animate-spin text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <>
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.total}</p>
+                </div>
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                  <p className="text-blue-400 text-sm">Perlu Didiagnosa</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.needsDiagnosis}</p>
+                </div>
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                  <p className="text-blue-400 text-sm">In Progress</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.inProgress}</p>
+                </div>
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                  <p className="text-blue-400 text-sm">On Hold</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.waitingSparepart}</p>
+                </div>
+                <div className="flex-1 px-4 py-4 text-center">
+                  <p className="text-blue-400 text-sm">Selesai</p>
+                  <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
+                </div>
+              </>
+            )}
+          </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">In Progress</p>
-                  <p className="text-4xl text-blue-600">
-                    {stats.inDiagnosis + stats.inRepair}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {stats.inDiagnosis} diagnosa, {stats.inRepair} perbaikan
-                  </p>
-                </div>
-                <div className="h-14 w-14 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Settings className="h-7 w-7 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Completed</p>
-                  <p className="text-4xl text-green-600">{stats.completed}</p>
-                  <p className="text-xs text-green-700 mt-1">
-                    +{stats.completedToday} hari ini
-                  </p>
-                </div>
-                <div className="h-14 w-14 bg-green-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-7 w-7 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Completion Trend */}
+        {/* Chart - Single incoming tickets chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Trend Penyelesaian (7 Hari)</CardTitle>
-            <CardDescription>Jumlah perbaikan selesai per hari</CardDescription>
+            <CardTitle>Tiket Masuk (7 Hari Terakhir)</CardTitle>
+            <CardDescription>Jumlah tiket baru per hari</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={completionTrend}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={incomingTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="completed"
-                  stroke="#10b981"
-                  strokeWidth={2}
+                <YAxis 
+                  domain={[0, Math.ceil(Math.max(...incomingTrend.map(d => d.assigned)) / 1) || 1]} 
+                  ticks={Array.from({length: Math.ceil(Math.max(...incomingTrend.map(d => d.assigned)) / 1) || 2}, (_, i) => i)}
+                  type="number"
                 />
-              </LineChart>
+                <Tooltip formatter={(value) => [`${value} tiket`, 'Assigned']} />
+                <Bar dataKey="assigned" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Work Status */}
-        <Card>
+        {/* Info Card */}
+        <Card className="pb-6">
           <CardHeader>
-            <CardTitle>Status Pekerjaan</CardTitle>
-            <CardDescription>Breakdown tugas saat ini</CardDescription>
+            <CardTitle>Informasi Penting</CardTitle>
           </CardHeader>
           <CardContent>
-            {workStatus.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={workStatus}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#f59e0b" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                  <p>Tidak ada pekerjaan aktif</p>
+            <div className="space-y-3">
+              {stats.needsDiagnosis > 0 && (
+                <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-900">
+                      {stats.needsDiagnosis} Tiket Perlu Didiagnosa
+                    </p>
+                    <p className="text-xs text-orange-700">Segera lakukan diagnosis</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              
+              {stats.waitingSparepart > 0 && (
+                <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <Package className="h-5 w-5 text-yellow-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-900">
+                      {stats.waitingSparepart} Tiket Menunggu Sparepart
+                    </p>
+                    <p className="text-xs text-yellow-700">Work order sedang diproses</p>
+                  </div>
+                </div>
+              )}
+
+              {stats.needsDiagnosis === 0 && stats.waitingSparepart === 0 && (
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-900">
+                      Semua Tiket Sesuai
+                    </p>
+                    <p className="text-xs text-green-700">Tidak ada tiket tertunda</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Additional Info */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Waiting Sparepart */}
-        {stats.waitingSparepart > 0 && (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Package className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900">
-                    {stats.waitingSparepart} Job Menunggu
-                    Sparepart/Vendor/Lisensi
-                  </h3>
-                  <p className="text-sm text-blue-700">
-                    Work order sedang diproses
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => onNavigate("sparepart-requests")}
-                >
-                  Lihat Status
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Cannot Repair */}
-        {stats.cannotRepair > 0 && (
-          <Card className="border-gray-200 bg-gray-50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
-                  <AlertCircle className="h-6 w-6 text-gray-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">
-                    {stats.cannotRepair} Item Tidak Dapat Diperbaiki
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    Sudah didokumentasikan
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+    </>
   );
 };

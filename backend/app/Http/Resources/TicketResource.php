@@ -51,6 +51,12 @@ class TicketResource extends JsonResource
             'rejectionReason' => $this->rejection_reason, // Alasan penolakan untuk semua tipe tiket
             'timeline' => TimelineResource::collection($this->whenLoaded('timeline')),
             
+            // Button status untuk perbaikan
+            'buttonStatus' => $this->when(
+                $this->type === 'perbaikan',
+                $this->getButtonStatus()
+            ),
+            
             // Comments
             'commentsCount' => $this->whenLoaded('comments', function () {
                 return $this->comments->count();
@@ -109,5 +115,39 @@ class TicketResource extends JsonResource
         }
 
         return $baseData;
+    }
+
+    private function getButtonStatus()
+    {
+        $diagnosis = $this->diagnosis;
+        
+        $hasDiagnosis = $diagnosis !== null;
+        $repairType = $diagnosis?->repair_type;
+        $needsWorkOrder = in_array($repairType, ['need_sparepart', 'need_vendor', 'need_license']);
+        $canBeCompleted = in_array($repairType, ['direct_repair', 'unrepairable']);
+        
+        // Get work orders
+        $workOrders = $this->workOrders ?? [];
+        $allWorkOrdersDelivered = count($workOrders) > 0
+            ? collect($workOrders)->every(fn($wo) => in_array($wo->status, ['delivered', 'completed', 'failed', 'cancelled']))
+            : true;
+        
+        // Check work_orders_ready flag
+        $workOrdersReady = $this->work_orders_ready ?? false;
+        
+        return [
+            'ubahDiagnosis' => [
+                'enabled' => true,
+                'reason' => null,
+            ],
+            'workOrder' => [
+                'enabled' => $hasDiagnosis && $needsWorkOrder,
+                'reason' => !$hasDiagnosis ? 'Diagnosis belum diisi' : (!$needsWorkOrder ? 'Diagnosis tidak memerlukan work order' : null),
+            ],
+            'selesaikan' => [
+                'enabled' => $hasDiagnosis && (!$needsWorkOrder || $workOrdersReady),
+                'reason' => !$hasDiagnosis ? 'Diagnosis belum diisi' : ($needsWorkOrder && !$workOrdersReady ? 'Klik "Lanjutkan Perbaikan" setelah work order selesai' : null),
+            ],
+        ];
     }
 }

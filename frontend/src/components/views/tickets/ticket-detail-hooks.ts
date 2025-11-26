@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Ticket, TicketStatus } from '@/types';
+import type {PerbaikanStatus} from '@/types';
 
 export interface DiagnosaForm {
   pemeriksaanFisik: string;
@@ -40,7 +40,6 @@ export const useAdminLayananDialogs = () => {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('');
-  const [assignNotes, setAssignNotes] = useState('');
 
   return {
     showApproveDialog,
@@ -53,8 +52,6 @@ export const useAdminLayananDialogs = () => {
     setRejectReason,
     selectedTechnician,
     setSelectedTechnician,
-    assignNotes,
-    setAssignNotes,
   };
 };
 
@@ -86,6 +83,7 @@ export const useTeknisiDialogs = () => {
 // Diagnosa Dialog States
 export const useDiagnosaDialogs = () => {
   const [showDiagnosaDialog, setShowDiagnosaDialog] = useState(false);
+  const [showStatusChangeConfirm, setShowStatusChangeConfirm] = useState(false);
   const [diagnosaForm, setDiagnosaForm] = useState<DiagnosaForm>({
     pemeriksaanFisik: '',
     hasilTesting: '',
@@ -121,6 +119,8 @@ export const useDiagnosaDialogs = () => {
   return {
     showDiagnosaDialog,
     setShowDiagnosaDialog,
+    showStatusChangeConfirm,
+    setShowStatusChangeConfirm,
     diagnosaForm,
     setDiagnosaForm,
     showCannotRepairDialog,
@@ -166,7 +166,7 @@ export const useWorkOrderDialogs = () => {
 // Progress Dialog States
 export const useProgressDialog = () => {
   const [showProgressDialog, setShowProgressDialog] = useState(false);
-  const [newStatus, setNewStatus] = useState<TicketStatus>('sedang_diagnosa');
+  const [newStatus, setNewStatus] = useState<PerbaikanStatus>('in_progress');
   const [progressNotes, setProgressNotes] = useState('');
 
   return {

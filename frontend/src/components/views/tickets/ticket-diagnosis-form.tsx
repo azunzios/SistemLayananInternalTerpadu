@@ -6,8 +6,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -21,6 +31,7 @@ import { FileText, Send } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { TicketDiagnosis } from "@/types";
+import {Spinner} from "@/components/ui/spinner";
 
 interface TicketDiagnosisFormProps {
   ticketId: string;
@@ -29,7 +40,8 @@ interface TicketDiagnosisFormProps {
   onOpenChange: (open: boolean) => void;
   existingDiagnosis?: TicketDiagnosis | null;
   onDiagnosisSubmitted: () => void;
-  onCreateWorkOrder?: (type: "sparepart" | "vendor" | "license") => void;
+  ticketStatus?: string;
+  onRequestStatusChange?: (callback: () => Promise<void>) => void;
 }
 
 export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
@@ -39,9 +51,14 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
   onOpenChange,
   existingDiagnosis,
   onDiagnosisSubmitted,
-  onCreateWorkOrder,
+  ticketStatus,
+  onRequestStatusChange,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDiagnosis, setIsLoadingDiagnosis] = useState(false);
+  const [fetchedDiagnosis, setFetchedDiagnosis] = useState<TicketDiagnosis | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmationType, setConfirmationType] = useState<"change" | "save">("save");
 
   const [formData, setFormData] = useState({
     problem_description: "",
@@ -56,21 +73,59 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
     unrepairable_reason: "",
     alternative_solution: "",
     technician_notes: "",
+    estimasi_hari: "",
   });
 
+  // Fetch diagnosis data dari backend saat modal dibuka
   useEffect(() => {
-    if (existingDiagnosis) {
+    if (open && ticketId) {
+      fetchDiagnosisData();
+    }
+  }, [open, ticketId]);
+
+  const fetchDiagnosisData = async () => {
+    setIsLoadingDiagnosis(true);
+    try {
+      const response = await api.get(`/tickets/${ticketId}/diagnosis`);
+      if (response.success && response.data) {
+        const data = response.data;
+        setFetchedDiagnosis(data);
+        // Convert snake_case dari backend ke camelCase untuk form
+        setFormData({
+          problem_description: data.problem_description || "",
+          problem_category: data.problem_category || "hardware",
+          repair_type: data.repair_type || "direct_repair",
+          repair_description: data.repair_description || "",
+          unrepairable_reason: data.unrepairable_reason || "",
+          alternative_solution: data.alternative_solution || "",
+          technician_notes: data.technician_notes || "",
+          estimasi_hari: data.estimasi_hari || "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching diagnosis data:", error);
+      // Form stays empty if no diagnosis exists yet
+    } finally {
+      setIsLoadingDiagnosis(false);
+    }
+  };
+
+  // Fallback ke existingDiagnosis jika di-pass sebagai prop
+  useEffect(() => {
+    if (!fetchedDiagnosis && existingDiagnosis) {
+      // Handle both camelCase (from props) and snake_case (from backend)
       setFormData({
-        problem_description: existingDiagnosis.problemDescription || "",
-        problem_category: existingDiagnosis.problemCategory || "hardware",
-        repair_type: existingDiagnosis.repairType || "direct_repair",
-        repair_description: existingDiagnosis.repairDescription || "",
-        unrepairable_reason: existingDiagnosis.unrepairableReason || "",
-        alternative_solution: existingDiagnosis.alternativeSolution || "",
-        technician_notes: existingDiagnosis.technicianNotes || "",
+        problem_description: existingDiagnosis.problemDescription || existingDiagnosis.problem_description || "",
+        problem_category: existingDiagnosis.problemCategory || existingDiagnosis.problem_category || "hardware",
+        repair_type: existingDiagnosis.repairType || existingDiagnosis.repair_type || "direct_repair",
+        repair_description: existingDiagnosis.repairDescription || existingDiagnosis.repair_description || "",
+        unrepairable_reason: existingDiagnosis.unrepairableReason || existingDiagnosis.unrepairable_reason || "",
+        alternative_solution: existingDiagnosis.alternativeSolution || existingDiagnosis.alternative_solution || "",
+        technician_notes: existingDiagnosis.technicianNotes || existingDiagnosis.technician_notes || "",
+        estimasi_hari: existingDiagnosis.estimasiHari || existingDiagnosis.estimasi_hari || "",
       });
     }
-  }, [existingDiagnosis]);
+  }, [existingDiagnosis, fetchedDiagnosis]);
 
   const handleSubmit = async () => {
     // Validation
@@ -95,6 +150,31 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
       return;
     }
 
+    // Check if diagnosis is being changed (not first time)
+    if (fetchedDiagnosis) {
+      setConfirmationType("change");
+      setShowConfirmDialog(true);
+    } else {
+      // First time saving diagnosis
+      setConfirmationType("save");
+      setShowConfirmDialog(true);
+    }
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmDialog(false);
+
+    // If status is assigned, show status change confirmation dialog before submitting
+    if (ticketStatus === "assigned" && onRequestStatusChange) {
+      onRequestStatusChange(performDiagnosisSubmit);
+      return;
+    }
+
+    // Otherwise submit directly
+    await performDiagnosisSubmit();
+  };
+
+  const performDiagnosisSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -104,30 +184,12 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
       );
 
       toast.success("Diagnosis berhasil disimpan");
-
-      // Check if needs work order
-      if (
-        ["need_sparepart", "need_vendor", "need_license"].includes(
-          formData.repair_type
-        )
-      ) {
-        onOpenChange(false);
-        onDiagnosisSubmitted();
-
-        // Open work order form
-        if (onCreateWorkOrder) {
-          const woType =
-            formData.repair_type === "need_sparepart"
-              ? "sparepart"
-              : formData.repair_type === "need_vendor"
-              ? "vendor"
-              : "license";
-          onCreateWorkOrder(woType);
-        }
-      } else {
-        onOpenChange(false);
-        onDiagnosisSubmitted();
-      }
+      
+      // Call the callback first to update parent state
+      onDiagnosisSubmitted();
+      
+      // Then close the dialog (non-blocking)
+      onOpenChange(false);
     } catch (error: any) {
       console.error("Failed to submit diagnosis:", error);
       toast.error(error.response?.data?.message || "Gagal menyimpan diagnosis");
@@ -137,22 +199,38 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Form Diagnosa Barang - {ticketNumber}
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Form Diagnosis Barang - {ticketNumber}
+              </DialogTitle>
+              {formData.repair_type === "unrepairable" && (
+                <div className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">
+                  Tidak Dapat Diperbaiki
+                </div>
+              )}
+            </div>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-6">
-            {/* Identifikasi Masalah */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Identifikasi Masalah</CardTitle>
-                <CardDescription>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {isLoadingDiagnosis ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex flex-col justify-center items-center gap-4">
+                  <Spinner/>
+                  <p className="text-sm text-gray-600">Memuat diagnosis...</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Identifikasi Masalah */}
+                <Card className="pb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Identifikasi Masalah</CardTitle>
+                <CardDescription className="text-sm">
                   Jelaskan masalah yang ditemukan
                 </CardDescription>
               </CardHeader>
@@ -218,10 +296,10 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
             </Card>
 
             {/* Hasil Diagnosis */}
-            <Card>
+            <Card className="pb-6">
               <CardHeader>
                 <CardTitle className="text-lg">Hasil Diagnosis</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm">
                   Tentukan jenis perbaikan yang diperlukan
                 </CardDescription>
               </CardHeader>
@@ -381,20 +459,32 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                     className="mt-1.5"
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="estimasi_hari">
+                    Estimasi Hari Pengerjaan
+                  </Label>
+                  <Input
+                    id="estimasi_hari"
+                    placeholder="Contoh: 2 hari, 1 minggu, dll"
+                    value={formData.estimasi_hari}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        estimasi_hari: e.target.value,
+                      })
+                    }
+                    className="mt-1.5"
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
+          )}
         </div>
 
         <DialogFooter className="border-t px-6 py-4 flex-shrink-0">
           <div className="flex gap-2 w-full justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Batal
-            </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               <Send className="h-4 w-4 mr-2" />
               Simpan Diagnosis
@@ -403,5 +493,27 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmationType === "change" ? "Ubah Diagnosis?" : "Simpan Diagnosis?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmationType === "change" 
+                ? "Anda akan mengubah diagnosis yang sudah ada sebelumnya. Pastikan informasi baru sudah benar."
+                : "Diagnosis akan disimpan dan status tiket akan berubah ke 'In Progress'. Pastikan semua data sudah benar."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleConfirmSubmit}>
+              {confirmationType === "change" ? "Ya, Ubah Diagnosis" : "Ya, Simpan Diagnosis"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

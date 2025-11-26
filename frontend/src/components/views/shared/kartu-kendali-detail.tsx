@@ -268,9 +268,8 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
         </div>
 
         <div className="flex justify-end">
-          <Button variant="outline" onClick={onClose}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Kembali
+          <Button variant="outline" size="icon" onClick={onClose} className="rounded-full">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         </div>
       </DialogContent>

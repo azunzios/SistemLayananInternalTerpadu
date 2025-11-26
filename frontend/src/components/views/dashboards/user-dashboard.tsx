@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   Wrench,
   Video,
@@ -279,27 +280,29 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
             </div>
           </div>
 
+          <Separator className="my-6 bg-blue-300" />
+
           {/* Statistics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6" style={{fontFamily:"var(--font-logo)"}}>
+          <div className="flex items-center justify-between">
             {loading ? (
-              <div className="col-span-full flex items-center justify-center py-8">
+              <div className="w-full flex items-center justify-center py-8">
                 <Loader className="h-6 w-6 animate-spin text-blue-600" />
               </div>
             ) : stats ? (
               <>
-                <div className="backdrop-blur-sm rounded-lg">
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
                   <p className="text-blue-400 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
-                <div className="backdrop-blur-sm rounded-lg">
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
                   <p className="text-blue-400 text-sm">Sedang Proses</p>
                   <p className="text-3xl mt-1 font-bold">{stats.in_progress}</p>
                 </div>
-                <div className="backdrop-blur-sm rounded-lg">
+                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
                   <p className="text-blue-400 text-sm">Selesai</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
                 </div>
-                <div className="backdrop-blur-sm rounded-lg">
+                <div className="flex-1 px-4 py-4 text-center">
                   <p className="text-blue-400 text-sm">Completion Rate</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completion_rate.toFixed(0)}%</p>
                 </div>

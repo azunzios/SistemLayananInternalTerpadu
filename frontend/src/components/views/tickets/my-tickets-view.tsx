@@ -186,36 +186,11 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string }> = {
-      submitted: { label: "Submitted", color: "bg-yellow-100 text-yellow-800" },
-      assigned: { label: "Assigned", color: "bg-blue-100 text-blue-800" },
-      in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-800" },
-      on_hold: { label: "On Hold", color: "bg-orange-100 text-orange-800" },
-      resolved: { label: "Resolved", color: "bg-green-100 text-green-800" },
-      waiting_for_pegawai: {
-        label: "Waiting for Pegawai",
-        color: "bg-purple-100 text-purple-800",
-      },
-      closed: { label: "Closed", color: "bg-green-100 text-green-800" },
-      closed_unrepairable: {
-        label: "Unrepairable",
-        color: "bg-red-100 text-red-800",
-      },
-      pending_review: {
-        label: "Pending Review",
-        color: "bg-yellow-100 text-yellow-800",
-      },
-      approved: { label: "Approved", color: "bg-green-100 text-green-800" },
-      completed: { label: "Completed", color: "bg-green-100 text-green-800" },
-      rejected: { label: "Rejected", color: "bg-red-100 text-red-800" },
-      cancelled: { label: "Cancelled", color: "bg-gray-100 text-gray-800" },
-    };
-
-    const statusInfo = statusMap[status] || {
-      label: status,
-      color: "bg-gray-100 text-gray-800",
-    };
-    return <Badge className={statusInfo.color}>{statusInfo.label}</Badge>;
+    return (
+      <div className="text-sm">
+        <span className="text-muted-foreground font-medium">status:</span> <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{status}</span>
+      </div>
+    );
   };
 
   const getTypeIcon = (type: string) => {

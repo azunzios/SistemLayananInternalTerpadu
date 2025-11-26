@@ -154,23 +154,21 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 min-h-[72px]">
+      <header className="bg-white h-[72px]">
         <div className="flex items-center justify-between h-full">
           {/* Left side - Toggle and App Name */}
           <div className="flex items-center h-full">
             {/* Hamburger button container - sama dengan sidebar collapsed width (72px) */}
-            <div className="w-[72px] px-3 flex items-center justify-center h-full">
+            <div className="w-[72px] h-[72px] flex items-center m-0 justify-center p-0 flex-shrink-0 outline-1">
               <Button
                 variant="link"
                 size="sm"
                 onClick={onToggleSidebar}
-                className="h-11 w-11 p-0 text-gray-700 hover:bg-blue-100 rounded-lg"
+                className="h-11 w-11 p-0 text-gray-700 hover:text-black hover:bg-[#f0f0f4f9] rounded-lg flex items-center justify-center"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             </div>
-            {/* Separator */}
-            <div className="w-px self-stretch bg-gray-200" />
             {/* App Name and Badge */}
             <div className="flex items-center gap-3 ml-4">
               <div className="h-9 w-9 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -181,7 +179,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
                   <h1 className="text-gray-900 leading-tight">SIGAP-TI</h1>
                   <p className="text-xs text-gray-500 leading-tight">BPS Provinsi Nusa Tenggara Barat</p>
                 </div>
-                <Badge variant="secondary" className="ml-2 bg-cyan-50 text-cyan-700 border-0 hover:bg-cyan-50">
+                <Badge variant="secondary" className="ml-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-50">
                   {activeRole === 'super_admin' ? 'SUPER ADMIN' : 
                    activeRole === 'admin_layanan' ? 'ADMIN LAYANAN' :
                    activeRole === 'admin_penyedia' ? 'ADMIN PENYEDIA' :

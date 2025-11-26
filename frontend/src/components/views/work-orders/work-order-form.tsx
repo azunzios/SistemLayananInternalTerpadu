@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, Users, Key, Plus, X } from "lucide-react";
+import { Package, Users, Key, Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { Spinner } from "@/components/ui/spinner";
 
 // Tipe sparepart item
 interface SparepartItem {
@@ -28,19 +29,53 @@ interface WorkOrderFormProps {
   isOpen: boolean;
   onClose: () => void;
   ticketId: number;
+  ticketStatus?: string;
+  workOrderCount?: number;
   onSuccess: () => void;
+  existingWorkOrders?: any[];
 }
 
 export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   isOpen,
   onClose,
   ticketId,
+  ticketStatus = "in_progress",
+  workOrderCount = 0,
   onSuccess,
+  existingWorkOrders = [],
 }) => {
   const [type, setType] = useState<"sparepart" | "vendor" | "license">(
     "sparepart"
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingWorkOrders, setIsLoadingWorkOrders] = useState(false);
+
+  const [showContinueConfirm, setShowContinueConfirm] = useState(false);
+  const [workOrders, setWorkOrders] = useState<any[]>([]);
+
+  // Fetch work orders saat dialog dibuka
+  useEffect(() => {
+    if (isOpen && ticketId) {
+      fetchWorkOrders();
+    }
+  }, [isOpen, ticketId]);
+
+  const fetchWorkOrders = async () => {
+    setIsLoadingWorkOrders(true);
+    try {
+      const response = await api.get(`/tickets/${ticketId}/work-orders`);
+      if (response.success && Array.isArray(response.data)) {
+        setWorkOrders(response.data);
+      } else if (Array.isArray(response.data)) {
+        setWorkOrders(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching work orders:", error);
+      setWorkOrders([]);
+    } finally {
+      setIsLoadingWorkOrders(false);
+    }
+  };
 
   // State untuk sparepart (array)
   const [spareparts, setSpareparts] = useState<SparepartItem[]>([
@@ -154,6 +189,19 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
       await api.post("work-orders", requestData);
 
+      // Jika ini adalah work order pertama (count = 0), update status tiket ke on_hold
+      if (workOrderCount === 0 && ticketStatus === "in_progress") {
+        try {
+          await api.patch(`tickets/${ticketId}/status`, {
+            status: "on_hold",
+            notes: "Work order dibuat, tiket dalam status menunggu",
+          });
+        } catch (error) {
+          console.error("Error updating ticket status:", error);
+          // Continue anyway, work order was created successfully
+        }
+      }
+
       toast.success("Work order berhasil dibuat");
       resetForm();
       onSuccess();
@@ -162,8 +210,8 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
       console.error("Error creating work order:", error);
       toast.error(
         error.body?.message ||
-          error.message ||
-          "Terjadi kesalahan saat membuat work order"
+        error.message ||
+        "Terjadi kesalahan saat membuat work order"
       );
     } finally {
       setIsSubmitting(false);
@@ -178,238 +226,360 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
     }
   };
 
+  // Handle "Lanjutkan Perbaikan" - unlock selesaikan button
+  const handleContinueRepair = async () => {
+    setIsSubmitting(true);
+    try {
+      // Mark work orders as ready
+      await api.patch(`tickets/${ticketId}/status`, {
+        status: "in_progress",
+        mark_work_orders_ready: true,
+        notes: "Work order selesai, siap melanjutkan perbaikan",
+      });
+
+      toast.success("Perbaikan siap dilanjutkan. Tombol selesaikan sudah tersedia.");
+      setShowContinueConfirm(false);
+      onSuccess(); // Refresh parent
+      onClose();
+    } catch (error: any) {
+      console.error("Error continuing repair:", error);
+      toast.error(
+        error.response?.data?.message || "Gagal melanjutkan perbaikan"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Tambah Work Order</DialogTitle>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+          <DialogTitle>Kelola Work Order</DialogTitle>
           <DialogDescription>
-            Buat work order untuk pengadaan sparepart, vendor eksternal, atau
-            lisensi software
+            Lihat daftar work order yang ada dan buat work order baru untuk pengadaan sparepart, vendor eksternal, atau lisensi software
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Pilih Tipe Work Order */}
-          <div className="space-y-3">
-            <Label>Tipe Work Order</Label>
-            <RadioGroup
-              value={type}
-              onValueChange={(val) => setType(val as any)}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sparepart" id="sparepart" />
-                <Label
-                  htmlFor="sparepart"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Package className="h-4 w-4" />
-                  Sparepart
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="vendor" id="vendor" />
-                <Label
-                  htmlFor="vendor"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Users className="h-4 w-4" />
-                  Vendor Eksternal
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="license" id="license" />
-                <Label
-                  htmlFor="license"
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Key className="h-4 w-4" />
-                  Lisensi Software
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {/* Loading State */}
+          {isLoadingWorkOrders && (
+            <div className="flex items-center justify-center py-4">
+              <Spinner className="h-5 w-5 mr-2" />
+              <span className="text-sm text-gray-600">Memuat work order...</span>
+            </div>
+          )}
 
-          {/* Form Sparepart */}
-          {type === "sparepart" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Daftar Sparepart</Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={addSparepart}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Tambah Sparepart
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {spareparts.map((sparepart, index) => (
-                  <Card key={sparepart.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 space-y-3">
-                          <div className="grid grid-cols-12 gap-3">
-                            <div className="col-span-12">
-                              <Label htmlFor={`name-${sparepart.id}`}>
-                                Nama Sparepart {index + 1}
-                              </Label>
-                              <Input
-                                id={`name-${sparepart.id}`}
-                                placeholder="Contoh: Hard Disk 1TB"
-                                value={sparepart.name}
-                                onChange={(e) =>
-                                  updateSparepart(
-                                    sparepart.id,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="col-span-6">
-                              <Label htmlFor={`quantity-${sparepart.id}`}>
-                                Jumlah
-                              </Label>
-                              <Input
-                                id={`quantity-${sparepart.id}`}
-                                type="number"
-                                min="1"
-                                placeholder="1"
-                                value={sparepart.quantity}
-                                onChange={(e) =>
-                                  updateSparepart(
-                                    sparepart.id,
-                                    "quantity",
-                                    parseInt(e.target.value) || 1
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="col-span-6">
-                              <Label htmlFor={`unit-${sparepart.id}`}>
-                                Unit
-                              </Label>
-                              <Input
-                                id={`unit-${sparepart.id}`}
-                                placeholder="Contoh: paket, buah, set"
-                                value={sparepart.unit}
-                                onChange={(e) =>
-                                  updateSparepart(
-                                    sparepart.id,
-                                    "unit",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                          </div>
+          {/* Daftar Work Order Existing */}
+          {!isLoadingWorkOrders && workOrders && workOrders.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm">Daftar Work Order</h3>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {workOrders.map((wo) => (
+                  <Card key={wo.id} className="p-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">
+                          {wo.type === 'sparepart' && '📦 Sparepart'}
+                          {wo.type === 'vendor' && '🏭 Vendor'}
+                          {wo.type === 'license' && '🔑 Lisensi'}
                         </div>
-                        {spareparts.length > 1 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => removeSparepart(sparepart.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${wo.status === 'requested' ? 'bg-yellow-100 text-yellow-800' :
+                          wo.status === 'in_procurement' ? 'bg-blue-100 text-blue-800' :
+                            wo.status === 'delivered' ? 'bg-purple-100 text-purple-800' :
+                              wo.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                wo.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                  wo.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                                    'bg-gray-100 text-gray-800'
+                          }`}>
+                          {wo.status}
+                        </span>
                       </div>
-                    </CardContent>
+                      {wo.type === 'sparepart' && wo.items && (
+                        <div className="text-gray-600">
+                          {Array.isArray(wo.items) ? wo.items.map((item: any, idx: number) => (
+                            <div key={idx}>{item.name} x{item.quantity} {item.unit}</div>
+                          )) : <div>{JSON.stringify(wo.items)}</div>}
+                        </div>
+                      )}
+                      {wo.type === 'vendor' && (
+                        <div className="text-gray-600">
+                          <div>{wo.vendor_name} - {wo.vendor_contact}</div>
+                          {wo.vendor_description && <div className="text-xs">{wo.vendor_description}</div>}
+                        </div>
+                      )}
+                      {wo.type === 'license' && (
+                        <div className="text-gray-600">
+                          <div>{wo.license_name}</div>
+                          {wo.license_description && <div className="text-xs">{wo.license_description}</div>}
+                        </div>
+                      )}
+                    </div>
                   </Card>
                 ))}
               </div>
+              <hr />
             </div>
           )}
 
-          {/* Form Vendor */}
-          {type === "vendor" && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="vendor-name">Nama Vendor</Label>
-                <Input
-                  id="vendor-name"
-                  placeholder="Contoh: PT Teknologi Maju"
-                  value={vendorName}
-                  onChange={(e) => setVendorName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="vendor-contact">Kontak Vendor</Label>
-                <Input
-                  id="vendor-contact"
-                  placeholder="Contoh: 081234567890 / email@vendor.com"
-                  value={vendorContact}
-                  onChange={(e) => setVendorContact(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="vendor-description">Deskripsi Pekerjaan</Label>
-                <Textarea
-                  id="vendor-description"
-                  placeholder="Jelaskan pekerjaan yang akan dilakukan oleh vendor..."
-                  value={vendorDescription}
-                  onChange={(e) => setVendorDescription(e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Pilih Tipe Work Order */}
+            <div className="space-y-3">
+              <Label>Tipe Work Order</Label>
+              <RadioGroup
+                value={type}
+                onValueChange={(val) => setType(val as any)}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="sparepart" id="sparepart" />
+                  <Label
+                    htmlFor="sparepart"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Package className="h-4 w-4" />
+                    Sparepart
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="vendor" id="vendor" />
+                  <Label
+                    htmlFor="vendor"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Users className="h-4 w-4" />
+                    Vendor Eksternal
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="license" id="license" />
+                  <Label
+                    htmlFor="license"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Key className="h-4 w-4" />
+                    Lisensi Software
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
-          )}
 
-          {/* Form Lisensi */}
-          {type === "license" && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="license-name">Nama Lisensi</Label>
-                <Input
-                  id="license-name"
-                  placeholder="Contoh: Microsoft Office 365 Business"
-                  value={licenseName}
-                  onChange={(e) => setLicenseName(e.target.value)}
-                  required
-                />
+            {/* Form Sparepart */}
+            {type === "sparepart" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Daftar Sparepart</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addSparepart}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Sparepart
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {spareparts.map((sparepart, index) => (
+                    <Card key={sparepart.id} className="pb-4">
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 space-y-3">
+                            <div className="grid grid-cols-12 gap-3">
+                              <div className="col-span-12">
+                                <Label htmlFor={`name-${sparepart.id}`}>
+                                  Nama Sparepart {index + 1}
+                                </Label>
+                                <Input
+                                  id={`name-${sparepart.id}`}
+                                  placeholder="Contoh: Hard Disk 1TB"
+                                  value={sparepart.name}
+                                  onChange={(e) =>
+                                    updateSparepart(
+                                      sparepart.id,
+                                      "name",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-span-6">
+                                <Label htmlFor={`quantity-${sparepart.id}`}>
+                                  Jumlah
+                                </Label>
+                                <Input
+                                  id={`quantity-${sparepart.id}`}
+                                  type="number"
+                                  min="1"
+                                  placeholder="1"
+                                  value={sparepart.quantity}
+                                  onChange={(e) =>
+                                    updateSparepart(
+                                      sparepart.id,
+                                      "quantity",
+                                      parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-span-6">
+                                <Label htmlFor={`unit-${sparepart.id}`}>
+                                  Unit
+                                </Label>
+                                <Input
+                                  id={`unit-${sparepart.id}`}
+                                  placeholder="Contoh: paket, buah, set"
+                                  value={sparepart.unit}
+                                  onChange={(e) =>
+                                    updateSparepart(
+                                      sparepart.id,
+                                      "unit",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          {spareparts.length > 1 && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeSparepart(sparepart.id)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-              <div>
-                <Label htmlFor="license-description">Deskripsi Lisensi</Label>
-                <Textarea
-                  id="license-description"
-                  placeholder="Jelaskan detail lisensi yang dibutuhkan..."
-                  value={licenseDescription}
-                  onChange={(e) => setLicenseDescription(e.target.value)}
-                  rows={4}
-                  required
-                />
+            )}
+
+            {/* Form Vendor */}
+            {type === "vendor" && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="vendor-name">Nama Vendor</Label>
+                  <Input
+                    id="vendor-name"
+                    placeholder="Contoh: PT Teknologi Maju"
+                    value={vendorName}
+                    onChange={(e) => setVendorName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="vendor-contact">Kontak Vendor</Label>
+                  <Input
+                    id="vendor-contact"
+                    placeholder="Contoh: 081234567890 / email@vendor.com"
+                    value={vendorContact}
+                    onChange={(e) => setVendorContact(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="vendor-description">Deskripsi Pekerjaan</Label>
+                  <Textarea
+                    id="vendor-description"
+                    placeholder="Jelaskan pekerjaan yang akan dilakukan oleh vendor..."
+                    value={vendorDescription}
+                    onChange={(e) => setVendorDescription(e.target.value)}
+                    rows={4}
+                    required
+                  />
+                </div>
               </div>
+            )}
+
+            {/* Form Lisensi */}
+            {type === "license" && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="license-name">Nama Lisensi</Label>
+                  <Input
+                    id="license-name"
+                    placeholder="Contoh: Microsoft Office 365 Business"
+                    value={licenseName}
+                    onChange={(e) => setLicenseName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="license-description">Deskripsi Lisensi</Label>
+                  <Textarea
+                    id="license-description"
+                    placeholder="Jelaskan detail lisensi yang dibutuhkan..."
+                    value={licenseDescription}
+                    onChange={(e) => setLicenseDescription(e.target.value)}
+                    rows={4}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-4 border-t">
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
+                {isSubmitting ? "Menyimpan..." : "Simpan Work Order"}
+              </Button>
+
+              {/* Check if all work orders are completed */}
+              {workOrders.length > 0 && (
+                <Button
+                  type="button"
+                  className="bg-green-600 hover:bg-green-700 text-white w-full"
+                  onClick={() => setShowContinueConfirm(true)}
+                  disabled={isSubmitting || !workOrders.every(wo => ['delivered', 'completed', 'failed', 'cancelled'].includes(wo.status))}
+                >
+                  {isSubmitting ? "Melanjutkan..." : "Lanjutkan Perbaikan"}
+                </Button>
+              )}
             </div>
-          )}
+          </form>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Batal
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Menyimpan..." : "Simpan Work Order"}
-            </Button>
+        {/* Confirmation Dialog */}
+        {showContinueConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <Card className="w-96">
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg mb-2">Konfirmasi Lanjutkan Perbaikan</h3>
+                  <p className="text-sm text-gray-600">Anda yakin ingin melanjutkan perbaikan? Pastikan semua work order sudah diterima.</p>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowContinueConfirm(false)}
+                    disabled={isSubmitting}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={handleContinueRepair}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
+                    Ya, Lanjutkan
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );

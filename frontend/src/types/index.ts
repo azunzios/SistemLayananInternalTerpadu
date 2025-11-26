@@ -9,40 +9,32 @@ export type UserRole =
 
 export type TicketType = "perbaikan" | "zoom_meeting";
 
-<<<<<<< HEAD
 export type PerbaikanStatus =
-  | "submitted" // Tiket baru diajukan
-  | "approved" // Disetujui admin layanan, menunggu assign teknisi
-  | "assigned" // Ditugaskan ke teknisi
-  | "in_progress" // Sedang dikerjakan teknisi
-  | "on_hold" // Menunggu WO (sparepart/vendor)
-  | "resolved" // Selesai diperbaiki (oleh teknisi)
-  | "waiting_for_user" // Menunggu konfirmasi user
-  | "closed" // Selesai & dikonfirmasi
-  | "closed_unrepairable" // Tidak dapat diperbaiki sama sekali
-  | "rejected"; // Ditolak oleh admin layanan
-=======
-export type PerbaikanStatus = 
-  | 'submitted'        // Tiket baru diajukan
-  | 'assigned'         // Ditugaskan ke teknisi
-  | 'in_progress'      // Sedang dikerjakan teknisi
-  | 'on_hold'          // Menunggu WO (sparepart/vendor)
-  | 'resolved'         // Selesai diperbaiki (oleh teknisi)
-  | 'waiting_for_pegawai' // Menunggu konfirmasi pegawai
-  | 'closed'           // Selesai & dikonfirmasi
-  | 'closed_unrepairable'; // Tidak dapat diperbaiki sama sekali
->>>>>>> 19ca4dee1678a68ce46e0d0c34d8ba0489249934
+  | "pending_review"        // Menunggu review
+  | "submitted"             // Tiket baru diajukan
+  | "assigned"              // Ditugaskan ke teknisi
+  | "in_progress"           // Sedang dikerjakan teknisi
+  | "on_hold"               // Menunggu WO (sparepart/vendor)
+  | "waiting_for_submitter" // Menunggu konfirmasi dari submitter/pegawai
+  | "closed"                // Selesai & dikonfirmasi
+  | "approved"              // Disetujui
+  | "rejected";             // Ditolak
 
 export type ZoomStatus = 
   | 'pending_review'   // Menggantikan 'menunggu_review' 
   | 'approved'         // Disetujui
   | 'rejected'         // Ditolak
   | 'cancelled'        // Menggantikan 'dibatalkan'
-  | 'completed';       // Acara zoom telah selesai, otomatis oleh sistem -> belum di implementasikan, apabila sudah melebih waktu pengajuan
-
 export type SeverityLevel = "low" | "normal" | "high" | "critical";
 
 export type ProblemType = "hardware" | "software" | "lainnya";
+
+export type RepairType =
+  | "direct_repair"      // Bisa diperbaiki langsung
+  | "need_sparepart"     // Butuh sparepart
+  | "need_vendor"        // Butuh vendor
+  | "need_license"       // Butuh lisensi
+  | "unrepairable";      // Tidak dapat diperbaiki
 
 export interface User {
   id: string;
@@ -149,6 +141,22 @@ export interface PerbaikanTicket extends BaseTicket {
 
   // Diagnosis relationship
   diagnosis?: TicketDiagnosis;
+
+  // Button status for workflow
+  buttonStatus?: {
+    ubahDiagnosis: {
+      enabled: boolean;
+      reason: string | null;
+    };
+    workOrder: {
+      enabled: boolean;
+      reason: string | null;
+    };
+    selesaikan: {
+      enabled: boolean;
+      reason: string | null;
+    };
+  };
 }
 
 // 3. Dibuat tipe spesifik untuk 'zoom_meeting'
@@ -311,12 +319,7 @@ export interface TicketDiagnosis {
   problemCategory: "hardware" | "software" | "lainnya";
 
   // Hasil diagnosis
-  repairType:
-    | "direct_repair"
-    | "need_sparepart"
-    | "need_vendor"
-    | "need_license"
-    | "unrepairable";
+  repairType: RepairType;
 
   // Jika bisa diperbaiki langsung
   repairDescription?: string;
@@ -327,6 +330,9 @@ export interface TicketDiagnosis {
 
   // Catatan teknisi
   technicianNotes?: string;
+
+  // Estimasi pengerjaan
+  estimasiHari?: string;
 
   // Metadata
   createdAt: string;

@@ -22,6 +22,7 @@ class TicketDiagnosis extends Model
         'unrepairable_reason',
         'alternative_solution',
         'technician_notes',
+        'estimasi_hari',
     ];
 
     protected $casts = [

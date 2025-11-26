@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets-counts', [TicketController::class, 'counts']);
     Route::get('/tickets/stats/dashboard', [TicketController::class, 'dashboardStats']);
     Route::get('/tickets/stats/admin-dashboard', [TicketController::class, 'adminDashboardStats']);
+    Route::get('/tickets/stats/admin-layanan-dashboard', [TicketController::class, 'adminLayananDashboardData']);
     Route::get('/tickets/stats/zoom-bookings', [TicketController::class, 'zoomBookingStats']);
     Route::get('/tickets/zoom-bookings', [TicketController::class, 'zoomBookings']);
     Route::get('/tickets/calendar/grid', [TicketController::class, 'calendarGrid']);
@@ -72,6 +73,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'show']);
     Route::post('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'store']);
     Route::delete('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'destroy']);
+
+    // Ticket Work Orders Routes
+    Route::get('/tickets/{ticket}/work-orders', [WorkOrderController::class, 'listByTicket']);
 
     // Work Order Management Routes
     Route::apiResource('work-orders', WorkOrderController::class);
