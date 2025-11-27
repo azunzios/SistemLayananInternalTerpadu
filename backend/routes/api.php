@@ -7,6 +7,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\BmnAssetController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\SparepartRequestController;
@@ -39,11 +40,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // Category Management Routes
     Route::apiResource('categories', CategoryController::class);
     
-    // Asset Management Routes
-    Route::apiResource('assets', AssetController::class);
+    // Asset Management Routes (Legacy - keep for backward compatibility)
     Route::get('/assets/search/by-code-nup', [AssetController::class, 'searchByCodeAndNup']);
-    Route::get('/assets/meta/types', [AssetController::class, 'getTypes']);
-    Route::get('/assets/meta/conditions', [AssetController::class, 'getConditions']);
+    
+    // BMN Asset Management Routes (Super Admin only)
+    Route::prefix('bmn-assets')->group(function () {
+        Route::get('/', [BmnAssetController::class, 'index']);
+        Route::get('/kondisi-options', [BmnAssetController::class, 'getKondisiOptions']);
+        Route::get('/template', [\App\Http\Controllers\BmnAssetImportController::class, 'downloadTemplate']);
+        Route::post('/import', [\App\Http\Controllers\BmnAssetImportController::class, 'importExcel']);
+        Route::get('/{asset}', [BmnAssetController::class, 'show']);
+        Route::post('/', [BmnAssetController::class, 'store']);
+        Route::put('/{asset}', [BmnAssetController::class, 'update']);
+        Route::delete('/{asset}', [BmnAssetController::class, 'destroy']);
+    });
     
     // Ticket Management Routes - Specific routes FIRST (before apiResource)
     Route::get('/tickets-counts', [TicketController::class, 'counts']);

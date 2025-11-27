@@ -19,8 +19,8 @@ class Ticket extends Model
         'category_id',
         'user_id',
         'assigned_to',
-        'asset_code',
-        'asset_nup',
+        'kode_barang',
+        'nup',
         'asset_location',
         'severity',
         'final_problem_type',
@@ -120,7 +120,7 @@ class Ticket extends Model
      */
     public function asset(): BelongsTo
     {
-        return $this->belongsTo(Asset::class, 'asset_code', 'asset_code');
+        return $this->belongsTo(Asset::class, 'kode_barang', 'kode_barang');
     }
 
     /**

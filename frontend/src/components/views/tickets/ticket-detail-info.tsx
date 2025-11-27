@@ -22,7 +22,7 @@ import {
   FolderKanban,
   Package,
   Truck,
-  FileText
+  FileText,
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
 import { TicketDiagnosisDisplay } from "@/components/views/tickets/ticket-diagnosis-display";
@@ -45,7 +45,12 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={onBack} className="rounded-full">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onBack}
+          className="rounded-full"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -361,7 +366,6 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
           {/* Right Column - Work Orders & Discussion */}
           <div className="space-y-4 col-span-2">
-
             {/* Work Orders Section */}
             {ticket.type === "perbaikan" &&
               (() => {

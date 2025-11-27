@@ -1,16 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Sidebar } from './sidebar';
-import { Header } from './header';
-import { Dashboard } from './dashboard';
-import { CreateTicket, TicketList, TicketDetail, MyTicketsView } from '@/components/views/tickets';
-import { ZoomBooking, ZoomManagementView } from '@/components/views/zoom';
-import { UserManagement, ReportsView } from '@/components/views/admin';
-import { ProfileSettings} from '@/components/views/shared';
-import { WorkOrderList, TeknisiWorkOrderList } from '@/components/views/work-orders';
-import { getActiveRole, refreshTicketsFromApi, loadDataFromApiOnce } from '@/lib/storage';
-import { buildRoute, isValidRole } from '@/routing/constants';
-import type { User } from '@/types';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Sidebar } from "./sidebar";
+import { Header } from "./header";
+import { Dashboard } from "./dashboard";
+import {
+  CreateTicket,
+  TicketList,
+  TicketDetail,
+  MyTicketsView,
+} from "@/components/views/tickets";
+import { ZoomBooking, ZoomManagementView } from "@/components/views/zoom";
+import { UserManagement, ReportsView } from "@/components/views/admin";
+import { ProfileSettings } from "@/components/views/shared";
+import {
+  WorkOrderList,
+  TeknisiWorkOrderList,
+} from "@/components/views/work-orders";
+import { BmnAssetManagement } from "./bmn-asset-management";
+import {
+  getActiveRole,
+  refreshTicketsFromApi,
+  loadDataFromApiOnce,
+} from "@/lib/storage";
+import { buildRoute, isValidRole } from "@/routing/constants";
+import type { User } from "@/types";
 
 interface MainLayoutProps {
   currentUser: User;
@@ -18,97 +31,106 @@ interface MainLayoutProps {
   onUserUpdate: (user: User) => void;
 }
 
-export type ViewType = 
-  | 'dashboard'
-  | 'create-ticket-perbaikan'
-  | 'create-ticket-zoom'
-  | 'tickets'
-  | 'my-tickets'
-  | 'ticket-detail'
-  | 'zoom-booking'
-  | 'zoom-management'
-  | 'users'
-  | 'work-orders'
-  | 'reports'
-  | 'profile'
-  | 'settings';
+export type ViewType =
+  | "dashboard"
+  | "create-ticket-perbaikan"
+  | "create-ticket-zoom"
+  | "tickets"
+  | "my-tickets"
+  | "ticket-detail"
+  | "zoom-booking"
+  | "zoom-management"
+  | "users"
+  | "bmn-assets"
+  | "work-orders"
+  | "reports"
+  | "profile"
+  | "settings";
 
 /**
  * Menentukan default view berdasarkan role pengguna
  */
 export const getDefaultViewForRole = (role: string): ViewType => {
   switch (role) {
-    case 'super_admin':
-      return 'dashboard'; // Super admin lihat dashboard dengan overview semua
-    
-    case 'admin_layanan':
-      return 'tickets'; // Admin layanan langsung ke daftar tiket untuk review
-    
-    case 'admin_penyedia':
-      return 'work-orders'; // Admin penyedia langsung ke work orders
-    
-    case 'teknisi':
-      return 'tickets'; // Teknisi lihat tiket yang assigned ke dia
-    
-    case 'pegawai':
+    case "super_admin":
+      return "dashboard"; // Super admin lihat dashboard dengan overview semua
+
+    case "admin_layanan":
+      return "tickets"; // Admin layanan langsung ke daftar tiket untuk review
+
+    case "admin_penyedia":
+      return "work-orders"; // Admin penyedia langsung ke work orders
+
+    case "teknisi":
+      return "tickets"; // Teknisi lihat tiket yang assigned ke dia
+
+    case "pegawai":
     default:
-      return 'my-tickets'; // Pegawai lihat tiket miliknya
+      return "my-tickets"; // Pegawai lihat tiket miliknya
   }
 };
 
-export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, onUserUpdate }) => {
+export const MainLayout: React.FC<MainLayoutProps> = ({
+  currentUser,
+  onLogout,
+  onUserUpdate,
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams<{ role?: string }>();
-  const roleParam = params.role || '';
-  
+  const roleParam = params.role || "";
+
   // Parse ticket ID dari URL path jika ada (format: /:role/ticket-detail/:id)
   const parseTicketId = (): string | null => {
-    const pathParts = location.pathname.split('/').filter(Boolean);
+    const pathParts = location.pathname.split("/").filter(Boolean);
     // pathParts: [role, 'ticket-detail', id]
-    if (pathParts.length >= 3 && pathParts[1] === 'ticket-detail') {
+    if (pathParts.length >= 3 && pathParts[1] === "ticket-detail") {
       return pathParts[2];
     }
     return null;
   };
-  
+
   const selectedTicketId = parseTicketId();
-  
+
   // Validate role from URL matches user's role
   useEffect(() => {
     if (!roleParam || !isValidRole(roleParam)) {
       // Invalid role, redirect to user's actual role
-      navigate(buildRoute('/:role/dashboard', currentUser.role), { replace: true });
+      navigate(buildRoute("/:role/dashboard", currentUser.role), {
+        replace: true,
+      });
       return;
     }
-    
+
     if (roleParam !== currentUser.role) {
       // Role in URL doesn't match user's role - redirect to correct role
-      navigate(buildRoute('/:role/dashboard', currentUser.role), { replace: true });
+      navigate(buildRoute("/:role/dashboard", currentUser.role), {
+        replace: true,
+      });
       return;
     }
   }, [roleParam, currentUser.role, navigate]);
-  
+
   // Derive current view from URL pathname
   const getViewFromPath = (): ViewType => {
-    const pathParts = location.pathname.split('/').filter(Boolean);
+    const pathParts = location.pathname.split("/").filter(Boolean);
     // pathParts[0] = role, pathParts[1] = menu, pathParts[2+] = detail
     if (pathParts.length >= 2) {
       const menu = pathParts[1];
-      if (menu.startsWith('ticket-detail')) return 'ticket-detail';
+      if (menu.startsWith("ticket-detail")) return "ticket-detail";
       return menu as ViewType;
     }
-    return 'dashboard' as ViewType;
+    return "dashboard" as ViewType;
   };
-  
+
   const currentView = getViewFromPath();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Track previous view di sessionStorage untuk persist saat navigate ke detail dari dialog
   React.useEffect(() => {
-    if (currentView !== 'ticket-detail') {
-      sessionStorage.setItem('previousView', currentView);
+    if (currentView !== "ticket-detail") {
+      sessionStorage.setItem("previousView", currentView);
     }
   }, [currentView]);
 
@@ -119,7 +141,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
         try {
           await refreshTicketsFromApi();
         } catch (e) {
-          console.warn('⚠️ Failed to refresh tickets in MainLayout:', e);
+          console.warn("⚠️ Failed to refresh tickets in MainLayout:", e);
         }
       })();
     }
@@ -127,29 +149,30 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
 
   React.useEffect(() => {
     const roleToLoad = getActiveRole(currentUser.id) || currentUser.role;
-    loadDataFromApiOnce(roleToLoad).catch(err => {
-      console.warn('⚠️ Failed to preload datasets for active role', err);
+    loadDataFromApiOnce(roleToLoad).catch((err) => {
+      console.warn("⚠️ Failed to preload datasets for active role", err);
     });
   }, [currentUser.id, currentUser.role]);
 
   const handleNavigate = (view: ViewType, ticketId?: string) => {
-    if (view === 'ticket-detail' && ticketId) {
-      navigate(buildRoute('/:role/ticket-detail/:id', roleParam, ticketId));
+    if (view === "ticket-detail" && ticketId) {
+      navigate(buildRoute("/:role/ticket-detail/:id", roleParam, ticketId));
     } else {
       const routeMap: Record<ViewType, string> = {
-        'dashboard': '/:role/dashboard',
-        'create-ticket-perbaikan': '/:role/create-ticket-perbaikan',
-        'create-ticket-zoom': '/:role/create-ticket-zoom',
-        'tickets': '/:role/tickets',
-        'my-tickets': '/:role/my-tickets',
-        'ticket-detail': '/:role/tickets',
-        'zoom-booking': '/:role/zoom-booking',
-        'zoom-management': '/:role/zoom-management',
-        'work-orders': '/:role/work-orders',
-        'users': '/:role/users',
-        'reports': '/:role/reports',
-        'profile': '/:role/profile',
-        'settings': '/:role/settings',
+        dashboard: "/:role/dashboard",
+        "create-ticket-perbaikan": "/:role/create-ticket-perbaikan",
+        "create-ticket-zoom": "/:role/create-ticket-zoom",
+        tickets: "/:role/tickets",
+        "my-tickets": "/:role/my-tickets",
+        "ticket-detail": "/:role/tickets",
+        "zoom-booking": "/:role/zoom-booking",
+        "zoom-management": "/:role/zoom-management",
+        "work-orders": "/:role/work-orders",
+        users: "/:role/users",
+        "bmn-assets": "/:role/bmn-assets",
+        reports: "/:role/reports",
+        profile: "/:role/profile",
+        settings: "/:role/settings",
       };
       const path = buildRoute(routeMap[view], roleParam);
       navigate(path);
@@ -157,36 +180,42 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   };
 
   const handleRoleSwitch = () => {
-    const activeRole = (getActiveRole(currentUser.id) || currentUser.role) as any;
-    loadDataFromApiOnce(activeRole).catch(err => {
-      console.warn('⚠️ Failed to load datasets for active role', err);
+    const activeRole = (getActiveRole(currentUser.id) ||
+      currentUser.role) as any;
+    loadDataFromApiOnce(activeRole).catch((err) => {
+      console.warn("⚠️ Failed to load datasets for active role", err);
     });
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
     const defaultView = getDefaultViewForRole(activeRole);
-    const path = buildRoute(defaultView === 'ticket-detail' ? '/:role/dashboard' : `/:role/${defaultView}`, roleParam);
+    const path = buildRoute(
+      defaultView === "ticket-detail"
+        ? "/:role/dashboard"
+        : `/:role/${defaultView}`,
+      roleParam
+    );
     navigate(path);
   };
 
   const handleViewTicketDetail = (ticketId: string) => {
-    navigate(buildRoute('/:role/ticket-detail/:id', roleParam, ticketId));
+    navigate(buildRoute("/:role/ticket-detail/:id", roleParam, ticketId));
   };
 
   const handleBackToList = () => {
     // Baca previousView dari sessionStorage (di-set setiap kali view berubah)
     // Ini memastikan back button selalu ke view yang sebelumnya
-    const savedPreviousView = sessionStorage.getItem('previousView');
-    
+    const savedPreviousView = sessionStorage.getItem("previousView");
+
     // Tentukan back view: jika sebelumnya ke my-tickets, kembali ke my-tickets
     // Jika zoom-booking/zoom-management, kembali ke situ. Otherwise default ke tickets
-    let backView: ViewType = 'tickets';
-    if (savedPreviousView === 'my-tickets') {
-      backView = 'my-tickets';
-    } else if (savedPreviousView === 'zoom-booking') {
-      backView = 'zoom-booking';
-    } else if (savedPreviousView === 'zoom-management') {
-      backView = 'zoom-management';
+    let backView: ViewType = "tickets";
+    if (savedPreviousView === "my-tickets") {
+      backView = "my-tickets";
+    } else if (savedPreviousView === "zoom-booking") {
+      backView = "zoom-booking";
+    } else if (savedPreviousView === "zoom-management") {
+      backView = "zoom-management";
     }
-    
+
     const path = buildRoute(`/:role/${backView}`, roleParam);
     navigate(path);
   };
@@ -194,38 +223,44 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
   const renderContent = () => {
     // Get active role untuk permission check
     const activeRole = getActiveRole(currentUser.id) || currentUser.role;
-    
-    switch (currentView) {
-      case 'dashboard':
-        return <Dashboard currentUser={currentUser} onNavigate={handleNavigate} onViewTicket={handleViewTicketDetail} />;
 
-      case 'create-ticket-perbaikan':
+    switch (currentView) {
+      case "dashboard":
+        return (
+          <Dashboard
+            currentUser={currentUser}
+            onNavigate={handleNavigate}
+            onViewTicket={handleViewTicketDetail}
+          />
+        );
+
+      case "create-ticket-perbaikan":
         return (
           <CreateTicket
             currentUser={currentUser}
             ticketType="perbaikan"
             onTicketCreated={() => {
-              setRefreshKey(prev => prev + 1);
-              handleNavigate('my-tickets');
+              setRefreshKey((prev) => prev + 1);
+              handleNavigate("my-tickets");
             }}
-            onCancel={() => handleNavigate('dashboard')}
+            onCancel={() => handleNavigate("dashboard")}
           />
         );
 
-      case 'create-ticket-zoom':
+      case "create-ticket-zoom":
         return (
           <CreateTicket
             currentUser={currentUser}
             ticketType="zoom_meeting"
             onTicketCreated={() => {
-              setRefreshKey(prev => prev + 1);
-              handleNavigate('my-tickets');
+              setRefreshKey((prev) => prev + 1);
+              handleNavigate("my-tickets");
             }}
-            onCancel={() => handleNavigate('dashboard')}
+            onCancel={() => handleNavigate("dashboard")}
           />
         );
 
-      case 'tickets':
+      case "tickets":
         return (
           <TicketList
             currentUser={currentUser}
@@ -235,7 +270,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           />
         );
 
-      case 'my-tickets':
+      case "my-tickets":
         return (
           <MyTicketsView
             currentUser={currentUser}
@@ -243,9 +278,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           />
         );
 
-      case 'ticket-detail':
+      case "ticket-detail":
         if (!selectedTicketId) {
-          handleNavigate('tickets');
+          handleNavigate("tickets");
           return null;
         }
         return (
@@ -257,7 +292,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           />
         );
 
-      case 'zoom-booking':
+      case "zoom-booking":
         return (
           <ZoomBooking
             currentUser={currentUser}
@@ -267,44 +302,60 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
           />
         );
 
-      case 'zoom-management':
+      case "zoom-management":
         // Only Admin Layanan and Super Admin can access Zoom Management
-        if (activeRole !== 'admin_layanan' && activeRole !== 'super_admin') {
-          handleNavigate('dashboard');
+        if (activeRole !== "admin_layanan" && activeRole !== "super_admin") {
+          handleNavigate("dashboard");
           return null;
         }
-        return <ZoomManagementView onNavigate={handleNavigate} onViewTicket={handleViewTicketDetail} />;
+        return (
+          <ZoomManagementView
+            onNavigate={handleNavigate}
+            onViewTicket={handleViewTicketDetail}
+          />
+        );
 
-      case 'users':
+      case "users":
         // Only Super Admin can access User Management
-        if (activeRole !== 'super_admin') {
-          handleNavigate('dashboard');
+        if (activeRole !== "super_admin") {
+          handleNavigate("dashboard");
           return null;
         }
         return <UserManagement currentUser={currentUser} />;
 
-      case 'work-orders':
+      case "bmn-assets":
+        // Only Super Admin can access BMN Asset Management
+        if (activeRole !== "super_admin") {
+          handleNavigate("dashboard");
+          return null;
+        }
+        return <BmnAssetManagement currentUser={currentUser} />;
+
+      case "work-orders":
         // Hanya Teknisi dan Admin Penyedia yang bisa akses Work Order
-        if (activeRole === 'teknisi') {
+        if (activeRole === "teknisi") {
           return <TeknisiWorkOrderList currentUser={currentUser} />;
-        } else if (activeRole === 'admin_penyedia' || activeRole === 'super_admin') {
+        } else if (
+          activeRole === "admin_penyedia" ||
+          activeRole === "super_admin"
+        ) {
           return <WorkOrderList currentUser={currentUser} />;
         } else {
           // Admin Layanan dan role lain tidak bisa akses Work Order
-          handleNavigate('dashboard');
+          handleNavigate("dashboard");
           return null;
         }
 
-      case 'reports':
+      case "reports":
         // Only Super Admin and Admin Penyedia can access Reports
-        if (activeRole !== 'super_admin' && activeRole !== 'admin_penyedia') {
-          handleNavigate('dashboard');
+        if (activeRole !== "super_admin" && activeRole !== "admin_penyedia") {
+          handleNavigate("dashboard");
           return null;
         }
         return <ReportsView currentUser={currentUser} />;
 
-      case 'profile':
-      case 'settings':
+      case "profile":
+      case "settings":
         return (
           <ProfileSettings
             currentUser={currentUser}
@@ -314,7 +365,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
         );
 
       default:
-        return <Dashboard currentUser={currentUser} onNavigate={handleNavigate} onViewTicket={handleViewTicketDetail} />;
+        return (
+          <Dashboard
+            currentUser={currentUser}
+            onNavigate={handleNavigate}
+            onViewTicket={handleViewTicketDetail}
+          />
+        );
     }
   };
 
@@ -341,9 +398,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ currentUser, onLogout, o
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-scroll [scrollbar-gutter:stable]">
-          <div className="container mx-auto p-6">
-            {renderContent()}
-          </div>
+          <div className="container mx-auto p-6">{renderContent()}</div>
         </main>
       </div>
     </div>
