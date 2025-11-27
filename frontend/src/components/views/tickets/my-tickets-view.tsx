@@ -236,9 +236,9 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Tiket Saya</h1>
+          <h1 className="text-3xl font-bold">Tiket Saya</h1>
           <p className="text-muted-foreground">
-            Pantau semua tiket yang Anda ajukan
+            Pantau semua tiket Anda
           </p>
         </div>
       </div>

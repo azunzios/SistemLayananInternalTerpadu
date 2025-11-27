@@ -389,7 +389,6 @@ class TicketController extends Controller
 
         $validated = $request->validate([
             'type' => 'required|in:perbaikan,zoom_meeting',
-            'category_id' => 'nullable|exists:categories,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             // Perbaikan fields
@@ -417,25 +416,6 @@ class TicketController extends Controller
 
         $user = auth()->user();
 
-        // Validate category only if provided (required for zoom_meeting, optional for perbaikan)
-        if (!empty($validated['category_id'])) {
-            $category = Category::findOrFail($validated['category_id']);
-
-            // Validate category is active
-            if (!$category->is_active) {
-                throw ValidationException::withMessages([
-                    'category_id' => ['This category is inactive'],
-                ]);
-            }
-
-            // Validate category type matches ticket type
-            if ($category->type !== $validated['type']) {
-                throw ValidationException::withMessages([
-                    'category_id' => ['Category type does not match ticket type'],
-                ]);
-            }
-        }
-
         // Validate asset exists for perbaikan tickets
         if ($validated['type'] === 'perbaikan') {
             $asset = Asset::where('asset_code', $validated['asset_code'])
@@ -461,12 +441,7 @@ class TicketController extends Controller
         $ticket->type = $validated['type'];
         $ticket->title = $validated['title'];
         $ticket->description = $validated['description'];
-        $ticket->category_id = $validated['category_id'] ?? null;
         $ticket->user_id = $user->id;
-        $ticket->user_name = $user->name;
-        $ticket->user_email = $user->email;
-        $ticket->user_phone = $user->phone;
-        $ticket->unit_kerja = $user->unit_kerja;
         $ticket->form_data = $validated['form_data'] ?? null;
 
         if ($validated['type'] === 'perbaikan') {
@@ -583,6 +558,7 @@ class TicketController extends Controller
             'title' => 'string|max:255',
             'description' => 'string',
             'form_data' => 'nullable|array',
+            'work_orders_ready' => 'nullable|boolean',
         ]);
 
         $ticket->update($validated);
@@ -794,7 +770,7 @@ class TicketController extends Controller
 
         // Special handling for marking work orders ready (from "Lanjutkan Perbaikan" button)
         if (isset($validated['mark_work_orders_ready']) && $validated['mark_work_orders_ready']) {
-            $ticket->work_orders_ready = true;
+            $ticket->work_orders_ready = 1;
             $validated['notes'] = 'Work orders ready, siap melanjutkan perbaikan';
         }
 

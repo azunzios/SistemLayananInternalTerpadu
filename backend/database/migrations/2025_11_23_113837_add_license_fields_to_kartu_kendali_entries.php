@@ -32,8 +32,21 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('kartu_kendali_entries')) {
+            return;
+        }
+
         Schema::table('kartu_kendali_entries', function (Blueprint $table) {
-            $table->dropColumn(['license_name', 'license_description']);
+            $columns = [];
+            if (Schema::hasColumn('kartu_kendali_entries', 'license_name')) {
+                $columns[] = 'license_name';
+            }
+            if (Schema::hasColumn('kartu_kendali_entries', 'license_description')) {
+                $columns[] = 'license_description';
+            }
+            if (!empty($columns)) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };

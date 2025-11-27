@@ -16,6 +16,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Skip if inventory table doesn't exist (it was dropped in 2025_11_20_200000)
+        if (!Schema::hasTable('inventory')) {
+            return;
+        }
+
         Schema::table('sparepart_requests', function (Blueprint $table) {
             $table->foreignId('inventory_id')->nullable()->constrained('inventory')->onDelete('restrict');
         });

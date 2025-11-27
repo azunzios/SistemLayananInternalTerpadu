@@ -844,7 +844,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 </div>
               ) : (
                 /* Calendar Grid View */
-                <div className="w-full rounded-md overflow-hidden">
+                <div className="w-full overflow-hidden">
                   <div className="flex bg-white overflow-x-auto">
                     {/* Time Column - Sticky */}
                     <div className="sticky left-0 z-10 flex-shrink-0 w-24 bg-white border-r border-gray-300">

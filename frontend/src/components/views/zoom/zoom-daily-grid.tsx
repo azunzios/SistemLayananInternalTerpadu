@@ -266,7 +266,7 @@ export const ZoomDailyGrid: React.FC<ZoomDailyGridProps> = ({
                 {errorMessage}
               </div>
             )}
-            <ScrollArea className="w-full rounded-md">
+            <ScrollArea className="w-full">
               <div className="w-full">
                 {/* Grid Container */}
                 <div className="flex overflow-hidden bg-white">
@@ -342,7 +342,7 @@ export const ZoomDailyGrid: React.FC<ZoomDailyGridProps> = ({
                                   className={`absolute left-2 right-2 ${isPending
                                     ? 'bg-yellow-400 border border-yellow-600 text-gray-900'
                                     : `${account.color} border ${account.borderColor} text-white`
-                                    } rounded-lg p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow z-10`}
+                                    } p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow z-10`}
                                   style={{
                                     top: `${style.top}px`,
                                     height: `${style.height}px`,

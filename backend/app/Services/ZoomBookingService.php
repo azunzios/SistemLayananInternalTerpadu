@@ -205,7 +205,7 @@ class ZoomBookingService
             if ($requestStart < $bookedEnd && $requestEnd > $bookedStart) {
                 $conflicts[] = [
                     'ticket_number' => $ticket->ticket_number,
-                    'user_name' => $ticket->user_name,
+                    'user_name' => $ticket->user?->name ?? 'Unknown',
                     'title' => $ticket->title,
                     'start_time' => $ticket->zoom_start_time,
                     'end_time' => $ticket->zoom_end_time,
@@ -239,8 +239,9 @@ class ZoomBookingService
                 ->where('zoom_account_id', $account->account_id)
                 ->where('zoom_date', $date)
                 ->whereIn('status', ['approved', 'pending_review', 'menunggu_review', 'pending_approval'])
+                ->with('user')
                 ->orderBy('zoom_start_time')
-                ->get(['zoom_start_time', 'zoom_end_time', 'title', 'user_name']);
+                ->get(['id', 'zoom_start_time', 'zoom_end_time', 'title', 'user_id']);
 
             $summary[] = [
                 'account_id' => $account->account_id,
@@ -250,7 +251,7 @@ class ZoomBookingService
                         'start' => $b->zoom_start_time,
                         'end' => $b->zoom_end_time,
                         'title' => $b->title,
-                        'user' => $b->user_name,
+                        'user' => $b->user?->name ?? 'Unknown',
                     ];
                 }),
             ];

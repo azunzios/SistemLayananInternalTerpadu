@@ -3,8 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Category;
-use App\Models\CategoryField;
 use App\Models\Ticket;
 use App\Models\Timeline;
 use App\Models\WorkOrder;
@@ -100,95 +98,18 @@ class DatabaseSeeder extends Seeder
 
         $users = User::all();
 
-        // ===== CATEGORIES =====
-        $categoryPerbaikan = Category::create([
-            'name' => 'Perbaikan Komputer',
-            'type' => 'perbaikan',
-            'description' => 'Layanan perbaikan perangkat keras dan lunak komputer',
-            'assigned_roles' => json_encode(['admin_layanan', 'teknisi']),
-            'is_active' => true,
-        ]);
-
-        // Add fields untuk perbaikan
-        $fieldsData = [
-            [
-                'category_id' => $categoryPerbaikan->id,
-                'name' => 'jenis_kerusakan',
-                'label' => 'Jenis Kerusakan',
-                'type' => 'select',
-                'required' => true,
-                'options' => json_encode(['Hardware', 'Software', 'Lainnya']),
-                'order' => 1,
-            ],
-            [
-                'category_id' => $categoryPerbaikan->id,
-                'name' => 'deskripsi_kerusakan',
-                'label' => 'Deskripsi Kerusakan',
-                'type' => 'textarea',
-                'required' => true,
-                'order' => 2,
-            ],
-            [
-                'category_id' => $categoryPerbaikan->id,
-                'name' => 'data_penting',
-                'label' => 'Ada Data Penting?',
-                'type' => 'checkbox',
-                'required' => false,
-                'order' => 3,
-            ],
-        ];
-        foreach ($fieldsData as $fieldData) {
-            CategoryField::create($fieldData);
-        }
-
-        $categoryZoom = Category::create([
-            'name' => 'Booking Zoom',
-            'type' => 'zoom_meeting',
-            'description' => 'Pemesanan meeting/konferensi video via Zoom',
-            'assigned_roles' => json_encode(['admin_layanan']),
-            'is_active' => true,
-        ]);
-
-        // Add fields untuk zoom
-        $zoomFieldsData = [
-            [
-                'category_id' => $categoryZoom->id,
-                'name' => 'topik_meeting',
-                'label' => 'Topik Meeting',
-                'type' => 'text',
-                'required' => true,
-                'order' => 1,
-            ],
-            [
-                'category_id' => $categoryZoom->id,
-                'name' => 'jumlah_peserta',
-                'label' => 'Estimasi Jumlah Peserta',
-                'type' => 'number',
-                'required' => true,
-                'order' => 2,
-            ],
-        ];
-        foreach ($zoomFieldsData as $fieldData) {
-            CategoryField::create($fieldData);
-        }
-
         // ===== TICKETS =====
         $pegawai = $users->where('email', 'pegawai@example.com')->first();
         $teknisi = $users->where('email', 'teknisi@example.com')->first();
         $admin = $users->where('email', 'admin.layanan@example.com')->first();
 
-        // Perbaikan Ticket
+        // Perbaikan Ticket - only store user_id, other info comes from User model via relation
         $ticket1 = Ticket::create([
             'ticket_number' => Ticket::generateTicketNumber('perbaikan'),
             'type' => 'perbaikan',
             'title' => 'Laptop tidak menyala',
             'description' => 'Laptop Dell Inspiron tidak bisa dinyalakan, sudah dicoba hard reset tapi tetap tidak menyala',
-            'category_id' => $categoryPerbaikan->id,
             'user_id' => $pegawai->id,
-            'user_name' => $pegawai->name,
-            'user_email' => $pegawai->email,
-            'user_phone' => $pegawai->phone,
-            'unit_kerja' => $pegawai->unit_kerja,
             'assigned_to' => $teknisi->id,
             'asset_code' => '2060101999',
             'asset_nup' => '00001',
@@ -211,18 +132,13 @@ class DatabaseSeeder extends Seeder
 
         Timeline::logAssignment($ticket1->id, $admin->id, $teknisi->id, $teknisi->name);
 
-        // Zoom Ticket
+        // Zoom Ticket - only store user_id
         $ticket2 = Ticket::create([
             'ticket_number' => Ticket::generateTicketNumber('zoom_meeting'),
             'type' => 'zoom_meeting',
             'title' => 'Rapat Koordinasi Tim',
             'description' => 'Rapat koordinasi dengan semua bagian untuk evaluasi kuartal III',
-            'category_id' => $categoryZoom->id,
             'user_id' => $pegawai->id,
-            'user_name' => $pegawai->name,
-            'user_email' => $pegawai->email,
-            'user_phone' => $pegawai->phone,
-            'unit_kerja' => $pegawai->unit_kerja,
             'zoom_date' => now()->addDays(7)->format('Y-m-d'),
             'zoom_start_time' => '10:00:00',
             'zoom_end_time' => '11:30:00',

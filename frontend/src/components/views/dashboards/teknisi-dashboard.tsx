@@ -6,26 +6,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  Wrench,
-  Clock,
   CheckCircle,
   AlertCircle,
   Package,
-  Settings,
   Sparkles,
-  ArrowUpRight,
   Loader,
 } from "lucide-react";
 import { motion } from "motion/react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,

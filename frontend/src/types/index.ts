@@ -211,11 +211,8 @@ export type WorkOrderType = "sparepart" | "vendor" | "license";
 export type WorkOrderStatus =
   | "requested"
   | "in_procurement"
-  | "delivered"
   | "completed"
-  | "failed"
-  | "cancelled";
-
+  | "unsuccessful";
 export interface WorkOrder {
   id: string;
   ticketId: string;
@@ -315,24 +312,24 @@ export interface TicketDiagnosis {
   };
 
   // Identifikasi masalah
-  problemDescription: string;
-  problemCategory: "hardware" | "software" | "lainnya";
+  problem_description: string;
+  problem_category: "hardware" | "software" | "lainnya";
 
   // Hasil diagnosis
-  repairType: RepairType;
+  repair_type: RepairType;
 
   // Jika bisa diperbaiki langsung
-  repairDescription?: string;
+  repair_description?: string;
 
   // Jika tidak dapat diperbaiki
-  unrepairableReason?: string;
-  alternativeSolution?: string;
+  unrepairable_reason?: string;
+  alternative_solution?: string;
 
   // Catatan teknisi
-  technicianNotes?: string;
+  technician_notes?: string;
 
   // Estimasi pengerjaan
-  estimasiHari?: string;
+  estimasi_hari?: string;
 
   // Metadata
   createdAt: string;

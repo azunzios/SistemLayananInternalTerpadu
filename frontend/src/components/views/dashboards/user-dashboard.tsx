@@ -63,6 +63,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
   const [coHostResults, setCoHostResults] = useState<User[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const activeRole = (getActiveRole(currentUser.id) || currentUser.role) as UserRole;
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
     setCoHostQuery('');
     setCoHostResults([]);
     setIsSubmittingQuick(false);
+    setAttachments([]);
   };
 
   const handleQuickBookingDialogOpenChange = (open: boolean) => {
@@ -368,6 +370,8 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
         onSelectCoHost={handleCoHostSelect}
         onRemoveCoHost={handleCoHostRemove}
         availableUsers={availableUsers}
+        attachments={attachments}
+        onAttachmentsChange={setAttachments}
       />
     </>
   );

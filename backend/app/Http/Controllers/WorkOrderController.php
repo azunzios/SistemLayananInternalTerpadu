@@ -175,8 +175,12 @@ class WorkOrderController extends Controller
         $workOrder = WorkOrder::create($workOrderData);
 
         // Update ticket status to on_hold when work order is created
+        // Reset work_orders_ready to false since new work order needs to be completed
         if (in_array($ticket->status, ['in_progress', 'in_diagnosis', 'in_repair'])) {
-            $ticket->update(['status' => 'on_hold']);
+            $ticket->update([
+                'status' => 'on_hold',
+                'work_orders_ready' => false,
+            ]);
         }
 
         // Log timeline

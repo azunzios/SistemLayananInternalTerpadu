@@ -6,6 +6,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +61,8 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
   const [showContinueConfirm, setShowContinueConfirm] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<any>(null);
 
   // Fetch work orders saat dialog dibuka
   useEffect(() => {
@@ -163,31 +174,50 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
     if (!validateForm()) return;
 
+    // Siapkan data sesuai tipe
+    const requestData: any = {
+      ticket_id: ticketId,
+      type: type,
+    };
+
+    if (type === "sparepart") {
+      requestData.items = spareparts.map((sp) => ({
+        name: sp.name,
+        quantity: sp.quantity,
+        unit: sp.unit,
+      }));
+    } else if (type === "vendor") {
+      requestData.vendor_name = vendorName;
+      requestData.vendor_contact = vendorContact;
+      requestData.description = vendorDescription;
+    } else if (type === "license") {
+      requestData.license_name = licenseName;
+      requestData.description = licenseDescription;
+    }
+
+    // Simpan data dan show confirmation dialog
+    setPendingSubmitData(requestData);
+    setShowConfirmSubmit(true);
+  };
+
+  // Submit ke API setelah konfirmasi
+  const handleConfirmedSubmit = async () => {
+    if (!pendingSubmitData) return;
+
     setIsSubmitting(true);
 
     try {
-      // Siapkan data sesuai tipe
-      const requestData: any = {
-        ticket_id: ticketId,
-        type: type,
-      };
+      await api.post("work-orders", pendingSubmitData);
 
-      if (type === "sparepart") {
-        requestData.items = spareparts.map((sp) => ({
-          name: sp.name,
-          quantity: sp.quantity,
-          unit: sp.unit,
-        }));
-      } else if (type === "vendor") {
-        requestData.vendor_name = vendorName;
-        requestData.vendor_contact = vendorContact;
-        requestData.description = vendorDescription;
-      } else if (type === "license") {
-        requestData.license_name = licenseName;
-        requestData.description = licenseDescription;
+      // Reset work_orders_ready ke 0 saat membuat work order baru
+      try {
+        await api.patch(`tickets/${ticketId}`, {
+          work_orders_ready: 0,
+        });
+      } catch (error) {
+        console.error("Error resetting work_orders_ready:", error);
+        // Continue anyway, work order was created successfully
       }
-
-      await api.post("work-orders", requestData);
 
       // Jika ini adalah work order pertama (count = 0), update status tiket ke on_hold
       if (workOrderCount === 0 && ticketStatus === "in_progress") {
@@ -204,6 +234,8 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
       toast.success("Work order berhasil dibuat");
       resetForm();
+      setShowConfirmSubmit(false);
+      setPendingSubmitData(null);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -230,11 +262,9 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   const handleContinueRepair = async () => {
     setIsSubmitting(true);
     try {
-      // Mark work orders as ready
-      await api.patch(`tickets/${ticketId}/status`, {
-        status: "in_progress",
-        mark_work_orders_ready: true,
-        notes: "Work order selesai, siap melanjutkan perbaikan",
+      // Set flag work_orders_ready ke 1 (integer), jangan ubah status
+      await api.patch(`tickets/${ticketId}`, {
+        work_orders_ready: 1,
       });
 
       toast.success("Perbaikan siap dilanjutkan. Tombol selesaikan sudah tersedia.");
@@ -253,7 +283,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-[90%] min-w-[80%] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle>Kelola Work Order</DialogTitle>
           <DialogDescription>
@@ -580,6 +610,43 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
             </Card>
           </div>
         )}
+
+        {/* Confirm Save Work Order Dialog */}
+        <AlertDialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Simpan Work Order</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin dengan isian data dalam perbaikan barang BMN tersebut? Pastikan semua informasi sudah benar sebelum menyimpan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p><strong>Tipe Work Order:</strong> {pendingSubmitData?.type === "sparepart" ? "Sparepart" : pendingSubmitData?.type === "vendor" ? "Vendor" : "Lisensi"}</p>
+              {pendingSubmitData?.type === "sparepart" && pendingSubmitData?.items && (
+                <div>
+                  <p><strong>Jumlah Item:</strong> {pendingSubmitData.items.length}</p>
+                </div>
+              )}
+              {pendingSubmitData?.type === "vendor" && (
+                <p><strong>Vendor:</strong> {pendingSubmitData.vendor_name}</p>
+              )}
+              {pendingSubmitData?.type === "license" && (
+                <p><strong>Lisensi:</strong> {pendingSubmitData.license_name}</p>
+              )}
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmedSubmit}
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
+                Ya, Simpan Work Order
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

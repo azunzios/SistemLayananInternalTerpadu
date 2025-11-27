@@ -45,9 +45,15 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('kartu_kendali_entries')) {
+            return;
+        }
+
         Schema::table('kartu_kendali_entries', function (Blueprint $table) {
-            // Drop unique constraint
-            $table->dropUnique(['work_order_id']);
+            // Drop unique constraint if exists
+            if (Schema::hasIndex('kartu_kendali_entries', 'kartu_kendali_entries_work_order_id_unique')) {
+                $table->dropUnique(['work_order_id']);
+            }
         });
     }
 };

@@ -8,42 +8,27 @@ interface TicketDiagnosisDisplayProps {
 export const TicketDiagnosisDisplay: React.FC<TicketDiagnosisDisplayProps> = ({
   diagnosis: rawDiagnosis,
 }) => {
-  // Convert snake_case dari backend ke camelCase untuk konsistensi
-  const diagnosis: TicketDiagnosis = {
-    id: rawDiagnosis.id,
-    ticketId: rawDiagnosis.ticket_id || rawDiagnosis.ticketId,
-    technicianId: rawDiagnosis.technician_id || rawDiagnosis.technicianId,
-    technician: rawDiagnosis.technician,
-    problemDescription: rawDiagnosis.problem_description || rawDiagnosis.problemDescription,
-    problemCategory: rawDiagnosis.problem_category || rawDiagnosis.problemCategory,
-    repairType: rawDiagnosis.repair_type || rawDiagnosis.repairType,
-    repairDescription: rawDiagnosis.repair_description || rawDiagnosis.repairDescription,
-    unrepairableReason: rawDiagnosis.unrepairable_reason || rawDiagnosis.unrepairableReason,
-    alternativeSolution: rawDiagnosis.alternative_solution || rawDiagnosis.alternativeSolution,
-    technicianNotes: rawDiagnosis.technician_notes || rawDiagnosis.technicianNotes,
-    estimasiHari: rawDiagnosis.estimasi_hari || rawDiagnosis.estimasiHari,
-    createdAt: rawDiagnosis.created_at || rawDiagnosis.createdAt,
-    updatedAt: rawDiagnosis.updated_at || rawDiagnosis.updatedAt,
-  };
+  // Data sudah dalam format snake_case dari backend
+  const diagnosis = rawDiagnosis as TicketDiagnosis;
 
   const getCategoryLabel = () => {
-    const map = {
+    const map: Record<string, string> = {
       hardware: "Hardware",
       software: "Software",
       lainnya: "Lainnya",
     };
-    return map[diagnosis.problemCategory] || diagnosis.problemCategory;
+    return map[diagnosis.problem_category] || diagnosis.problem_category;
   };
 
   const getRepairTypeLabel = () => {
-    const map = {
+    const map: Record<string, string> = {
       direct_repair: "Bisa Diperbaiki Langsung",
       need_sparepart: "Butuh Sparepart",
       need_vendor: "Butuh Vendor",
       need_license: "Butuh Lisensi",
       unrepairable: "Tidak Dapat Diperbaiki",
     };
-    return map[diagnosis.repairType] || diagnosis.repairType;
+    return map[diagnosis.repair_type] || diagnosis.repair_type;
   };
 
   return (
@@ -57,7 +42,7 @@ export const TicketDiagnosisDisplay: React.FC<TicketDiagnosisDisplayProps> = ({
         </p>
         <p className="text-gray-700 mt-2">
           <span className="text-gray-500">Deskripsi: </span>
-          {diagnosis.problemDescription}
+          {diagnosis.problem_description}
         </p>
       </div>
 
@@ -74,68 +59,68 @@ export const TicketDiagnosisDisplay: React.FC<TicketDiagnosisDisplayProps> = ({
       {/* Status Perbaikan */}
       <div>
         <h4 className="font-semibold mb-1">Status Perbaikan</h4>
-        {diagnosis.repairType === "direct_repair" && (
+        {diagnosis.repair_type === "direct_repair" && (
           <p className="text-gray-700">Dapat diperbaiki</p>
         )}
-        {diagnosis.repairType === "unrepairable" && (
+        {diagnosis.repair_type === "unrepairable" && (
           <p className="text-gray-700">Tidak dapat diperbaiki</p>
         )}
-        {["need_sparepart", "need_vendor", "need_license"].includes(diagnosis.repairType) && (
+        {["need_sparepart", "need_vendor", "need_license"].includes(diagnosis.repair_type) && (
           <p className="text-gray-700">Membutuhkan pihak eksternal</p>
         )}
       </div>
 
       {/* Deskripsi Perbaikan */}
-      {diagnosis.repairDescription && (
+      {diagnosis.repair_description && (
         <>
           <hr className="my-3" />
           <div>
             <h4 className="font-semibold mb-1">Deskripsi Perbaikan</h4>
-            <p className="text-gray-700">{diagnosis.repairDescription}</p>
+            <p className="text-gray-700">{diagnosis.repair_description}</p>
           </div>
         </>
       )}
 
       {/* Alasan Tidak Dapat Diperbaiki */}
-      {diagnosis.unrepairableReason && (
+      {diagnosis.unrepairable_reason && (
         <>
           <hr className="my-3" />
           <div>
             <h4 className="font-semibold mb-1">Alasan Tidak Dapat Diperbaiki</h4>
-            <p className="text-gray-700">{diagnosis.unrepairableReason}</p>
+            <p className="text-gray-700">{diagnosis.unrepairable_reason}</p>
           </div>
         </>
       )}
 
       {/* Solusi Alternatif */}
-      {diagnosis.alternativeSolution && (
+      {diagnosis.alternative_solution && (
         <>
           <hr className="my-3" />
           <div>
             <h4 className="font-semibold mb-1">Solusi Alternatif</h4>
-            <p className="text-gray-700">{diagnosis.alternativeSolution}</p>
+            <p className="text-gray-700">{diagnosis.alternative_solution}</p>
           </div>
         </>
       )}
 
       {/* Catatan Teknisi */}
-      {diagnosis.technicianNotes && (
+      {diagnosis.technician_notes && (
         <>
           <hr className="my-3" />
           <div>
             <h4 className="font-semibold mb-1">Catatan Teknisi</h4>
-            <p className="text-gray-700">{diagnosis.technicianNotes}</p>
+            <p className="text-gray-700">{diagnosis.technician_notes}</p>
           </div>
         </>
       )}
 
       {/* Estimasi Pengerjaan */}
-      {diagnosis.estimasiHari && (
+      {diagnosis.estimasi_hari && (
         <>
           <hr className="my-3" />
           <div>
             <h4 className="font-semibold mb-1">Estimasi Pengerjaan</h4>
-            <p className="text-gray-700">{diagnosis.estimasiHari}</p>
+            <p className="text-gray-700">{diagnosis.estimasi_hari}</p>
           </div>
         </>
       )}

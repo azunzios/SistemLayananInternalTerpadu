@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
-  UserCheck,
   CheckCircle,
   XCircle,
   Package,
@@ -51,6 +50,7 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [closeTicketUnderstand, setCloseTicketUnderstand] = useState(false);
   const [isClosingTicket, setIsClosingTicket] = useState(false);
+  const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
   const [showPegawaiCloseDialog, setShowPegawaiCloseDialog] = useState(false);
   const [pegawaiCloseUnderstand, setPegawaiCloseUnderstand] = useState(false);
   const [isClosingPegawaiTicket, setIsClosingPegawaiTicket] = useState(false);
@@ -101,21 +101,21 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
       {currentUser.role === "admin_layanan" &&
         ticket.type === "perbaikan" &&
         ticket.status !== "closed" && (
-          <Card className="border-purple-200 bg-purple-50">
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <UserCheck className="h-8 w-8 text-purple-600" />
+                  <AlertCircle className="h-8 w-8 text-red-600" />
                   <div>
-                    <h3 className="text-purple-900">Tutup Tiket</h3>
-                    <p className="text-sm text-purple-700">
+                    <h3 className="text-red-900">Tutup Tiket</h3>
+                    <p className="text-sm text-red-700">
                       Anda dapat menutup tiket ini kapan saja. Pastikan semua proses sudah selesai.
                     </p>
                   </div>
                 </div>
                 <Button
                   onClick={() => setShowCloseDialog(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Tutup Tiket
@@ -149,14 +149,12 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
           // Get work orders for this ticket
           const workOrders = getWorkOrdersByTicket(ticket.id);
           
-          // Check if all work orders are at least delivered
-          // If needs work order but no work orders exist, return false
-          // If work orders exist, check if all are delivered
-          const allWorkOrdersDelivered = needsWorkOrder
-            ? workOrders.length > 0 && workOrders.every((wo) => 
+          // Check if work orders are ready (using the work_orders_ready flag from backend)
+          // If work_orders_ready is true, skip work order checks and allow completion
+          const workOrdersReady = (ticket as any).workOrdersReady === true;
+          const allWorkOrdersDelivered = workOrdersReady || (needsWorkOrder && workOrders.length > 0 && workOrders.every((wo) => 
                 ["delivered", "completed", "failed", "cancelled"].includes(wo.status)
-              )
-            : true; // If doesn't need work order, always true
+              )) || !needsWorkOrder; // If doesn't need work order, always true
           
           // Button enable/disable logic
           const diagnosaEnabled = true; // Always can redo diagnosis
@@ -399,19 +397,56 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
           <div className="flex gap-3">
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
-              onClick={async () => {
+              onClick={() => {
                 if (!closeTicketUnderstand) {
                   toast.error("Silakan centang checkbox pemahaman terlebih dahulu");
                   return;
                 }
+                setShowCloseDialog(false);
+                setShowCloseConfirmDialog(true);
+              }}
+              disabled={!closeTicketUnderstand}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Lanjutkan
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
+      {/* Dialog: Admin Layanan Close Ticket - Second Confirmation */}
+      <AlertDialog open={showCloseConfirmDialog} onOpenChange={setShowCloseConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-900 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Konfirmasi Penutupan Tiket
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda yakin ingin menutup tiket <strong>#{ticket.ticketNumber}</strong>? 
+              Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3 py-4">
+            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-sm text-red-900 font-medium">
+                ⚠️ Tiket akan ditutup secara permanen
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
                 try {
                   setIsClosingTicket(true);
                   await api.patch(`tickets/${ticket.id}/status`, {
                     status: "closed",
                   });
                   toast.success("Tiket berhasil ditutup");
-                  setShowCloseDialog(false);
+                  setShowCloseConfirmDialog(false);
                   setCloseTicketUnderstand(false);
                   onUpdate?.();
                 } catch (error: any) {
@@ -421,10 +456,10 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                   setIsClosingTicket(false);
                 }
               }}
-              disabled={!closeTicketUnderstand || isClosingTicket}
+              disabled={isClosingTicket}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isClosingTicket ? "Memproses..." : "Tutup Tiket"}
+              {isClosingTicket ? "Memproses..." : "Ya, Tutup Tiket"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

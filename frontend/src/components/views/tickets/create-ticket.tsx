@@ -77,7 +77,7 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
   const [isCheckingAsset, setIsCheckingAsset] = useState(false);
   const [assetChecked, setAssetChecked] = useState(false);
 
-  // Fetch categories on mount - hanya untuk zoom_meeting
+  // Fetch categories on mount - hanya untuk zoom_meeting, perbaikan tidak perlu kategori
   useEffect(() => {
     if (ticketType === "zoom_meeting") {
       const fetchCategories = async () => {
@@ -260,7 +260,6 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       form.append("type", ticketType);
       form.append("title", formData.title);
       form.append("description", formData.description);
-      if (formData.categoryId) form.append("category_id", formData.categoryId);
 
       if (ticketType === "perbaikan") {
         form.append("asset_code", formData.assetCode);

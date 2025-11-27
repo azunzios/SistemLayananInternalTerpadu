@@ -29,12 +29,12 @@ class TicketResource extends JsonResource
                 ] : null;
             }),
             
-            // User info
+            // User info - fetched from user relationship
             'userId' => $this->user_id,
-            'userName' => $this->user_name,
-            'userEmail' => $this->user_email,
-            'userPhone' => $this->user_phone,
-            'unitKerja' => $this->unit_kerja,
+            'userName' => $this->whenLoaded('user', fn() => $this->user?->name),
+            'userEmail' => $this->whenLoaded('user', fn() => $this->user?->email),
+            'userPhone' => $this->whenLoaded('user', fn() => $this->user?->phone),
+            'unitKerja' => $this->whenLoaded('user', fn() => $this->user?->unit_kerja),
             
             // Assignment
             'assignedTo' => $this->assigned_to,
@@ -48,6 +48,7 @@ class TicketResource extends JsonResource
             
             // Status & Timeline
             'status' => $this->status,
+            'workOrdersReady' => $this->work_orders_ready ?? false,
             'rejectionReason' => $this->rejection_reason, // Alasan penolakan untuk semua tipe tiket
             'timeline' => TimelineResource::collection($this->whenLoaded('timeline')),
             
