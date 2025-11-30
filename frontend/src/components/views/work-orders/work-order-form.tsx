@@ -304,7 +304,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
           {!isLoadingWorkOrders && workOrders && workOrders.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-semibold text-sm">Daftar Work Order</h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
                 {workOrders.map((wo) => (
                   <Card key={wo.id} className="p-3">
                     <div className="space-y-2 text-sm">
