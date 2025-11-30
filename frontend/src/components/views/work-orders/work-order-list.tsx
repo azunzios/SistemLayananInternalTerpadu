@@ -708,32 +708,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
               </div>
 
               <Separator />
-
-              {/* Timeline */}
-              <div className="space-y-3">
-                <h4 className="font-semibold">Timeline</h4>
-                <div className="space-y-2">
-                  {selectedWO.timeline.map((event, idx) => (
-                    <div key={event.id} className="flex gap-3 text-sm">
-                      <div className="text-gray-500 min-w-[140px]">
-                        {new Date(event.timestamp).toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{event.action}</div>
-                        <div className="text-gray-600">{event.details}</div>
-                        <div className="text-xs text-gray-500">
-                          oleh {event.actor}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 

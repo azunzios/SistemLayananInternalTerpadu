@@ -71,7 +71,7 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
           { label: "Menunggu Sparepart/Vendor/Lisensi", statuses: ["on_hold"] },
           {
             label: "Menunggu Konfirmasi",
-            statuses: ["resolved", "waiting_for_user"],
+            statuses: ["resolved", "waiting_for_user", "waiting_for_submitter"],
           },
           { label: "Selesai", statuses: ["closed"] },
         ];
@@ -208,7 +208,7 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
                       </h4>
                       <p className="text-xs text-gray-500 mt-1">
                         {isStepCompleted && "✓ Selesai"}
-                        {isCurrent && !isRejected && "⏳ Sedang diproses"}
+                        {isCurrent && !isRejected && !isCompleted && "⏳ Sedang diproses"}
                         {isCurrent && isRejected && "✗ Ditolak"}
                         {isUpcoming && "⏺ Menunggu"}
                       </p>

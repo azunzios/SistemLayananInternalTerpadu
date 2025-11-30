@@ -255,4 +255,93 @@ class BmnAssetImportController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend(true);
     }
+
+    /**
+     * Export all assets ke Excel
+     * GET /bmn-assets/export
+     */
+    public function exportAll()
+    {
+        // Check super admin
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+        
+        // Check if user has super_admin role (roles is JSON array)
+        $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
+        if (!in_array('super_admin', $roles ?? [])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Only super admin can export assets.',
+            ], 403);
+        }
+        
+        // Get all assets
+        $assets = Asset::all();
+        
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Set header
+        $sheet->setCellValue('A1', 'kode_satker');
+        $sheet->setCellValue('B1', 'nama_satker');
+        $sheet->setCellValue('C1', 'kode_barang');
+        $sheet->setCellValue('D1', 'nama_barang');
+        $sheet->setCellValue('E1', 'nup');
+        $sheet->setCellValue('F1', 'kondisi');
+        $sheet->setCellValue('G1', 'merek');
+        $sheet->setCellValue('H1', 'ruangan');
+        $sheet->setCellValue('I1', 'serial_number');
+        $sheet->setCellValue('J1', 'pengguna');
+        
+        // Set header style (bold)
+        $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+        
+        // Add data
+        $row = 2;
+        foreach ($assets as $asset) {
+            $sheet->setCellValue('A' . $row, $asset->kode_satker);
+            $sheet->setCellValue('B' . $row, $asset->nama_satker);
+            $sheet->setCellValue('C' . $row, $asset->kode_barang);
+            $sheet->setCellValue('D' . $row, $asset->nama_barang);
+            $sheet->setCellValue('E' . $row, $asset->nup);
+            $sheet->setCellValue('F' . $row, $asset->kondisi);
+            $sheet->setCellValue('G' . $row, $asset->merek);
+            $sheet->setCellValue('H' . $row, $asset->ruangan);
+            $sheet->setCellValue('I' . $row, $asset->serial_number);
+            $sheet->setCellValue('J' . $row, $asset->pengguna);
+            $row++;
+        }
+        
+        // Auto-size columns
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        
+        // Write file
+        $writer = new Xlsx($spreadsheet);
+        
+        $filename = 'asset_bmn_' . date('Y-m-d_H-i-s') . '.xlsx';
+        $tempFile = tempnam(sys_get_temp_dir(), 'export_');
+        $writer->save($tempFile);
+        
+        // Audit log
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'export_assets',
+            'model_type' => 'Asset',
+            'model_id' => null,
+            'changes' => [
+                'total_exported' => count($assets),
+            ],
+        ]);
+        
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
 }

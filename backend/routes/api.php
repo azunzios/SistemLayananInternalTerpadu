@@ -17,7 +17,7 @@ use App\Http\Controllers\ZoomAccountController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\TicketDiagnosisController;
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 // Public endpoints (no auth required)
 Route::get('/categories/by-type/{type}', [CategoryController::class, 'getByType']);
@@ -48,6 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [BmnAssetController::class, 'index']);
         Route::get('/kondisi-options', [BmnAssetController::class, 'getKondisiOptions']);
         Route::get('/template', [\App\Http\Controllers\BmnAssetImportController::class, 'downloadTemplate']);
+        Route::get('/export/all', [\App\Http\Controllers\BmnAssetImportController::class, 'exportAll']);
         Route::post('/import', [\App\Http\Controllers\BmnAssetImportController::class, 'importExcel']);
         Route::get('/{asset}', [BmnAssetController::class, 'show']);
         Route::post('/', [BmnAssetController::class, 'store']);

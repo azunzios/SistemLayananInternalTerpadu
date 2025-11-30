@@ -185,11 +185,81 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
   // Handle download template
   const handleDownloadTemplate = async () => {
     try {
-      window.open(`${import.meta.env.VITE_API}/bmn-assets/template`, "_blank");
-      toast.success("Template sedang diunduh");
+      const token = sessionStorage.getItem("auth_token");
+      if (!token) {
+        toast.error("Token tidak ditemukan. Silakan login kembali");
+        return;
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API}/bmn-assets/template`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "template_asset_bmn.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Template berhasil diunduh");
     } catch (error: any) {
       console.error("Error downloading template:", error);
-      toast.error("Gagal mengunduh template");
+      toast.error(error.message || "Gagal mengunduh template");
+    }
+  };
+
+  // Handle download all assets
+  const handleDownloadAll = async () => {
+    try {
+      const token = sessionStorage.getItem("auth_token");
+      if (!token) {
+        toast.error("Token tidak ditemukan. Silakan login kembali");
+        return;
+      }
+
+      const loadingToast = toast.loading("Mengunduh data...");
+      const response = await fetch(`${import.meta.env.VITE_API}/bmn-assets/export/all`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        toast.dismiss(loadingToast);
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `asset_bmn_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.dismiss(loadingToast);
+      toast.success("Berhasil mengunduh data asset");
+    } catch (error: any) {
+      console.error("Error downloading all assets:", error);
+      toast.error(error.message || "Gagal mengunduh data");
     }
   };
 
@@ -243,6 +313,10 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
           <Button variant="outline" onClick={handleDownloadTemplate} size="lg">
             <Download className="h-4 w-4 mr-2" />
             Download Template
+          </Button>
+          <Button variant="outline" onClick={handleDownloadAll} size="lg">
+            <Download className="h-4 w-4 mr-2" />
+            Download Semua
           </Button>
           <Button
             variant="outline"
