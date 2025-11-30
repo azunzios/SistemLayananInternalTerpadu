@@ -12,70 +12,38 @@ class Asset extends Model
     use HasFactory;
 
     protected $fillable = [
-        'asset_code',
-        'asset_nup',
-        'asset_name',
-        'merk_tipe',
-        'spesifikasi',
-        'tahun_perolehan',
-        'tanggal_perolehan',
-        'sumber_dana',
-        'nomor_bukti_perolehan',
-        'nilai_perolehan',
-        'nilai_buku',
-        'satuan',
-        'jumlah',
-        'location',
-        'unit_pengguna',
-        'penanggung_jawab_user_id',
-        'condition',
-        'status_penggunaan',
-        'is_active',
-        'keterangan',
+        'kode_satker',
+        'nama_satker',
+        'kode_barang',
+        'nama_barang',
+        'nup',
+        'kondisi',
+        'merek',
+        'ruangan',
+        'serial_number',
+        'pengguna',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'tanggal_perolehan' => 'date',
-        'nilai_perolehan' => 'decimal:2',
-        'nilai_buku' => 'decimal:2',
-        'jumlah' => 'integer',
-        'tahun_perolehan' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
-
-    /**
-     * Get the user who owns this asset
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'penanggung_jawab_user_id');
-    }
 
     /**
      * Get tickets for this asset
      */
     public function tickets(): HasMany
     {
-        return $this->hasMany(Ticket::class, 'asset_code', 'asset_code');
+        return $this->hasMany(Ticket::class, 'kode_barang', 'kode_barang');
     }
 
     /**
-     * Scope to get only active assets
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Find asset by code and NUP
+     * Find asset by kode barang and NUP
      */
     public static function findByCodeAndNup($code, $nup)
     {
-        return self::where('asset_code', $code)
-            ->where('asset_nup', $nup)
+        return self::where('kode_barang', $code)
+            ->where('nup', $nup)
             ->first();
     }
 

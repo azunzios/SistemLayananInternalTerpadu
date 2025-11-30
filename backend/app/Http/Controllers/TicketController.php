@@ -392,8 +392,8 @@ class TicketController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             // Perbaikan fields
-            'asset_code' => 'required_if:type,perbaikan|string',
-            'asset_nup' => 'required_if:type,perbaikan|string',
+            'kode_barang' => 'required_if:type,perbaikan|string',
+            'nup' => 'required_if:type,perbaikan|string',
             'asset_location' => 'nullable|string',
             'severity' => 'required_if:type,perbaikan|in:low,normal,high,critical',
             // Zoom fields - validasi minimal, jumlah peserta & breakout room tidak wajib
@@ -418,19 +418,13 @@ class TicketController extends Controller
 
         // Validate asset exists for perbaikan tickets
         if ($validated['type'] === 'perbaikan') {
-            $asset = Asset::where('asset_code', $validated['asset_code'])
-                ->where('asset_nup', $validated['asset_nup'])
+            $asset = Asset::where('kode_barang', $validated['kode_barang'])
+                ->where('nup', $validated['nup'])
                 ->first();
 
             if (!$asset) {
                 throw ValidationException::withMessages([
-                    'asset_code' => ['Barang dengan kode dan NUP ini tidak ditemukan di database'],
-                ]);
-            }
-
-            if (!$asset->is_active) {
-                throw ValidationException::withMessages([
-                    'asset_code' => ['Barang ini tidak aktif dan tidak bisa diperbaiki'],
+                    'kode_barang' => ['Barang dengan kode dan NUP ini tidak ditemukan di database'],
                 ]);
             }
         }
@@ -445,8 +439,8 @@ class TicketController extends Controller
         $ticket->form_data = $validated['form_data'] ?? null;
 
         if ($validated['type'] === 'perbaikan') {
-            $ticket->asset_code = $validated['asset_code'];
-            $ticket->asset_nup = $validated['asset_nup'];
+            $ticket->kode_barang = $validated['kode_barang'];
+            $ticket->nup = $validated['nup'];
             $ticket->asset_location = $validated['asset_location'] ?? null;
             $ticket->severity = $validated['severity'];
             $ticket->status = 'submitted';

@@ -641,37 +641,6 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
               )}
 
               <Separator />
-
-              {/* Timeline */}
-              <div>
-                <h4 className="font-semibold mb-3">Timeline</h4>
-                <div className="space-y-3">
-                  <div className="text-sm">
-                    <span className="text-gray-600">Dibuat:</span>{" "}
-                    <span>
-                      {new Date(selectedWO.createdAt).toLocaleString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-gray-600">Terakhir Diupdate:</span>{" "}
-                    <span>
-                      {new Date(selectedWO.updatedAt).toLocaleString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </DialogContent>

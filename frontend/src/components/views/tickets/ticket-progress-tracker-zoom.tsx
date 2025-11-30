@@ -98,7 +98,7 @@ export const TicketProgressTrackerZoom: React.FC<TicketProgressTrackerZoomProps>
                       </h4>
                       <p className="text-xs text-gray-500 mt-1">
                         {isStepCompleted && 'Selesai'}
-                        {isCurrent && !isRejected && 'Sedang diproses'}
+                        {isCurrent && !isRejected && !isCompleted && 'Sedang diproses'}
                         {isCurrent && isRejected && 'Ditolak/Dibatalkan'}
                         {isUpcoming && 'Menunggu'}
                       </p>

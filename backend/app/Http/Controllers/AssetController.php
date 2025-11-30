@@ -169,14 +169,21 @@ class AssetController extends Controller
      */
     public function searchByCodeAndNup(Request $request)
     {
-        $validated = $request->validate([
+        // Accept both old and new parameter names for backward compatibility
+        $assetCode = $request->input('asset_code') ?? $request->input('kode_barang');
+        $assetNup = $request->input('asset_nup') ?? $request->input('nup');
+        
+        $validated = validator([
+            'asset_code' => $assetCode,
+            'asset_nup' => $assetNup,
+        ], [
             'asset_code' => 'required|string',
             'asset_nup' => 'required|string',
-        ]);
+        ])->validate();
 
-        $asset = Asset::where('asset_code', $validated['asset_code'])
-            ->where('asset_nup', $validated['asset_nup'])
-            ->active()
+        // Cari asset dengan struktur BMN (kode_barang, nup)
+        $asset = Asset::where('kode_barang', $validated['asset_code'])
+            ->where('nup', $validated['asset_nup'])
             ->first();
 
         if (!$asset) {

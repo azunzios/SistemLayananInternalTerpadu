@@ -73,8 +73,8 @@ class TicketResource extends JsonResource
         // Add type-specific fields
         if ($this->type === 'perbaikan') {
             $baseData = array_merge($baseData, [
-                'assetCode' => $this->asset_code,
-                'assetNUP' => $this->asset_nup,
+                'assetCode' => $this->kode_barang, // Menggunakan kode_barang dari struktur BMN
+                'assetNUP' => $this->nup, // Menggunakan nup dari struktur BMN
                 'assetLocation' => $this->asset_location,
                 'severity' => $this->severity,
                 'finalProblemType' => $this->final_problem_type,

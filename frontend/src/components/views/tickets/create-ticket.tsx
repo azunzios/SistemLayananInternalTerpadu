@@ -18,7 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Wrench,
   Video,
@@ -262,8 +266,8 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       form.append("description", formData.description);
 
       if (ticketType === "perbaikan") {
-        form.append("asset_code", formData.assetCode);
-        form.append("asset_nup", formData.assetNUP);
+        form.append("kode_barang", formData.assetCode);
+        form.append("nup", formData.assetNUP);
         if (formData.assetLocation)
           form.append("asset_location", formData.assetLocation);
         form.append("severity", formData.severity);
@@ -349,7 +353,12 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={onCancel} className="rounded-full">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onCancel}
+            className="rounded-full"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </div>
@@ -573,21 +582,7 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                           <div>
                             <span className="text-gray-600">Merk/Tipe:</span>
                             <p className="font-medium">
-                              {assetInfo.merk_tipe || "N/A"}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">
-                              Tahun Perolehan:
-                            </span>
-                            <p className="font-medium">
-                              {assetInfo.tahun_perolehan || "N/A"}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Sumber Dana:</span>
-                            <p className="font-medium">
-                              {assetInfo.sumber_dana || "N/A"}
+                              {assetInfo.merek || "N/A"}
                             </p>
                           </div>
                           <div>
@@ -604,24 +599,6 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                               {assetInfo.location || "N/A"}
                             </p>
                           </div>
-                          {assetInfo.spesifikasi && (
-                            <div className="col-span-2">
-                              <span className="text-gray-600">
-                                Spesifikasi:
-                              </span>
-                              <p className="font-medium">
-                                {assetInfo.spesifikasi}
-                              </p>
-                            </div>
-                          )}
-                          {assetInfo.keterangan && (
-                            <div className="col-span-2">
-                              <span className="text-gray-600">Keterangan:</span>
-                              <p className="font-medium">
-                                {assetInfo.keterangan}
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}

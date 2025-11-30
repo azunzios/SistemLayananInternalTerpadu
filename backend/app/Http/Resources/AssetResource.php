@@ -16,29 +16,29 @@ class AssetResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'asset_code' => $this->asset_code,
-            'asset_nup' => $this->asset_nup,
-            'asset_name' => $this->asset_name,
-            'merk_tipe' => $this->merk_tipe,
-            'spesifikasi' => $this->spesifikasi,
-            'tahun_perolehan' => $this->tahun_perolehan,
-            'tanggal_perolehan' => $this->tanggal_perolehan?->toDateString(),
-            'sumber_dana' => $this->sumber_dana,
-            'nomor_bukti_perolehan' => $this->nomor_bukti_perolehan,
-            'nilai_perolehan' => $this->nilai_perolehan,
-            'nilai_buku' => $this->nilai_buku,
-            'satuan' => $this->satuan,
-            'jumlah' => $this->jumlah,
-            'location' => $this->location,
-            'unit_pengguna' => $this->unit_pengguna,
-            'penanggung_jawab_user_id' => $this->penanggung_jawab_user_id,
-            'penanggung_jawab_name' => $this->user?->name,
-            'condition' => $this->condition,
-            'status_penggunaan' => $this->status_penggunaan,
-            'is_active' => $this->is_active,
-            'keterangan' => $this->keterangan,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            // Struktur BMN baru
+            'kodeSatker' => $this->kode_satker,
+            'namaSatker' => $this->nama_satker,
+            'kodeBarang' => $this->kode_barang,
+            'namaBarang' => $this->nama_barang,
+            'nup' => $this->nup,
+            'kondisi' => $this->kondisi,
+            'merek' => $this->merek,
+            'ruangan' => $this->ruangan,
+            'serialNumber' => $this->serial_number,
+            'pengguna' => $this->pengguna,
+            
+            // Backward compatibility untuk ticket creation & kartu kendali
+            'location' => $this->ruangan, // map ruangan ke location
+            'asset_name' => $this->nama_barang, // map nama_barang ke asset_name
+            'asset_code' => $this->kode_barang, // map kode_barang ke asset_code
+            'asset_nup' => $this->nup, // map nup ke asset_nup untuk kartu kendali
+            'condition' => $this->kondisi, // map kondisi ke condition
+            'merek' => $this->merek, // include merek untuk merk/tipe display
+            'merk_tipe' => $this->merek, // map merek ke merk_tipe untuk kartu kendali
+            
+            'createdAt' => $this->created_at?->toIso8601String(),
+            'updatedAt' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
