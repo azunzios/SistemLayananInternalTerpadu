@@ -11,10 +11,13 @@ use App\Http\Resources\TicketResource;
 use App\Models\AuditLog;
 use App\Traits\HasRoleHelper;
 use App\Services\ZoomBookingService;
+use App\Services\TicketNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class TicketController extends Controller
 {
@@ -538,6 +541,9 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Notifikasi ke admin_layanan
+        TicketNotificationService::onTicketCreated($ticket);
+
         return response()->json(new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount')), 201);
     }
 
@@ -601,25 +607,8 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Notification to assigned technician
-        \App\Models\Notification::create([
-            'user_id' => $validated['assigned_to'],
-            'title' => 'Tiket Baru Ditugaskan',
-            'message' => "Anda ditugaskan untuk menangani tiket {$ticket->ticket_number} ({$ticket->title})",
-            'type' => 'info',
-            'link' => "/tickets/{$ticket->id}",
-            'read' => false,
-        ]);
-
-        // Notification to user
-        \App\Models\Notification::create([
-            'user_id' => $ticket->user_id,
-            'title' => 'Tiket Sedang Ditangani',
-            'message' => "Tiket {$ticket->ticket_number} telah ditugaskan ke teknisi",
-            'type' => 'info',
-            'link' => "/tickets/{$ticket->id}",
-            'read' => false,
-        ]);
+        // Notifikasi ke teknisi dan pelapor
+        TicketNotificationService::onTicketAssigned($ticket);
 
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
@@ -673,20 +662,8 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Notifikasi ke user yang mengajukan
-        \App\Models\Notification::create([
-            'user_id' => $ticket->user_id,
-            'type' => 'success',
-            'title' => 'Tiket Perbaikan Disetujui',
-            'message' => "Tiket perbaikan {$ticket->ticket_number} telah disetujui oleh admin. Teknisi akan segera ditugaskan.",
-            'reference_type' => 'ticket',
-            'reference_id' => $ticket->id,
-            'data' => [
-                'ticket_id' => $ticket->id,
-                'ticket_number' => $ticket->ticket_number,
-                'notification_type' => 'ticket_approved',
-            ],
-        ]);
+        // Notifikasi ke pelapor
+        TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'approved');
 
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user'));
     }
@@ -812,6 +789,13 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Notifikasi perubahan status
+        if ($validated['status'] === 'closed') {
+            TicketNotificationService::onTicketClosed($ticket);
+        } else {
+            TicketNotificationService::onStatusChanged($ticket, $oldStatus, $validated['status']);
+        }
+
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
 
@@ -897,6 +881,9 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Notifikasi ke pelapor
+        TicketNotificationService::onZoomApproved($ticket);
+
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
 
@@ -943,6 +930,9 @@ class TicketController extends Controller
             'details' => "Zoom booking {$ticket->ticket_number} rejected: {$validated['reason']}",
             'ip_address' => request()->ip(),
         ]);
+
+        // Notifikasi ke pelapor
+        TicketNotificationService::onZoomRejected($ticket, $validated['reason']);
 
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
@@ -996,15 +986,8 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Notifikasi ke user yang mengajukan
-        \App\Models\Notification::create([
-            'user_id' => $ticket->user_id,
-            'title' => 'Tiket Ditolak',
-            'message' => "Tiket {$ticket->ticket_number} ditolak: {$validated['reason']}",
-            'type' => 'error',
-            'link' => "/tickets/{$ticket->id}",
-            'read' => false,
-        ]);
+        // Notifikasi ke pelapor
+        TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'rejected');
 
         return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
     }
@@ -1036,15 +1019,8 @@ class TicketController extends Controller
                 'ip_address' => request()->ip(),
             ]);
 
-            // Notification to user
-            \App\Models\Notification::create([
-                'user_id' => $ticket->user_id,
-                'title' => 'Tiket Disetujui',
-                'message' => "Tiket {$ticket->ticket_number} telah disetujui dan sedang menunggu teknisi",
-                'type' => 'success',
-                'link' => "/tickets/{$ticket->id}",
-                'read' => false,
-            ]);
+            // Notifikasi ke pelapor
+            TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'assigned');
 
             return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
         }
@@ -1352,5 +1328,255 @@ class TicketController extends Controller
                 'has_more' => $tickets->hasMorePages(),
             ],
         ]);
+    }
+
+    /**
+     * Export zoom tickets to Excel
+     * GET /tickets/export/zoom
+     */
+    public function exportZoom(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
+        // Check role - hanya admin_layanan dan super_admin
+        $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
+        if (!array_intersect(['super_admin', 'admin_layanan'], $roles ?? [])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Get all zoom tickets with relations
+        $tickets = Ticket::where('type', 'zoom_meeting')
+            ->with(['user', 'zoomAccount'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tiket Zoom Meeting');
+
+        // Header columns
+        $headers = [
+            'A1' => 'No',
+            'B1' => 'Nomor Tiket',
+            'C1' => 'Judul Meeting',
+            'D1' => 'Deskripsi',
+            'E1' => 'Tanggal Meeting',
+            'F1' => 'Waktu Mulai',
+            'G1' => 'Waktu Selesai',
+            'H1' => 'Durasi (menit)',
+            'I1' => 'Estimasi Peserta',
+            'J1' => 'Co-Hosts',
+            'K1' => 'Breakout Rooms',
+            'L1' => 'Status',
+            'M1' => 'Nama Pemohon',
+            'N1' => 'Email Pemohon',
+            'O1' => 'Unit Kerja',
+            'P1' => 'Akun Zoom (ID)',
+            'Q1' => 'Nama Akun Zoom',
+            'R1' => 'Email Akun Zoom',
+            'S1' => 'Link Meeting',
+            'T1' => 'Passcode',
+            'U1' => 'Alasan Penolakan',
+            'V1' => 'Tanggal Dibuat',
+            'W1' => 'Tanggal Diupdate',
+        ];
+
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Bold header
+        $sheet->getStyle('A1:W1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:W1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE0E0E0');
+
+        // Status label mapping
+        $statusLabels = [
+            'pending_review' => 'Menunggu Review',
+            'approved' => 'Disetujui',
+            'rejected' => 'Ditolak',
+            'cancelled' => 'Dibatalkan',
+            'completed' => 'Selesai',
+        ];
+
+        // Data rows
+        $row = 2;
+        $no = 1;
+        foreach ($tickets as $ticket) {
+            // Format co-hosts
+            $coHosts = '';
+            if ($ticket->zoom_co_hosts) {
+                $hosts = is_string($ticket->zoom_co_hosts) 
+                    ? json_decode($ticket->zoom_co_hosts, true) 
+                    : $ticket->zoom_co_hosts;
+                if (is_array($hosts)) {
+                    $coHosts = implode(', ', array_map(function($h) {
+                        return ($h['name'] ?? '') . ' (' . ($h['email'] ?? '') . ')';
+                    }, $hosts));
+                }
+            }
+
+            $sheet->setCellValue('A' . $row, $no);
+            $sheet->setCellValue('B' . $row, $ticket->ticket_number);
+            $sheet->setCellValue('C' . $row, $ticket->title);
+            $sheet->setCellValue('D' . $row, $ticket->description);
+            $sheet->setCellValue('E' . $row, $ticket->zoom_date ? $ticket->zoom_date->format('Y-m-d') : '');
+            $sheet->setCellValue('F' . $row, $ticket->zoom_start_time);
+            $sheet->setCellValue('G' . $row, $ticket->zoom_end_time);
+            $sheet->setCellValue('H' . $row, $ticket->zoom_duration);
+            $sheet->setCellValue('I' . $row, $ticket->zoom_estimated_participants);
+            $sheet->setCellValue('J' . $row, $coHosts);
+            $sheet->setCellValue('K' . $row, $ticket->zoom_breakout_rooms ?? 0);
+            $sheet->setCellValue('L' . $row, $statusLabels[$ticket->status] ?? $ticket->status);
+            $sheet->setCellValue('M' . $row, $ticket->user?->name ?? '-');
+            $sheet->setCellValue('N' . $row, $ticket->user?->email ?? '-');
+            $sheet->setCellValue('O' . $row, $ticket->user?->unit_kerja ?? '-');
+            $sheet->setCellValue('P' . $row, $ticket->zoom_account_id ?? '-');
+            $sheet->setCellValue('Q' . $row, $ticket->zoomAccount?->name ?? '-');
+            $sheet->setCellValue('R' . $row, $ticket->zoomAccount?->email ?? '-');
+            $sheet->setCellValue('S' . $row, $ticket->zoom_meeting_link ?? '-');
+            $sheet->setCellValue('T' . $row, $ticket->zoom_passcode ?? '-');
+            $sheet->setCellValue('U' . $row, $ticket->zoom_rejection_reason ?? '-');
+            $sheet->setCellValue('V' . $row, $ticket->created_at?->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('W' . $row, $ticket->updated_at?->format('Y-m-d H:i:s'));
+
+            $row++;
+            $no++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'W') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Generate file
+        $filename = 'tiket_zoom_' . date('Ymd_His') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        
+        $tempFile = tempnam(sys_get_temp_dir(), 'zoom_export_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Export all tickets to Excel
+     * GET /tickets/export/all
+     */
+    public function exportAll(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated'], 401);
+        }
+
+        // Get all tickets with relations
+        $tickets = Ticket::with(['user', 'assignedUser', 'zoomAccount', 'diagnosis'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Semua Tiket');
+
+        // Header columns
+        $headers = [
+            'No', 'Nomor Tiket', 'Tipe', 'Judul', 'Deskripsi', 'Status',
+            'Nama Pemohon', 'Email Pemohon', 'Unit Kerja',
+            'Teknisi Ditugaskan', 'Kode Aset', 'NUP', 'Nama Aset',
+            'Kondisi Fisik', 'Dapat Diperbaiki', 'Rekomendasi Perbaikan',
+            'Tanggal Zoom', 'Waktu Mulai', 'Waktu Selesai', 'Link Meeting',
+            'Tanggal Dibuat', 'Tanggal Diupdate'
+        ];
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $sheet->getStyle($col . '1')->getFont()->setBold(true);
+            $sheet->getStyle($col . '1')->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('4472C4');
+            $sheet->getStyle($col . '1')->getFont()->getColor()->setRGB('FFFFFF');
+            $col++;
+        }
+
+        // Status labels
+        $statusLabels = [
+            'submitted' => 'Diajukan',
+            'pending_review' => 'Menunggu Review',
+            'assigned' => 'Ditugaskan',
+            'in_progress' => 'Dalam Proses',
+            'on_hold' => 'Ditunda',
+            'waiting_for_submitter' => 'Menunggu Pelapor',
+            'approved' => 'Disetujui',
+            'rejected' => 'Ditolak',
+            'cancelled' => 'Dibatalkan',
+            'closed' => 'Selesai',
+            'completed' => 'Selesai',
+        ];
+
+        $typeLabels = [
+            'perbaikan' => 'Perbaikan',
+            'zoom_meeting' => 'Zoom Meeting',
+        ];
+
+        // Data rows
+        $row = 2;
+        $no = 1;
+        foreach ($tickets as $ticket) {
+            $formData = is_string($ticket->form_data) 
+                ? json_decode($ticket->form_data, true) 
+                : ($ticket->form_data ?? []);
+            
+            $diagnosis = $ticket->diagnosis;
+
+            $sheet->setCellValue('A' . $row, $no);
+            $sheet->setCellValue('B' . $row, $ticket->ticket_number);
+            $sheet->setCellValue('C' . $row, $typeLabels[$ticket->type] ?? $ticket->type);
+            $sheet->setCellValue('D' . $row, $ticket->title);
+            $sheet->setCellValue('E' . $row, $ticket->description);
+            $sheet->setCellValue('F' . $row, $statusLabels[$ticket->status] ?? $ticket->status);
+            $sheet->setCellValue('G' . $row, $ticket->user?->name ?? '-');
+            $sheet->setCellValue('H' . $row, $ticket->user?->email ?? '-');
+            $sheet->setCellValue('I' . $row, $ticket->user?->unit_kerja ?? '-');
+            $sheet->setCellValue('J' . $row, $ticket->assignedUser?->name ?? '-');
+            $sheet->setCellValue('K' . $row, $formData['asset_code'] ?? $formData['kode_barang'] ?? '-');
+            $sheet->setCellValue('L' . $row, $formData['nup'] ?? $formData['asset_nup'] ?? '-');
+            $sheet->setCellValue('M' . $row, $formData['asset_name'] ?? $formData['nama_barang'] ?? '-');
+            $sheet->setCellValue('N' . $row, $diagnosis?->physical_condition ?? '-');
+            $sheet->setCellValue('O' . $row, $diagnosis ? ($diagnosis->is_repairable ? 'Ya' : 'Tidak') : '-');
+            $sheet->setCellValue('P' . $row, $diagnosis?->repair_recommendation ?? '-');
+            $sheet->setCellValue('Q' . $row, $ticket->zoom_date ? $ticket->zoom_date->format('Y-m-d') : '-');
+            $sheet->setCellValue('R' . $row, $ticket->zoom_start_time ?? '-');
+            $sheet->setCellValue('S' . $row, $ticket->zoom_end_time ?? '-');
+            $sheet->setCellValue('T' . $row, $ticket->zoom_meeting_link ?? '-');
+            $sheet->setCellValue('U' . $row, $ticket->created_at?->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('V' . $row, $ticket->updated_at?->format('Y-m-d H:i:s'));
+
+            $row++;
+            $no++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'V') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Generate file
+        $filename = 'laporan_tiket_' . date('Ymd_His') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        
+        $tempFile = tempnam(sys_get_temp_dir(), 'ticket_export_');
+        $writer->save($tempFile);
+
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 }

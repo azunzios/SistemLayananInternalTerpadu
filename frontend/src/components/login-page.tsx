@@ -5,31 +5,11 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
-import { Eye, EyeOff, AlertCircle, Mail, ArrowUpRight, ArrowDownLeftFromSquareIcon } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
 import { toast, Toaster } from "sonner";
 import { motion, AnimatePresence } from 'motion/react';
 import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '../lib/storage';
 import type { User } from '../types';
-
-/**
- * Mendapatkan nama view yang akan dibuka berdasarkan role
- */
-const getViewNameForRole = (role: string): string => {
-  switch (role) {
-    case 'super_admin':
-      return 'Dashboard Admin';
-    case 'admin_layanan':
-      return 'Daftar Tiket';
-    case 'admin_penyedia':
-      return 'Work Orders';
-    case 'teknisi':
-      return 'Tiket Saya';
-    case 'pegawai':
-      return 'Tiket Saya';
-    default:
-      return 'Dashboard';
-  }
-};
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -97,16 +77,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       };
 
       const roleLabel = roleLabels[user.role] || user.role;
-      const viewName = getViewNameForRole(user.role);
 
       toast.success(`Selamat datang, ${user.name}!`, {
-        description: `Login sebagai ${roleLabel} dan Membuka ${viewName}`,
+        description: (
+          <div className="text-black">
+            Anda login sebagai <span className="font-medium">{roleLabel}</span>
+          </div>
+        ),
         style: {
-          background: '#00a63e',
-          color: '#fff',
-          border: 'none',
+          background: "#ffffff",
+          color: "#000000",
         },
       });
+
 
       onLogin(user);
     } catch (err: any) {
@@ -255,17 +238,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           <CardContent className="grid p-0 md:grid-cols-2">
             <div className="flex flex-col justify-center p-6 pb-0 !mb-0 sm:p-10">
               <CardHeader className="p-0 px-6 mb-4 text-center md:text-left max-w-full">
-
-                {/* Title Bar */}
-                <div className="relative">
-                  <div className="flex justify-betwen flex-row gap-3 text-blue-500">
-                    <div>
-                      <CardTitle className="text-2xl font-bold bg-[#e8f0fe] rounded-full px-4 flex items-center gap-2">
-                        Sigap-TI
-                      </CardTitle>
-                    </div>
-                  </div>
-                </div>
                 {/* Logo */}
                 <div className="flex justify-center md:justify-start">
                   <div className="h-20 w-20 flex items-center justify-center rounded-full">
@@ -372,7 +344,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     disabled={isLoading}
                   >
                     {isLoading ? 'Memverifikasi...' : 'Masuk'}
-                    <ArrowUpRight />
                   </Button>
                   <p className="text-center text-sm text-gray-500">
                     Belum punya akun? Hubungi administrator untuk pendaftaran
@@ -392,11 +363,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 alt="Image"
                 className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale z-10"
               />
-              <div className="absolute bottom-4 z-20 bg-black-30 backdrop-blur-sm w-[100%] px-4 flex flex-col gap-0">
-                <div className="flex items-start gap-1 text-black text-sm font-medium">
-                  <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Nusa Tenggara Barat</span>
+              <div className="absolute inset-0 z-15 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 z-20 w-[100%] px-4 flex flex-col gap-0">
+                <h2 className="text-white text-lg font-medium mb-1">SIGAP-TI</h2>
+                <div className="flex items-start gap-1 text-white text-md font-normal">
+                  <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat</span>
                 </div>
-                <p className='text-[10px] text-gray-800'>Tim 2 RPL Kelas 3SI2 </p>
               </div>
 
             </div>

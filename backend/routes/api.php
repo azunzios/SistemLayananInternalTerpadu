@@ -11,7 +11,6 @@ use App\Http\Controllers\BmnAssetController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\SparepartRequestController;
-use App\Http\Controllers\KartuKendaliController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ZoomAccountController;
 use App\Http\Controllers\CommentController;
@@ -64,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets/stats/zoom-bookings', [TicketController::class, 'zoomBookingStats']);
     Route::get('/tickets/zoom-bookings', [TicketController::class, 'zoomBookings']);
     Route::get('/tickets/calendar/grid', [TicketController::class, 'calendarGrid']);
+    Route::get('/tickets/export/zoom', [TicketController::class, 'exportZoom']);
+    Route::get('/tickets/export/all', [TicketController::class, 'exportAll']);
     
     // Generic resource routes AFTER specific routes
     Route::apiResource('tickets', TicketController::class);
@@ -100,13 +101,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/sparepart-requests/{sparepartRequest}/fulfill', [SparepartRequestController::class, 'fulfill']);
     Route::get('/sparepart-requests/stats/summary', [SparepartRequestController::class, 'stats']);
     
-    // Kartu Kendali (Maintenance Control Card) Routes
-    Route::get('/kartu-kendali/stats/summary', [KartuKendaliController::class, 'stats']);
-    Route::get('/kartu-kendali/check-work-order/{work_order_id}', [KartuKendaliController::class, 'checkWorkOrder']);
-    Route::post('/kartu-kendali/from-work-order', [KartuKendaliController::class, 'createFromWorkOrder']);
-    Route::apiResource('kartu-kendali', KartuKendaliController::class);
-    Route::post('/kartu-kendali/{kartuKendali}/entries', [KartuKendaliController::class, 'addEntry']);
-    Route::get('/kartu-kendali/{kartuKendali}/entries', [KartuKendaliController::class, 'getEntries']);
+    // Kartu Kendali - data from completed work orders
+    Route::get('/kartu-kendali', [WorkOrderController::class, 'kartuKendali']);
+    Route::get('/kartu-kendali/export', [WorkOrderController::class, 'exportKartuKendali']);
     
     // Notification Routes
     Route::get('/notifications', [NotificationController::class, 'index']);

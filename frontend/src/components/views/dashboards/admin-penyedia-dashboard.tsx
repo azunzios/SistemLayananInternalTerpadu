@@ -1,145 +1,205 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
   CheckCircle,
-  ShoppingCart,
-  BarChart3,
-  ArrowRight,
   Package,
   FolderKanban,
-  Clock,
-  Truck,
+  ArrowUpRight,
+  Loader,
+  Wrench,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { getSparepartRequests, getWorkOrders } from '@/lib/storage';
+import { api } from '@/lib/api';
 import type { User } from '@/types';
 import type { ViewType } from '@/components/main-layout';
+import { Spinner } from '@/components/ui/spinner';
 
 interface AdminPenyediaDashboardProps {
   currentUser: User;
   onNavigate: (view: ViewType) => void;
 }
 
+interface DashboardStats {
+  total: number;
+  byStatus: {
+    requested: number;
+    in_procurement: number;
+    completed: number;
+    unsuccessful: number;
+  };
+  byType: {
+    sparepart: number;
+    vendor: number;
+    license: number;
+  };
+  recentWorkOrders: Array<{
+    id: string;
+    type: string;
+    status: string;
+    ticketNumber: string;
+    ticketTitle: string;
+    createdAt: string;
+  }>;
+}
+
 export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
   currentUser,
   onNavigate,
 }) => {
-  const sparepartRequests = getSparepartRequests();
-  const workOrders = getWorkOrders();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Admin Penyedia Stats - focus on work orders and sparepart requests
-  const stats = useMemo(() => {
-    const pendingSparepartRequests = sparepartRequests.filter(r => r.status === 'pending');
-    const approvedSparepartRequests = sparepartRequests.filter(r => r.status === 'approved');
-    const rejectedSparepartRequests = sparepartRequests.filter(r => r.status === 'rejected');
-    
-    const pendingWorkOrders = workOrders.filter(w => w.status === 'requested');
-    const inProcurementWorkOrders = workOrders.filter(w => w.status === 'in_procurement');
-    const completedWorkOrders = workOrders.filter(w => w.status === 'completed' || w.status === 'delivered');
-
-    return {
-      pendingSparepartRequests: pendingSparepartRequests.length,
-      approvedSparepartRequests: approvedSparepartRequests.length,
-      rejectedSparepartRequests: rejectedSparepartRequests.length,
-      totalSparepartRequests: sparepartRequests.length,
-      pendingWorkOrders: pendingWorkOrders.length,
-      inProcurementWorkOrders: inProcurementWorkOrders.length,
-      completedWorkOrders: completedWorkOrders.length,
-      totalWorkOrders: workOrders.length,
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get<any>('/work-orders/stats/summary');
+        // Transform response
+        setStats({
+          total: response.data?.total || 0,
+          byStatus: response.data?.by_status || { requested: 0, in_procurement: 0, completed: 0, unsuccessful: 0 },
+          byType: response.data?.by_type || { sparepart: 0, vendor: 0, license: 0 },
+          recentWorkOrders: response.data?.recent || [],
+        });
+      } catch (err) {
+        console.error('Failed to load admin penyedia dashboard stats:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [sparepartRequests, workOrders]);
 
-  // Work Order Status Distribution
-  const workOrderStatus = useMemo(() => {
-    return [
-      { name: 'Requested', value: workOrders.filter(w => w.status === 'requested').length, color: '#3b82f6' },
-      { name: 'In Procurement', value: workOrders.filter(w => w.status === 'in_procurement').length, color: '#f59e0b' },
-      { name: 'Delivered', value: workOrders.filter(w => w.status === 'delivered').length, color: '#10b981' },
-      { name: 'Completed', value: workOrders.filter(w => w.status === 'completed').length, color: '#06b6d4' },
-    ].filter(item => item.value > 0);
-  }, [workOrders]);
+    loadStats();
+  }, []);
 
-  // Work Order Type Distribution
-  const workOrderType = useMemo(() => {
-    return [
-      { name: 'Sparepart', value: workOrders.filter(w => w.type === 'sparepart').length, color: '#8b5cf6' },
-      { name: 'Vendor', value: workOrders.filter(w => w.type === 'vendor').length, color: '#f97316' },
-    ].filter(item => item.value > 0);
-  }, [workOrders]);
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold flex items-center gap-3">
+            Admin Penyedia Dashboard
+          </h1>
+          <div className="flex flex-row gap-4">
+            <p className="text-black-500 mt-1">Memuat data dashboard...</p>
+            <Spinner />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Sparepart requests trend (last 7 days)
-  const sparepartTrend = useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      
-      const dayRequests = sparepartRequests.filter(r => {
-        const requestDate = new Date(r.createdAt);
-        return requestDate.toDateString() === date.toDateString();
-      });
-
-      last7Days.push({
-        date: dateStr,
-        requests: dayRequests.length,
-      });
+  // Get type icon
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'sparepart': return Package;
+      case 'vendor': return Wrench;
+      case 'license': return FolderKanban;
+      default: return Package;
     }
-    return last7Days;
-  }, [sparepartRequests]);
+  };
+
+  // Get type label
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'sparepart': return 'Sparepart';
+      case 'vendor': return 'Vendor';
+      case 'license': return 'Lisensi';
+      default: return type;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl flex items-center gap-3">
-            <Package className="h-8 w-8 text-green-600" />
-            Admin Penyedia Dashboard
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Kelola work order dan request sparepart dari teknisi
-          </p>
+      {/* Welcome Section - matching admin-layanan style */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="
+    bg-blue-500 
+    rounded-3xl 
+    p-8 
+    text-white
+    border border-white/30
+    shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]
+  "
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl mb-2">
+              Admin Penyedia Dashboard 
+            </h1>
+            <p className="text-blue-100">
+              Kelola work order dan pengadaan dari teknisi
+            </p>
+          </div>
+          <div className="hidden md:block">
+            <Package className="h-20 w-20 text-black-300 opacity-50" />
+          </div>
         </div>
-      </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="border-2 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Sparepart Requests</p>
-                  <p className="text-4xl text-blue-600">{stats.pendingSparepartRequests}</p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Pending review
-                  </p>
-                </div>
-                <div className="h-14 w-14 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <ShoppingCart className="h-7 w-7 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <Separator className="my-6 bg-gray-300" />
 
+        {/* Statistics Table */}
+        {stats ? (
+          <table className="w-full table-fixed">
+            <thead>
+              <tr>
+                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Total Work Order</th>
+                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Requested</th>
+                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">In Procurement</th>
+                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Completed</th>
+                <th className="py-2 text-blue-100 text-sm font-normal">Unsuccessful</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="py-2 text-center border-r border-gray-300">
+                  <p className="text-3xl font-bold">{stats.total}</p>
+                </td>
+                <td className="py-2 text-center border-r border-gray-300">
+                  <p className="text-3xl font-bold">{stats.byStatus.requested}</p>
+                </td>
+                <td className="py-2 text-center border-r border-gray-300">
+                  <p className="text-3xl font-bold">{stats.byStatus.in_procurement}</p>
+                </td>
+                <td className="py-2 text-center border-r border-gray-300">
+                  <p className="text-3xl font-bold">{stats.byStatus.completed}</p>
+                </td>
+                <td className="py-2 text-center">
+                  <p className="text-3xl font-bold">{stats.byStatus.unsuccessful}</p>
+                </td>
+              </tr>
+              <tr>
+                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Semua work order</td>
+                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Menunggu proses</td>
+                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Sedang pengadaan</td>
+                <td className="py-1 text-center text-xs text-whites border-r border-gray-300">Selesai</td>
+                <td className="py-1 text-center text-xs text-white  ">Tidak berhasil</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : (
+          <div className="w-full flex items-center justify-center py-8">
+            <Loader className="h-6 w-6 animate-spin text-black-600" />
+          </div>
+        )}
+      </motion.div>
+
+      {/* Work Order by Type - simple cards */}
+      <div className="grid gap-4 md:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Work Orders</p>
-                  <p className="text-4xl text-green-600">{stats.pendingWorkOrders}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Pending action
-                  </p>
+                  <p className="text-sm text-black-500 mb-1">Sparepart</p>
+                  <p className="text-4xl font-bold">{stats?.byType.sparepart || 0}</p>
+                  <p className="text-xs text-black-400 mt-1">Work order sparepart</p>
                 </div>
-                <div className="h-14 w-14 bg-green-100 rounded-lg flex items-center justify-center">
-                  <FolderKanban className="h-7 w-7 text-green-600" />
+                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-7 w-7" />
                 </div>
               </div>
             </CardContent>
@@ -151,14 +211,12 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">In Procurement</p>
-                  <p className="text-4xl text-orange-600">{stats.inProcurementWorkOrders}</p>
-                  <p className="text-xs text-orange-700 mt-1">
-                    In progress
-                  </p>
+                  <p className="text-sm text-black-500 mb-1">Vendor</p>
+                  <p className="text-4xl font-bold">{stats?.byType.vendor || 0}</p>
+                  <p className="text-xs text-black-400 mt-1">Work order vendor</p>
                 </div>
-                <div className="h-14 w-14 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Truck className="h-7 w-7 text-orange-600" />
+                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Wrench className="h-7 w-7 text-black-600" />
                 </div>
               </div>
             </CardContent>
@@ -170,14 +228,12 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Completed</p>
-                  <p className="text-4xl text-emerald-600">{stats.completedWorkOrders}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This month
-                  </p>
+                  <p className="text-sm text-black-500 mb-1">Lisensi</p>
+                  <p className="text-4xl font-bold">{stats?.byType.license || 0}</p>
+                  <p className="text-xs text-black-400 mt-1">Work order lisensi</p>
                 </div>
-                <div className="h-14 w-14 bg-emerald-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-7 w-7 text-emerald-600" />
+                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <FolderKanban className="h-7 w-7 text-black-600" />
                 </div>
               </div>
             </CardContent>
@@ -185,101 +241,68 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
         </motion.div>
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Work Order Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Work Order</CardTitle>
-            <CardDescription>Distribusi status work order saat ini</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {workOrderStatus.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={workOrderStatus}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6">
-                    {workOrderStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <FolderKanban className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                  <p>Belum ada work order</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sparepart Requests Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Trend Request Sparepart (7 Hari)</CardTitle>
-            <CardDescription>Request dari teknisi per hari</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={sparepartTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Work Order Type Distribution */}
-      {workOrderType.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribusi Tipe Work Order</CardTitle>
-            <CardDescription>Perbandingan work order sparepart vs vendor</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-8">
-              <ResponsiveContainer width="50%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={workOrderType}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {workOrderType.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-3">
-                {workOrderType.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <div className="h-4 w-4 rounded" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-sm">{item.name}</span>
-                    <Badge variant="secondary">{item.value}</Badge>
-                  </div>
-                ))}
-              </div>
+      {/* Recent Work Orders */}
+      <Card className="pb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Work Order Terbaru</CardTitle>
+              <CardDescription>
+                {stats?.byStatus.requested || 0} work order menunggu diproses
+              </CardDescription>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button variant="link" onClick={() => onNavigate('work-orders')} className="p-0">
+              Lihat Semua <ArrowUpRight />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {stats?.recentWorkOrders && stats.recentWorkOrders.length > 0 ? (
+            <div className="space-y-2">
+              {stats.recentWorkOrders.slice(0, 5).map((wo, index) => {
+                const TypeIcon = getTypeIcon(wo.type);
+
+                return (
+                  <motion.div
+                    key={wo.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-gray-200"
+                  >
+                    <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <TypeIcon className="h-5 w-5 text-black-600" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">
+                        {getTypeLabel(wo.type)} - {wo.ticketTitle || wo.ticketNumber}
+                      </h4>
+                      <div className="flex items-center gap-2 text-xs text-black-500 mt-1">
+                        <span className="font-mono text-black-700">{wo.ticketNumber}</span>
+                        <span>•</span>
+                        <span>{new Date(wo.createdAt).toLocaleDateString('id-ID')}</span>
+                        <span>•</span>
+                        <span className="font-medium text-black-700">
+                          {wo.status === 'requested' ? 'Requested' :
+                            wo.status === 'in_procurement' ? 'In Procurement' :
+                              wo.status === 'completed' ? 'Completed' : 'Unsuccessful'}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-black-500">
+              <CheckCircle className="h-16 w-16 mx-auto mb-4 text-black-400" />
+              <p className="text-lg">Belum ada work order!</p>
+              <p className="text-sm mt-1">Work order dari teknisi akan muncul di sini</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -28,7 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Package, Truck, Search, Eye, Clock, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
+import { Package, Truck, Search, Clock, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
 import { getWorkOrders, getTickets, getUsersSync, updateWorkOrder, addNotification } from '@/lib/storage';
 import type { User, WorkOrder, WorkOrderStatus } from '@/types';
 import { motion } from 'motion/react';
@@ -422,7 +422,6 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
                             variant="outline"
                             onClick={() => handleOpenUpdateDialog(wo)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
                             Update
                           </Button>
                         </TableCell>

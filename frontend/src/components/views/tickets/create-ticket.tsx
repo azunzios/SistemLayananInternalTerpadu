@@ -363,7 +363,7 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
           </Button>
         </div>
 
-        <Card>
+        <Card className="pb-6">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -478,15 +478,15 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="critical">
-                          Critical (Segera, kurang dari 4 jam)
+                          Critical (Segera)
                         </SelectItem>
                         <SelectItem value="high">
-                          High (1 hari kerja)
+                          High (approx: 1 hari kerja)
                         </SelectItem>
                         <SelectItem value="normal">
-                          Normal (3 hari kerja)
+                          Normal (approx: 3 hari kerja)
                         </SelectItem>
-                        <SelectItem value="low">Low (1 minggu)</SelectItem>
+                        <SelectItem value="low">Low (approx: 1 minggu)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">

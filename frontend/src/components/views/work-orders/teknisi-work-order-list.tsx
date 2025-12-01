@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -6,8 +6,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,16 +36,26 @@ import {
   Package,
   Truck,
   Search,
-  Eye,
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { User, WorkOrder, WorkOrderStatus } from "@/types";
 import { motion } from "motion/react";
 import { Spinner } from "@/components/ui/spinner";
+
+// Pagination info from backend
+interface PaginationInfo {
+  total: number;
+  per_page: number;
+  current_page: number;
+  last_page: number;
+  from: number | null;
+  to: number | null;
+}
 
 interface TeknisiWorkOrderListProps {
   currentUser: User;
@@ -66,27 +76,20 @@ const statusConfig: Record<
     color: "bg-blue-100 text-blue-800",
     icon: Package,
   },
-  delivered: {
-    label: "Sudah Dikirim",
+  completed: {
+    label: "Selesai",
     color: "bg-green-100 text-green-800",
     icon: CheckCircle,
   },
-  completed: {
-    label: "Selesai",
-    color: "bg-gray-100 text-gray-800",
-    icon: CheckCircle,
-  },
-  failed: { label: "Gagal", color: "bg-red-100 text-red-800", icon: XCircle },
-  cancelled: {
-    label: "Dibatalkan",
-    color: "bg-gray-100 text-gray-600",
+  unsuccessful: {
+    label: "Tidak Berhasil",
+    color: "bg-red-100 text-red-800",
     icon: XCircle,
   },
 };
 
 export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
   currentUser,
-  onViewDetail,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -95,6 +98,14 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: 0,
+    per_page: 15,
+    current_page: 1,
+    last_page: 1,
+    from: null,
+    to: null,
+  });
 
   // Helper: parse items (handle both array and JSON string)
   const parseItems = (items: any) => {
@@ -110,18 +121,28 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
     return [];
   };
 
-  // Fetch work orders from API
-  useEffect(() => {
-    fetchWorkOrders();
-  }, []);
-
-  const fetchWorkOrders = async () => {
+  // Fetch work orders from API with server-side filtering
+  const fetchWorkOrders = useCallback(async (page: number = 1) => {
     try {
       setLoading(true);
-      const response = await api.get<any>("work-orders");
-      console.log("Work orders API response:", response);
-      console.log("Work orders data:", response.data);
-      console.log("Current user ID:", currentUser.id);
+      
+      // Build query params for server-side filtering
+      const params = new URLSearchParams();
+      params.append("created_by", String(currentUser.id));
+      params.append("page", String(page));
+      params.append("per_page", "15");
+      
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+      if (typeFilter !== "all") {
+        params.append("type", typeFilter);
+      }
+      if (searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+      }
+
+      const response = await api.get<any>(`work-orders?${params.toString()}`);
 
       // Transform snake_case to camelCase for top-level fields
       const transformedData =
@@ -140,110 +161,38 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
           updatedAt: wo.updated_at,
         })) || [];
 
-      console.log("Transformed data:", transformedData);
       setWorkOrders(transformedData);
+      
+      // Update pagination info
+      if (response.pagination) {
+        setPagination(response.pagination);
+      }
     } catch (error) {
       console.error("Failed to fetch work orders:", error);
       setWorkOrders([]);
     } finally {
       setLoading(false);
     }
+  }, [currentUser.id, statusFilter, typeFilter, searchQuery]);
+
+  // Fetch on mount and when filters change
+  useEffect(() => {
+    fetchWorkOrders(1);
+  }, [statusFilter, typeFilter]); // Don't include searchQuery here - use debounce
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchWorkOrders(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.last_page) {
+      fetchWorkOrders(newPage);
+    }
   };
-
-  // Filter work orders created by current user
-  const myWorkOrders = useMemo(() => {
-    console.log("=== FILTERING WORK ORDERS ===");
-    console.log("Total work orders:", workOrders.length);
-    console.log(
-      "Current user ID:",
-      currentUser.id,
-      "Type:",
-      typeof currentUser.id
-    );
-
-    const filtered = workOrders.filter((wo) => {
-      console.log(
-        "WO:",
-        wo.id,
-        "createdBy:",
-        wo.createdBy,
-        "Type:",
-        typeof wo.createdBy
-      );
-      console.log(
-        "createdByUser?.id:",
-        wo.createdByUser?.id,
-        "Type:",
-        typeof wo.createdByUser?.id
-      );
-
-      const isCreator =
-        wo.createdBy == currentUser.id ||
-        wo.createdByUser?.id == currentUser.id;
-      console.log("Match result:", isCreator);
-      return isCreator;
-    });
-
-    console.log("Filtered work orders:", filtered.length);
-    console.log("=== END FILTERING ===");
-    return filtered;
-  }, [workOrders, currentUser.id]);
-
-  // Apply filters
-  const filteredWorkOrders = useMemo(() => {
-    return myWorkOrders.filter((wo) => {
-      // Status filter
-      if (statusFilter !== "all" && wo.status !== statusFilter) return false;
-
-      // Type filter
-      if (typeFilter !== "all" && wo.type !== typeFilter) return false;
-
-      // Search filter
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-
-        const matchesTicket =
-          wo.ticket?.ticketNumber?.toLowerCase().includes(searchLower) ||
-          wo.ticket?.title?.toLowerCase().includes(searchLower) ||
-          wo.ticketNumber?.toLowerCase().includes(searchLower);
-
-        const itemsArray = parseItems(wo.items);
-        const matchesSparepart = itemsArray.some((item: any) =>
-          item.name?.toLowerCase().includes(searchLower)
-        );
-
-        const matchesVendor =
-          wo.vendorName?.toLowerCase().includes(searchLower) ||
-          wo.vendorDescription?.toLowerCase().includes(searchLower);
-
-        const matchesLicense =
-          wo.licenseName?.toLowerCase().includes(searchLower) ||
-          wo.licenseDescription?.toLowerCase().includes(searchLower);
-
-        if (
-          !matchesTicket &&
-          !matchesSparepart &&
-          !matchesVendor &&
-          !matchesLicense
-        )
-          return false;
-      }
-
-      return true;
-    });
-  }, [myWorkOrders, statusFilter, typeFilter, searchQuery]);
-
-  // Statistics
-  const stats = useMemo(() => {
-    return {
-      total: myWorkOrders.length,
-      requested: myWorkOrders.filter((wo) => wo.status === "requested").length,
-      in_procurement: myWorkOrders.filter(
-        (wo) => wo.status === "in_procurement"
-      ).length,
-      completed: myWorkOrders.filter((wo) => wo.status === "completed").length,
-    };
-  }, [myWorkOrders]);
 
   const handleViewDetail = (woId: string | number) => {
     const wo = workOrders.find((w) => w.id === woId);
@@ -274,57 +223,6 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total WO</p>
-                <p className="text-2xl mt-1">{stats.total}</p>
-              </div>
-              <Package className="h-8 w-8 text-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Diminta</p>
-                <p className="text-2xl mt-1">{stats.requested}</p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pengadaan</p>
-                <p className="text-2xl mt-1">{stats.in_procurement}</p>
-              </div>
-              <AlertCircle className="h-8 w-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Selesai</p>
-                <p className="text-2xl mt-1">{stats.completed}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Filters */}
       <Card className="pb-6">
         <CardHeader>
@@ -350,6 +248,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                 <SelectItem value="all">Semua Jenis</SelectItem>
                 <SelectItem value="sparepart">Sparepart</SelectItem>
                 <SelectItem value="vendor">Vendor</SelectItem>
+                <SelectItem value="license">Lisensi</SelectItem>
               </SelectContent>
             </Select>
 
@@ -359,12 +258,10 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="requested">Diminta</SelectItem>
-                <SelectItem value="in_procurement">Dalam Pengadaan</SelectItem>
-                <SelectItem value="delivered">Sudah Dikirim</SelectItem>
-                <SelectItem value="completed">Selesai</SelectItem>
-                <SelectItem value="failed">Gagal</SelectItem>
-                <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                <SelectItem value="requested">Requested</SelectItem>
+                <SelectItem value="in_procurement">In Procurement</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="unsuccessful">Unsuccessful</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -374,34 +271,33 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
       {/* Work Orders Table */}
       <Card className="pb-6">
         <CardHeader>
-          <CardTitle>Daftar Work Order ({filteredWorkOrders.length})</CardTitle>
+          <CardTitle>Daftar Work Order ({pagination.total})</CardTitle>
           <CardDescription>
             Klik pada baris untuk melihat detail work order
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredWorkOrders.length === 0 ? (
+          {workOrders.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p>Tidak ada work order yang ditemukan</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="border border-gray-200">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Tiket</TableHead>
-                    <TableHead>Jenis</TableHead>
-                    <TableHead>Detail</TableHead>
+                  <TableRow className="border-b">
+                    <TableHead className="border-r">Tanggal</TableHead>
+                    <TableHead className="border-r">Tiket</TableHead>
+                    <TableHead className="border-r">Jenis</TableHead>
+                    <TableHead className="border-r">Detail</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredWorkOrders.map((wo, index) => {
+                  {workOrders.map((wo: any, index: number) => {
                     const ticket = wo.ticket;
-                    const StatusIcon = statusConfig[wo.status]?.icon;
+                    const StatusIcon = statusConfig[wo.status as WorkOrderStatus]?.icon;
                     const getTypeIcon = () => {
                       if (wo.type === "sparepart")
                         return <Package className="h-3 w-3" />;
@@ -415,10 +311,10 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="hover:bg-gray-50 cursor-pointer"
+                        className="hover:bg-gray-50 cursor-pointer border-b"
                         onClick={() => handleViewDetail(wo.id)}
                       >
-                        <TableCell>
+                        <TableCell className="border-r">
                           <div className="text-sm">
                             {new Date(wo.createdAt).toLocaleDateString(
                               "id-ID",
@@ -440,7 +336,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                           </div>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="border-r">
                           <div className="font-mono text-sm">
                             {ticket?.ticketNumber || wo.ticketNumber}
                           </div>
@@ -449,7 +345,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                           </div>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="border-r">
                           <Badge
                             variant="outline"
                             className="flex items-center gap-1 w-fit"
@@ -463,7 +359,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                           </Badge>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="border-r">
                           {wo.type === "sparepart" && wo.items && (
                             <div className="text-sm">
                               {(() => {
@@ -490,24 +386,11 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                           )}
                         </TableCell>
 
-                        <TableCell>
-                          <Badge className={statusConfig[wo.status].color}>
+                        <TableCell className="w-32">
+                          <Badge className={statusConfig[wo.status as WorkOrderStatus]?.color}>
                             <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusConfig[wo.status].label}
+                            {statusConfig[wo.status as WorkOrderStatus]?.label}
                           </Badge>
-                        </TableCell>
-
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="link"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDetail(wo.id);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
                         </TableCell>
                       </motion.tr>
                     );
@@ -516,6 +399,68 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
               </Table>
             </div>
           )}
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-gray-500">
+              {pagination.from && pagination.to ? (
+                <>
+                  Menampilkan {pagination.from} - {pagination.to} dari {pagination.total} work order
+                </>
+              ) : (
+                <>Total: {pagination.total} work order</>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page - 1)}
+                disabled={pagination.current_page <= 1 || loading}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Prev
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
+                  .filter((page) => {
+                    // Show first, last, current, and nearby pages
+                    if (page === 1 || page === pagination.last_page) return true;
+                    if (Math.abs(page - pagination.current_page) <= 1) return true;
+                    return false;
+                  })
+                  .map((page, idx, arr) => {
+                    // Add ellipsis if there's a gap
+                    const showEllipsisBefore = idx > 0 && page - arr[idx - 1] > 1;
+                    return (
+                      <React.Fragment key={page}>
+                        {showEllipsisBefore && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <Button
+                          variant={pagination.current_page === page ? "default" : "outline"}
+                          size="sm"
+                          className="w-8 h-8 p-0"
+                          onClick={() => handlePageChange(page)}
+                          disabled={loading}
+                        >
+                          {page}
+                        </Button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.current_page + 1)}
+                disabled={pagination.current_page >= pagination.last_page || loading}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

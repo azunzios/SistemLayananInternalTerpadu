@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
-import { AlertCircle, Search, RotateCcw, Eye, Calendar, Clock, Video, Loader } from 'lucide-react';
+import { AlertCircle, Search, RotateCcw, Eye, Calendar, Clock, Video, Loader, Loader2, Download } from 'lucide-react';
 import type { Ticket, ZoomTicket } from '@/types';
 import { api } from '@/lib/api';
 
@@ -56,12 +56,12 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
     try {
       const response = await api.get<any>('tickets-counts?type=zoom_meeting');
       const statsData = response.counts || response;
-      
+
       // Zoom hanya punya 3 status: pending_review, approved, rejected
       const pending = statsData.pending || 0;
       const approved = (statsData.completed || 0); // approved termasuk dalam completed di backend
       const rejected = statsData.rejected || 0;
-      
+
       setStats({
         total: statsData.total || 0,
         pending: pending,
@@ -82,12 +82,12 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
       query.push(`page=${page}`);
       query.push(`per_page=15`);
       query.push(`type=zoom_meeting`);
-      
+
       // Add search parameter
       if (searchTerm) {
         query.push(`search=${encodeURIComponent(searchTerm)}`);
       }
-      
+
       // Add status filter based on tab
       if (selectedTab === 'pending') {
         query.push(`status=pending_review`);
@@ -99,10 +99,10 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
 
       const url = `tickets?${query.join('&')}`;
       const res: any = await api.get(url);
-      
+
       const data = Array.isArray(res) ? res : (res?.data || []);
       const responseMeta = res?.meta || res;
-      
+
       setZoomTickets(data);
       setPagination({
         total: responseMeta.total || 0,
@@ -134,6 +134,47 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
   const handleRefreshData = async () => {
     await loadStats();
     loadTickets(1);
+  };
+
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      // Get token from sessionStorage (same as api helper)
+      const token = sessionStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const baseUrl = (import.meta.env.VITE_API as string || '').replace(/\/$/, '');
+      const response = await fetch(`${baseUrl}/tickets/export/zoom`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Download file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tiket_zoom_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -182,7 +223,24 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
           <h1 className="text-xl font-semibold flex items-center gap-3">
             Daftar Tiket Zoom Meeting
           </h1>
-          <p className="text-muted-foreground">Kelola semua permintaan booking Zoom meeting</p>
+          <p className="text-muted-foreground text-sm">Kelola semua permintaan booking Zoom meeting</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Button Clean Outline Full Rounded */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all"
+          >
+            {exporting ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-3.5 w-3.5 text-slate-500" />
+            )}
+            Unduh Laporan (.xlsx)
+          </Button>
         </div>
       </div>
 
@@ -190,17 +248,17 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefreshData} 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
               disabled={loading || statsLoading}
               className="h-8"
             >
               <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            
+
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -275,11 +333,11 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                                   <span className="font-mono">{ticket.ticketNumber}</span>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-4 w-4" />
-                                    <span>{ticket.date ? formatDate(ticket.date) : '-'}</span>
+                                    <span>{(ticket as ZoomTicket).date ? formatDate((ticket as ZoomTicket).date) : '-'}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Clock className="h-4 w-4" />
-                                    <span>{ticket.startTime || '-'}</span>
+                                    <span>{(ticket as ZoomTicket).startTime || '-'}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     {getStatusBadge(ticket.status)}
@@ -308,18 +366,18 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                           {pagination && `Halaman ${pagination.current_page} dari ${pagination.last_page} • Menampilkan ${pagination.from}-${pagination.to} dari ${pagination.total}`}
                         </div>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handlePrevPage} 
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePrevPage}
                             disabled={!pagination || pagination.current_page === 1 || loading}
                           >
                             Sebelumnya
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleNextPage} 
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleNextPage}
                             disabled={!pagination || !pagination.has_more || loading}
                           >
                             Berikutnya

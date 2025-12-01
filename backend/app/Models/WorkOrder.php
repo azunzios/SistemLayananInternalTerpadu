@@ -76,11 +76,11 @@ class WorkOrder extends Model
     }
 
     /**
-     * Get valid statuses
+     * Valid statuses: requested, in_procurement, completed, unsuccessful
      */
     public static function getStatuses()
     {
-        return ['requested', 'in_procurement', 'delivered', 'completed', 'failed', 'cancelled'];
+        return ['requested', 'in_procurement', 'completed', 'unsuccessful'];
     }
 
     /**
@@ -93,20 +93,29 @@ class WorkOrder extends Model
 
     /**
      * Check if work order can transition to a specific status
+     * Now allows any transition (flexible) - frontend will handle confirmation
      */
     public function canTransitionTo($newStatus)
     {
-        $currentStatus = $this->status;
-
-        $allowedTransitions = [
-            'requested' => ['in_procurement', 'cancelled'],
-            'in_procurement' => ['delivered', 'failed'],
-            'delivered' => ['completed', 'failed'],
-            'completed' => [],
-            'failed' => ['requested'],
-            'cancelled' => [],
-        ];
-
-        return in_array($newStatus, $allowedTransitions[$currentStatus] ?? []);
+        // Tidak boleh ke status yang sama
+        if ($this->status === $newStatus) {
+            return false;
+        }
+        
+        // Izinkan transisi ke status apapun
+        return in_array($newStatus, self::getStatuses());
+    }
+    
+    /**
+     * Get status label in Indonesian
+     */
+    public static function getStatusLabel($status)
+    {
+        return [
+            'requested' => 'Diajukan',
+            'in_procurement' => 'Dalam Pengadaan',
+            'completed' => 'Selesai',
+            'unsuccessful' => 'Tidak Berhasil',
+        ][$status] ?? $status;
     }
 }

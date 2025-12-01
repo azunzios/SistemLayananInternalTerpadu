@@ -12,7 +12,7 @@ import {
   CheckCircle,
   AlertCircle,
   Package,
-  Sparkles,
+  ToolCase,
   Loader,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -222,19 +222,25 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
+          className="    
+    bg-blue-500 
+    rounded-3xl 
+    p-8 
+    text-white
+    border border-white/30
+    shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
         >
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl mb-2">
                 Teknisi Dashboard
               </h1>
-              <p className="text-blue-600">
+              <p className="text-blue-100">
                 Kelola tugas perbaikan dan tracking progress
               </p>
             </div>
             <div className="hidden md:block">
-              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
+              <ToolCase className="h-20 w-20 text-blue-100 opacity-50"/>
             </div>
           </div>
 
@@ -244,28 +250,28 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
           <div className="flex items-center justify-between">
             {loading ? (
               <div className="w-full flex items-center justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader className="h-6 w-6 animate-spin text-blue-100" />
               </div>
             ) : (
               <>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Perlu Didiagnosa</p>
+                  <p className="text-blue-100 text-sm">Perlu Didiagnosa</p>
                   <p className="text-3xl mt-1 font-bold">{stats.needsDiagnosis}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">In Progress</p>
+                  <p className="text-blue-100 text-sm">In Progress</p>
                   <p className="text-3xl mt-1 font-bold">{stats.inProgress}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">On Hold</p>
+                  <p className="text-blue-100 text-sm">On Hold</p>
                   <p className="text-3xl mt-1 font-bold">{stats.waitingSparepart}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center">
-                  <p className="text-blue-400 text-sm">Selesai</p>
+                  <p className="text-blue-100 text-sm">Selesai</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
                 </div>
               </>

@@ -42,16 +42,27 @@ export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNaviga
 
       {/* Tabs for Booking and Account Management */}
       <Tabs defaultValue="booking" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="booking" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-3 h-auto rounded-full border border-black-400 bg-blue-100 text-slate-500 shadow-sm">
+          <TabsTrigger
+            value="booking"
+            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-none"
+          >
             <Calendar className="h-4 w-4" />
             Kelola Zoom Booking
           </TabsTrigger>
-          <TabsTrigger value="tickets" className="flex items-center gap-2">
+
+          <TabsTrigger
+            value="tickets"
+            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-none"
+          >
             <List className="h-4 w-4" />
             Daftar Tiket Booking
           </TabsTrigger>
-          <TabsTrigger value="accounts" className="flex items-center gap-2">
+
+          <TabsTrigger
+            value="accounts"
+            className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-none"
+          >
             <Settings className="h-4 w-4" />
             Manajemen Akun
           </TabsTrigger>

@@ -110,21 +110,23 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
   // Fetch asset data for perbaikan tickets
   useEffect(() => {
     const fetchAssetData = async () => {
+      // Cast to any untuk akses field spesifik perbaikan
+      const perbaikanTicket = ticket as any;
       if (
         ticket.type !== "perbaikan" ||
-        !ticket.assetCode ||
-        !ticket.assetNUP
+        !perbaikanTicket.assetCode ||
+        !perbaikanTicket.assetNUP
       ) {
         return;
       }
 
       try {
         setLoadingAsset(true);
-        const response = await api.get(
-          `assets/search/by-code-nup?asset_code=${ticket.assetCode}&asset_nup=${ticket.assetNUP}`
+        const response = await api.get<{ asset: any }>(
+          `assets/search/by-code-nup?asset_code=${perbaikanTicket.assetCode}&asset_nup=${perbaikanTicket.assetNUP}`
         );
-        if (response.asset) {
-          setAssetData(response.asset);
+        if ((response as any).asset) {
+          setAssetData((response as any).asset);
         }
       } catch (error) {
         console.error("Error fetching asset data:", error);
@@ -134,7 +136,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
     };
 
     fetchAssetData();
-  }, [ticket.type, ticket.assetCode, ticket.assetNUP]);
+  }, [ticket]);
 
   // Fetch complete diagnosis data when modal opens
   const handleOpenDiagnosisModal = async () => {
@@ -142,9 +144,9 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
     try {
       setLoadingDiagnosis(true);
-      const response = await api.get(`/tickets/${ticket.id}/diagnosis`);
-      if (response.success && response.data) {
-        setDiagnosisData(response.data);
+      const response = await api.get<{ success: boolean; data: any }>(`/tickets/${ticket.id}/diagnosis`);
+      if ((response as any).success && (response as any).data) {
+        setDiagnosisData((response as any).data);
       }
     } catch (error) {
       console.error("Error fetching diagnosis data:", error);
@@ -174,12 +176,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                 ticket.status
               )
                 ? "default"
-                : [
-                    "closed_unrepairable",
-                    "ditolak",
-                    "rejected",
-                    "dibatalkan",
-                  ].includes(ticket.status)
+                : ["rejected", "cancelled"].includes(ticket.status)
                 ? "destructive"
                 : "secondary"
             }
@@ -196,6 +193,31 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
             <div>
               <h4 className="text-sm mb-3">Informasi Tiket</h4>
               <div className="space-y-3 text-sm">
+                {ticket.type === "perbaikan" && (ticket as any).severity && (
+                  <div className="flex gap-2">
+                    <span className="text-gray-500 w-32">Prioritas:</span>
+                    <Badge
+                      className={
+                        (ticket as any).severity === "critical"
+                          ? "bg-red-100 text-red-800"
+                          : (ticket as any).severity === "high"
+                          ? "bg-orange-100 text-orange-800"
+                          : (ticket as any).severity === "normal"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      }
+                    >
+                      {(ticket as any).severity === "critical"
+                        ? "Critical"
+                        : (ticket as any).severity === "high"
+                        ? "High"
+                        : (ticket as any).severity === "normal"
+                        ? "Normal"
+                        : "Low"}
+                    </Badge>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <span className="text-gray-500 w-32">Title:</span>
                   <span>{ticket.title}</span>
@@ -254,23 +276,6 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
               </>
             )}
 
-            {/* Tampilkan alasan unrepairable jika ada */}
-            {ticket.type === "perbaikan" &&
-              ticket.status === "closed_unrepairable" &&
-              (ticket as any).unrepairableReason && (
-                <>
-                  <Separator />
-                  <div className="border border-orange-200 bg-orange-50 p-3 rounded-lg">
-                    <h4 className="text-sm font-semibold text-orange-900 mb-2">
-                      Tidak Dapat Diperbaiki
-                    </h4>
-                    <p className="text-sm text-orange-700 whitespace-pre-wrap">
-                      {(ticket as any).unrepairableReason}
-                    </p>
-                  </div>
-                </>
-              )}
-
             {attachmentList.length > 0 && (
               <div>
                 <h4 className="text-sm mb-2">File Terlampir</h4>
@@ -304,16 +309,16 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                 <div>
                   <h4 className="text-sm mb-3">Informasi Barang</h4>
                   <div className="space-y-2 text-sm">
-                    {ticket.assetCode && (
+                    {(ticket as any).assetCode && (
                       <div className="flex gap-2">
                         <span className="text-gray-500 w-32">Kode Barang:</span>
-                        <span className="font-mono">{ticket.assetCode}</span>
+                        <span className="font-mono">{(ticket as any).assetCode}</span>
                       </div>
                     )}
-                    {ticket.assetNUP && (
+                    {(ticket as any).assetNUP && (
                       <div className="flex gap-2">
                         <span className="text-gray-500 w-32">NUP:</span>
-                        <span className="font-mono">{ticket.assetNUP}</span>
+                        <span className="font-mono">{(ticket as any).assetNUP}</span>
                       </div>
                     )}
                     {loadingAsset ? (
@@ -339,17 +344,17 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                         <span>{assetData.merk_tipe}</span>
                       </div>
                     )}
-                    {ticket.assetLocation && (
+                    {(ticket as any).assetLocation && (
                       <div className="flex gap-2">
                         <span className="text-gray-500 w-32">Lokasi:</span>
-                        <span>{ticket.assetLocation}</span>
+                        <span>{(ticket as any).assetLocation}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Diagnosis Button */}
-                {ticket.type === "perbaikan" && ticket.diagnosis && (
+                {ticket.type === "perbaikan" && (ticket as any).diagnosis && (
                   <Button
                     variant="outline"
                     onClick={handleOpenDiagnosisModal}
@@ -439,7 +444,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
             <div>
               <h4 className="text-sm mb-3">Diskusi</h4>
-              <ScrollArea className="h-[500px] border rounded-lg p-4 bg-gray-50">
+              <ScrollArea className="h-[500px] p-4 bg-gray-50">
                 <div className="space-y-3">
                   {comments && comments.length > 0 ? (
                     <>

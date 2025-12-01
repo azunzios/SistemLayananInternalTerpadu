@@ -67,12 +67,12 @@ export const AdminPenyediaKartuKendali: React.FC = () => {
               ticketNumber: wo.ticket.ticketNumber,
               title: wo.ticket.title,
               data: {
-                asset_code: wo.ticket.assetCode,
-                asset_nup: wo.ticket.assetNUP,
+                asset_code: (wo.ticket as any).assetCode,
+                asset_nup: (wo.ticket as any).assetNUP,
                 asset_name: wo.ticket.title,
                 asset_merk:
-                  wo.ticket.formData?.asset_merk ||
-                  wo.ticket.formData?.merk ||
+                  (wo.ticket as any).formData?.asset_merk ||
+                  (wo.ticket as any).formData?.merk ||
                   "",
               },
             }

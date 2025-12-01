@@ -1,4 +1,26 @@
 // type definition buat aplikasi ini
+/* Catatan status tiket perbaikan
+sebenarnya cuma ada 3 sekarang,
+yaitu:
+semua, pending, diproses, selesai
+
+untuk semua:
+semua status
+pending: status==submitted
+
+diproses:
+status==assigned, in_progress, on_hold, waiting_for_submitter
+
+selesai:
+closed
+
+untuk zoom:
+pending: pending_review,
+selesai: approved, rejected, cancelled
+
+dan berikan juga arti arti status itu
+*/
+
 
 export type UserRole =
   | "super_admin"
@@ -213,6 +235,7 @@ export type WorkOrderStatus =
   | "in_procurement"
   | "completed"
   | "unsuccessful";
+  
 export interface WorkOrder {
   id: string;
   ticketId: string;
@@ -237,6 +260,10 @@ export interface WorkOrder {
   licenseName?: string;
   licenseDescription?: string;
 
+  // Completion notes & failure reason
+  completionNotes?: string;
+  failureReason?: string;
+
   // Vendor details (old structure - for backwards compatibility)
   vendorInfo?: {
     name?: string;
@@ -250,7 +277,6 @@ export interface WorkOrder {
 
   // Delivery/completion info
   completedAt?: string;
-  failureReason?: string;
 
   timeline: TimelineEvent[];
 }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,27 +14,18 @@ import {
   AlertCircle,
   Search,
   RotateCcw,
-  Eye,
   Calendar,
-  Clock,
   Wrench,
   Video,
-  Loader,
+  Info,
 } from "lucide-react";
 import type { Ticket, User } from "@/types";
 import { api } from "@/lib/api";
+import { StatusInfoDialog } from "./status-info-dialog";
 
 interface MyTicketsViewProps {
   currentUser: User;
   onViewTicket: (ticketId: string) => void;
-}
-
-interface TicketStats {
-  total: number;
-  pending: number;
-  in_progress: number;
-  completed: number;
-  rejected: number;
 }
 
 interface PaginationMeta {
@@ -54,20 +44,11 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [selectedTab, setSelectedTab] = useState<
-    "all" | "pending" | "inProgress" | "completed"
-  >("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [stats, setStats] = useState<TicketStats>({
-    total: 0,
-    pending: 0,
-    in_progress: 0,
-    completed: 0,
-    rejected: 0,
-  });
+  const [showStatusInfo, setShowStatusInfo] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(true);
 
   // Determine scope based on user role
   const userRoles = Array.isArray(currentUser.roles)
@@ -76,43 +57,17 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
     ? JSON.parse(currentUser.roles)
     : [];
   const isTeknisi = userRoles.includes("teknisi");
-  const scope = isTeknisi ? "assigned" : "my"; // teknisi: assigned_to, pegawai: user_id
+  const scope = isTeknisi ? "assigned" : "my"; // teknisi: assigned_to, pegawai: my
 
-  // Load statistics on mount
+  // Reset filterStatus ketika filterType berubah
   useEffect(() => {
-    loadStats();
-  }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
+    setFilterStatus("all");
+  }, [filterType]);
 
-  // Load tickets when tab, searchTerm, or filterType changes
+  // Load tickets when filterStatus, searchTerm, or filterType changes
   useEffect(() => {
     loadTickets(1);
-  }, [selectedTab, searchTerm, filterType, scope]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadStats = async () => {
-    setStatsLoading(true);
-    try {
-      const params: string[] = [`scope=${scope}`];
-      if (filterType !== "all") {
-        params.push(`type=${filterType}`);
-      }
-      const response = await api.get<any>(
-        `tickets-counts${params.length ? `?${params.join("&")}` : ""}`
-      );
-      // Response bisa langsung berisi properties atau nested dalam 'counts'
-      const statsData = response.counts || response;
-      setStats({
-        total: statsData.total || 0,
-        pending: statsData.pending || 0,
-        in_progress: statsData.in_progress || 0,
-        completed: statsData.completed || 0,
-        rejected: statsData.rejected || 0,
-      });
-    } catch (err) {
-      console.error("Failed to load ticket stats:", err);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+  }, [filterStatus, searchTerm, filterType, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTickets = async (page: number = 1) => {
     setLoading(true);
@@ -126,18 +81,34 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
         query.push(`search=${encodeURIComponent(searchTerm)}`);
       }
 
-      // Add type filter
-      if (filterType !== "all") {
+      // Add type filter - teknisi hanya handle perbaikan
+      const effectiveType = isTeknisi ? "perbaikan" : filterType;
+      if (isTeknisi) {
+        query.push(`type=perbaikan`);
+      } else if (filterType !== "all") {
         query.push(`type=${filterType}`);
       }
 
-      // Add status filter based on tab
-      if (selectedTab === "pending") {
-        query.push(`status=pending`);
-      } else if (selectedTab === "inProgress") {
-        query.push(`status=in_progress`);
-      } else if (selectedTab === "completed") {
-        query.push(`status=completed`);
+      // Add status filter based on filterStatus dan tipe tiket
+      if (filterStatus !== "all") {
+        if (effectiveType === "perbaikan" || effectiveType === "all") {
+          // Perbaikan: pending=submitted, diproses=assigned/in_progress/on_hold/waiting_for_submitter, selesai=closed
+          if (filterStatus === "pending") {
+            query.push(`status=submitted`);
+          } else if (filterStatus === "inProgress") {
+            query.push(`status=assigned,in_progress,on_hold,waiting_for_submitter`);
+          } else if (filterStatus === "completed") {
+            query.push(`status=closed`);
+          }
+        }
+        if (effectiveType === "zoom_meeting") {
+          // Zoom: pending=pending_review, selesai=approved/rejected/cancelled
+          if (filterStatus === "pending") {
+            query.push(`status=pending_review`);
+          } else if (filterStatus === "completed") {
+            query.push(`status=approved,rejected,cancelled`);
+          }
+        }
       }
 
       // Force scope based on user role (teknisi: assigned, pegawai: my)
@@ -180,8 +151,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
     loadTickets(pagination.current_page + 1);
   };
 
-  const handleRefreshData = async () => {
-    await loadStats();
+  const handleRefreshData = () => {
     loadTickets(1);
   };
 
@@ -243,38 +213,27 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
         </div>
       </div>
 
-      {/* Filter Controls */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshData}
-              disabled={loading || statsLoading}
-              className="h-8"
-            >
-              <RotateCcw
-                className={`h-4 w-4 ${
-                  loading || statsLoading ? "animate-spin" : ""
-                }`}
-              />
-              Refresh
-            </Button>
+  {/* Filter Controls */}
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 w-full">
+          
+          {/* 1. Search - flex-1 agar mengisi sisa ruang (paling panjang) */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Cari tiket..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-10 text-sm w-full"
+            />
+          </div>
 
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Cari tiket..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-8 text-xs"
-              />
-            </div>
-
+          {/* 2. Filter Tipe - Fixed width & tidak menyusut */}
+          {!isTeknisi && (
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[150px] h-8 text-xs">
-                <SelectValue placeholder="Filter Tipe" />
+              <SelectTrigger className="h-10 text-sm w-36 flex-shrink-0">
+                <SelectValue placeholder="Tipe" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Tipe</SelectItem>
@@ -282,184 +241,195 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                 <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
+          )}
 
-      {/* Tickets Tabs */}
+          {/* 3. Filter Status - Fixed width & tidak menyusut */}
+          <Select
+            value={filterType === "all" ? "all" : filterStatus}
+            onValueChange={setFilterStatus}
+            disabled={filterType === "all"}
+          >
+            <SelectTrigger
+              className="h-10 text-sm w-36 flex-shrink-0"
+              title={filterType === "all" ? "Pilih tipe tiket terlebih dahulu" : undefined}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {filterType === "perbaikan" ? (
+                <>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="inProgress">Diproses</SelectItem>
+                  <SelectItem value="completed">Selesai</SelectItem>
+                </>
+              ) : filterType === "zoom_meeting" ? (
+                <>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="completed">Selesai</SelectItem>
+                </>
+              ) : (
+                <SelectItem value="all">Semua</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+
+          {/* 4. Action Buttons - Fixed size & tidak menyusut */}
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowStatusInfo(true)}
+              className="h-10 w-10"
+              title="Informasi Status"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefreshData}
+              disabled={loading}
+              className="h-10 w-10"
+              title="Refresh"
+            >
+              <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+
+        </div>
+      </CardContent>
+    </Card>
+      {/* Tickets List */}
       <Card>
         <CardContent className="p-4">
-          <Tabs
-            value={selectedTab}
-            onValueChange={(val) => setSelectedTab(val as any)}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="all">
-                Semua{" "}
-                {statsLoading ? (
-                  <Loader className="h-3 w-3 animate-spin ml-1" />
-                ) : (
-                  `(${stats.total})`
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="pending">
-                Pending{" "}
-                {statsLoading ? (
-                  <Loader className="h-3 w-3 animate-spin ml-1" />
-                ) : (
-                  `(${stats.pending})`
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="inProgress">
-                Diproses{" "}
-                {statsLoading ? (
-                  <Loader className="h-3 w-3 animate-spin ml-1" />
-                ) : (
-                  `(${stats.in_progress})`
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="completed">
-                Selesai{" "}
-                {statsLoading ? (
-                  <Loader className="h-3 w-3 animate-spin ml-1" />
-                ) : (
-                  `(${stats.completed})`
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            {(["all", "pending", "inProgress", "completed"] as const).map(
-              (tab) => (
-                <TabsContent key={tab} value={tab} className="mt-4">
-                  {loading ? (
-                    <Card>
-                      <CardContent className="flex items-center justify-center py-16">
-                        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
-                      </CardContent>
-                    </Card>
-                  ) : tickets.length === 0 ? (
-                    <Card>
-                      <CardContent className="flex flex-col items-center justify-center py-16">
-                        <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">
-                          Tidak ada tiket
-                        </h3>
-                        <p className="text-muted-foreground text-center">
-                          {tab === "all" && "Belum ada tiket yang dibuat"}
-                          {tab === "pending" && "Tidak ada tiket pending"}
-                          {tab === "inProgress" &&
-                            "Tidak ada tiket dalam proses"}
-                          {tab === "completed" && "Tidak ada tiket selesai"}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="grid gap-4">
-                        {tickets.map((ticket) => (
-                          <Card
-                            key={ticket.id}
-                            className="hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => onViewTicket(ticket.id)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                      {React.createElement(
-                                        getTypeIcon(ticket.type),
-                                        {
-                                          className: `h-5 w-5 ${
-                                            ticket.type === "perbaikan"
-                                              ? "text-orange-600"
-                                              : "text-purple-600"
-                                          }`,
-                                        }
-                                      )}
-                                      <h3 className="font-semibold text-lg">
-                                        {ticket.title}
-                                      </h3>
-                                    </div>
-                                    <Badge
-                                      className={getTypeColor(ticket.type)}
-                                    >
-                                      {getTypeLabel(ticket.type)}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    <span className="font-mono">
-                                      {ticket.ticketNumber}
-                                    </span>
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-4 w-4" />
-                                      <span>
-                                        {formatDate(ticket.createdAt)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="h-4 w-4" />
-                                      {getStatusBadge(ticket.status)}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex-shrink-0">
-                                  <Button
-                                    variant="link"
-                                    size="sm"
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-
-                      {/* Pagination */}
-                      {pagination && pagination.last_page > 1 && (
-                        <Card>
-                          <CardContent className="flex items-center justify-between py-4">
-                            <div className="text-sm text-muted-foreground">
-                              Halaman {pagination.current_page} dari{" "}
-                              {pagination.last_page} • Menampilkan{" "}
-                              {pagination.from}-{pagination.to} dari{" "}
-                              {pagination.total}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handlePrevPage}
-                                disabled={
-                                  pagination.current_page === 1 || loading
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-foreground"></div>
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Tidak ada tiket
+              </h3>
+              <p className="text-muted-foreground text-center">
+                {filterStatus === "all" && "Belum ada tiket yang dibuat"}
+                {filterStatus === "pending" && "Tidak ada tiket pending"}
+                {filterStatus === "inProgress" &&
+                  "Tidak ada tiket dalam proses"}
+                {filterStatus === "completed" && "Tidak ada tiket selesai"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid gap-4">
+                {tickets.map((ticket) => (
+                  <Card
+                    key={ticket.id}
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => onViewTicket(ticket.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              {React.createElement(
+                                getTypeIcon(ticket.type),
+                                {
+                                  className: `h-5 w-5 ${
+                                    ticket.type === "perbaikan"
+                                      ? "text-orange-600"
+                                      : "text-purple-600"
+                                  }`,
                                 }
-                              >
-                                Sebelumnya
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleNextPage}
-                                disabled={!pagination.has_more || loading}
-                              >
-                                Berikutnya
-                              </Button>
+                              )}
+                              <h3 className="font-semibold text-lg">
+                                {ticket.title}
+                              </h3>
                             </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-              )
-            )}
-          </Tabs>
+                            <Badge
+                              className={getTypeColor(ticket.type)}
+                            >
+                              {getTypeLabel(ticket.type)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="font-mono">
+                              {ticket.ticketNumber}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>
+                                {formatDate(ticket.createdAt)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {getStatusBadge(ticket.status)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Pagination - selalu tampilkan */}
+              <Card>
+                <CardContent className="flex items-center justify-between py-4">
+                  <div className="text-sm text-muted-foreground">
+                    {pagination ? (
+                      <>
+                        Halaman {pagination.current_page} dari{" "}
+                        {pagination.last_page} • Menampilkan{" "}
+                        {pagination.from}-{pagination.to} dari{" "}
+                        {pagination.total}
+                      </>
+                    ) : (
+                      "Memuat..."
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePrevPage}
+                      disabled={
+                        !pagination || pagination.current_page === 1 || loading
+                      }
+                    >
+                      Sebelumnya
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={!pagination || !pagination.has_more || loading}
+                    >
+                      Berikutnya
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Status Info Dialog */}
+      <StatusInfoDialog open={showStatusInfo} onOpenChange={setShowStatusInfo} />
     </div>
   );
 };

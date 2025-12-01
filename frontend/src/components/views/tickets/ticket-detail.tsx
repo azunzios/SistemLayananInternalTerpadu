@@ -1,9 +1,6 @@
 import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TicketProgressTracker } from "./ticket-progress-tracker";
 import { TicketProgressTrackerZoom } from "./ticket-progress-tracker-zoom";
 import { WorkOrderForm } from "@/components/views/work-orders/work-order-form";
@@ -33,17 +30,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertCircle } from "lucide-react";
 import type { User } from "@/types";
-type TicketStatus = any;
 import { motion } from "motion/react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import {
   getTickets,
-  saveTickets,
   getUsersSync,
-  addNotification,
-  createWorkOrder,
   getWorkOrdersByTicket,
 } from "@/lib/storage";
 import type { ViewType } from "@/components/main-layout";
@@ -55,7 +48,6 @@ import {
   useAdminLayananDialogs,
   useDiagnosaDialogs,
   useWorkOrderDialogs,
-  useProgressDialog,
   useCommentState,
   useZoomReviewModal,
 } from "./ticket-detail-hooks";
@@ -85,7 +77,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const adminDialogs = useAdminLayananDialogs();
   const diagnosaDialog = useDiagnosaDialogs();
   const workOrderDialog = useWorkOrderDialogs();
-  const progressDialog = useProgressDialog();
   const { comment, setComment } = useCommentState();
   const { showZoomReviewModal, setShowZoomReviewModal } = useZoomReviewModal();
   const {
@@ -257,23 +248,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     }
   };
 
-  const handleComplete = async () => {
-    try {
-      // Update ticket status to closed via API
-      await api.patch(`tickets/${ticketId}/status`, {
-        status: "closed",
-        notes: "Tiket dikonfirmasi selesai oleh pegawai",
-      });
-
-      toast.success("Terima kasih atas konfirmasinya! Tiket telah ditutup.");
-      setRefreshKey((prev) => prev + 1);
-      setTimeout(() => onBack(), 1000);
-    } catch (error: any) {
-      console.error("Failed to complete ticket:", error);
-      toast.error(error.response?.data?.message || "Gagal menutup tiket");
-    }
-  };
-
   const handleAddComment = async () => {
     if (!comment.trim()) {
       toast.error("Komentar tidak boleh kosong");
@@ -323,126 +297,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         setDiagnosisSubmitCallback(null);
       }
     }
-  };
-
-  // === TEKNISI HANDLERS ===
-
-  const handleCreateWorkOrder = () => {
-    if (workOrderDialog.workOrderType === "sparepart") {
-      if (
-        !workOrderDialog.sparepartName.trim() ||
-        !workOrderDialog.sparepartDescription.trim()
-      ) {
-        toast.error("Nama sparepart dan deskripsi harus diisi");
-        return;
-      }
-    } else {
-      if (!workOrderDialog.sparepartDescription.trim()) {
-        toast.error("Deskripsi pekerjaan harus diisi");
-        return;
-      }
-    }
-    createWorkOrder({
-      ticketId: ticket.id,
-      type: workOrderDialog.workOrderType,
-      createdBy: currentUser.id,
-      spareparts:
-        workOrderDialog.workOrderType === "sparepart"
-          ? [
-            {
-              name: workOrderDialog.sparepartName,
-              quantity: 1,
-              unit: "unit",
-              remarks: workOrderDialog.sparepartDescription,
-            },
-          ]
-          : undefined,
-      vendorInfo:
-        workOrderDialog.workOrderType === "vendor"
-          ? {
-            description: workOrderDialog.sparepartDescription,
-          }
-          : undefined,
-    });
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: "on_hold" as TicketStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "WORK_ORDER_CREATED",
-              actor: currentUser.name,
-              details: `Work order ${workOrderDialog.workOrderType} dibuat`,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    const adminLayanan = users.filter((u) => u.role === "admin_layanan");
-    adminLayanan.forEach((admin) => {
-      addNotification({
-        userId: admin.id,
-        title: "Work Order Baru",
-        message: `Work order ${workOrderDialog.workOrderType} untuk tiket ${ticket.ticketNumber}`,
-        type: "info",
-        read: false,
-      });
-    });
-    toast.success(`Work Order berhasil dibuat`);
-    workOrderDialog.setShowSparepartDialog(false);
-    workOrderDialog.setSparepartName("");
-    workOrderDialog.setSparepartDescription("");
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleUpdateProgress = () => {
-    if (
-      progressDialog.newStatus === "tidak_dapat_diperbaiki" &&
-      !progressDialog.progressNotes.trim()
-    ) {
-      toast.error("Catatan wajib diisi");
-      return;
-    }
-    const isClosed = progressDialog.newStatus === "tidak_dapat_diperbaiki";
-    const updatedTickets = tickets.map((t) => {
-      if (t.id === ticketId) {
-        return {
-          ...t,
-          status: progressDialog.newStatus,
-          updatedAt: new Date().toISOString(),
-          timeline: [
-            ...t.timeline,
-            {
-              id: Date.now().toString(),
-              timestamp: new Date().toISOString(),
-              action: "STATUS_UPDATE",
-              actor: currentUser.name,
-              details: progressDialog.progressNotes,
-            },
-          ],
-        };
-      }
-      return t;
-    });
-    saveTickets(updatedTickets);
-    addNotification({
-      userId: ticket.userId,
-      title: isClosed ? "Tiket Ditutup" : "Progress Update",
-      message: progressDialog.progressNotes,
-      type: isClosed ? "error" : "info",
-      read: false,
-    });
-    toast.success(isClosed ? "Tiket ditutup" : "Progress updated");
-    progressDialog.setShowProgressDialog(false);
-    progressDialog.setProgressNotes("");
-    if (isClosed) setTimeout(() => onBack(), 1000);
   };
 
   // === RENDER ===
@@ -644,7 +498,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         onOpenChange={(open) => {
           diagnosaDialog.setShowDiagnosaDialog(open);
         }}
-        existingDiagnosis={ticket.diagnosis || null}
+        existingDiagnosis={(ticket as any).diagnosis || null}
         onDiagnosisSubmitted={() => {
           setRefreshKey((prev) => prev + 1);
         }}
@@ -664,50 +518,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
           setRefreshKey((prev) => prev + 1);
         }}
       />
-
-      {/* Progress */}
-      <Dialog
-        open={progressDialog.showProgressDialog}
-        onOpenChange={progressDialog.setShowProgressDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Progress</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Select
-              value={progressDialog.newStatus}
-              onValueChange={(val) => progressDialog.setNewStatus(val as any)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sedang_diagnosa">Sedang Diagnosa</SelectItem>
-                <SelectItem value="dalam_perbaikan">Dalam Perbaikan</SelectItem>
-                <SelectItem value="tidak_dapat_diperbaiki">
-                  Tidak Dapat Diperbaiki
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Textarea
-              placeholder="Catatan..."
-              value={progressDialog.progressNotes}
-              onChange={(e) => progressDialog.setProgressNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => progressDialog.setShowProgressDialog(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleUpdateProgress}>Update</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Zoom Modal */}
       {showZoomReviewModal && ticket.type === "zoom_meeting" && (
