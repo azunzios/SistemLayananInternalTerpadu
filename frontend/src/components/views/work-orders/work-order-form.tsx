@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, Users, Key, Plus, X, Loader2 } from "lucide-react";
+import { Package, Users, Key, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
@@ -41,7 +41,6 @@ interface WorkOrderFormProps {
   ticketStatus?: string;
   workOrderCount?: number;
   onSuccess: () => void;
-  existingWorkOrders?: any[];
 }
 
 export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
@@ -51,7 +50,6 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   ticketStatus = "in_progress",
   workOrderCount = 0,
   onSuccess,
-  existingWorkOrders = [],
 }) => {
   const [type, setType] = useState<"sparepart" | "vendor" | "license">(
     "sparepart"
@@ -74,7 +72,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   const fetchWorkOrders = async () => {
     setIsLoadingWorkOrders(true);
     try {
-      const response = await api.get(`/tickets/${ticketId}/work-orders`);
+      const response = await api.get(`/tickets/${ticketId}/work-orders`) as { success?: boolean; data?: any[] };
       if (response.success && Array.isArray(response.data)) {
         setWorkOrders(response.data);
       } else if (Array.isArray(response.data)) {

@@ -9,10 +9,8 @@ import {
   Shield,
   Database,
   BarChart3,
-  AlertTriangle,
   CheckCircle,
   Clock,
-  Package,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
@@ -61,7 +59,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       pendingTickets: tickets.filter(t =>
         ['menunggu_review', 'pending_approval', 'menunggu_verifikasi_penyedia'].includes(t.status)
       ).length,
-      completedTickets: tickets.filter(t => t.status === 'selesai').length,
+      completedTickets: tickets.filter(t => t.status === 'closed').length,
       rejectedTickets: tickets.filter(t => ['ditolak', 'rejected'].includes(t.status)).length,
       ticketsLast7Days: tickets.filter(t => new Date(t.createdAt) >= last7Days).length,
       ticketsLast30Days: tickets.filter(t => new Date(t.createdAt) >= last30Days).length,
@@ -136,7 +134,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       last7Days.push({
         date: dateStr,
         tickets: dayTickets.length,
-        completed: dayTickets.filter(t => t.status === 'selesai').length,
+        completed: dayTickets.filter(t => t.status === 'closed').length,
       });
     }
     return last7Days;
@@ -288,12 +286,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {ticketsByType.map((entry, index) => (
+                  {ticketsByType.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -353,7 +351,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full justify-start gap-2" onClick={() => onNavigate('user-management')}>
+            <Button className="w-full justify-start gap-2" onClick={() => onNavigate('users')}>
               <Users className="h-4 w-4" />
               Manage Users
             </Button>

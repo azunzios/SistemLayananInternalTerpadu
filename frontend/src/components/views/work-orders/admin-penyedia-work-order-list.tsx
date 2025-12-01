@@ -41,10 +41,8 @@ interface AdminPenyediaWorkOrderListProps {
 const statusConfig: Record<WorkOrderStatus, { label: string; color: string; icon: any }> = {
   requested: { label: 'Diminta', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
   in_procurement: { label: 'Dalam Pengadaan', color: 'bg-blue-100 text-blue-800', icon: Package },
-  delivered: { label: 'Sudah Dikirim', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   completed: { label: 'Selesai', color: 'bg-gray-100 text-gray-800', icon: CheckCircle },
-  failed: { label: 'Gagal', color: 'bg-red-100 text-red-800', icon: XCircle },
-  cancelled: { label: 'Dibatalkan', color: 'bg-gray-100 text-gray-600', icon: XCircle },
+  unsuccessful: { label: 'Gagal', color: 'bg-red-100 text-red-800', icon: XCircle },
 };
 
 export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProps> = ({
@@ -102,8 +100,8 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
       total: allWorkOrders.length,
       requested: allWorkOrders.filter(wo => wo.status === 'requested').length,
       in_procurement: allWorkOrders.filter(wo => wo.status === 'in_procurement').length,
-      delivered: allWorkOrders.filter(wo => wo.status === 'delivered').length,
       completed: allWorkOrders.filter(wo => wo.status === 'completed').length,
+      unsuccessful: allWorkOrders.filter(wo => wo.status === 'unsuccessful').length,
     };
   }, [allWorkOrders]);
 
@@ -141,8 +139,8 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
       timeline,
     };
 
-    // Add completion data if status is delivered or completed
-    if (updateStatus === 'delivered' || updateStatus === 'completed') {
+    // Add completion data if status is completed
+    if (updateStatus === 'completed') {
       updates.completedAt = new Date().toISOString();
       if (updateNotes) {
         if (selectedWO.type === 'vendor') {
@@ -151,13 +149,13 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
             completionNotes: updateNotes,
           };
         } else {
-          updates.receivedRemarks = updateNotes;
+          updates.completionNotes = updateNotes;
         }
       }
     }
 
-    // Add failure reason if status is failed
-    if (updateStatus === 'failed' && updateNotes) {
+    // Add failure reason if status is unsuccessful
+    if (updateStatus === 'unsuccessful' && updateNotes) {
       updates.failureReason = updateNotes;
     }
 
@@ -167,13 +165,11 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
     const teknisi = getTeknisiInfo(selectedWO.createdBy);
     if (teknisi) {
       addNotification({
-        id: `notif-${Date.now()}`,
         userId: teknisi.id,
         title: 'Update Work Order',
         message: `Work Order ${selectedWO.type === 'sparepart' ? 'Sparepart' : 'Vendor'} telah diupdate: ${statusConfig[updateStatus].label}`,
         type: 'info',
         read: false,
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -237,10 +233,10 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Dikirim</p>
-                <p className="text-2xl mt-1">{stats.delivered}</p>
+                <p className="text-sm text-gray-600">Gagal</p>
+                <p className="text-2xl mt-1">{stats.unsuccessful}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-400" />
+              <CheckCircle className="h-8 w-8 text-red-400" />
             </div>
           </CardContent>
         </Card>
@@ -391,7 +387,7 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
                                 <div>
                                   <div>{wo.spareparts[0]?.name}</div>
                                   <div className="text-xs text-gray-500">
-                                    Qty: {wo.spareparts[0]?.qty} {wo.spareparts[0]?.unit}
+                                    Qty: {wo.spareparts[0]?.quantity} {wo.spareparts[0]?.unit}
                                   </div>
                                 </div>
                               )}
@@ -479,7 +475,7 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
                           <div key={idx} className="text-sm bg-gray-50 p-2 rounded">
                             <div className="font-medium">{sp.name}</div>
                             <div className="text-xs text-gray-600">
-                              Qty: {sp.qty} {sp.unit}
+                              Qty: {sp.quantity} {sp.unit}
                               {sp.remarks && ` • ${sp.remarks}`}
                             </div>
                           </div>

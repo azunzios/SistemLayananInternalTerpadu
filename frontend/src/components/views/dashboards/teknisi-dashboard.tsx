@@ -6,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle,
@@ -36,7 +35,7 @@ interface TeknisiDashboardProps {
 
 export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
   currentUser,
-  onNavigate,
+  onNavigate: _onNavigate,
 }) => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,67 +97,6 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     };
   }, [myTickets]);
 
-  // Recent assignments - Updated for new status values
-  const recentAssignments = useMemo(() => {
-    return myTickets
-      .filter((t) =>
-        [
-          "assigned",
-          "submitted",
-          "pending_review",
-          "in_progress",
-          "on_hold",
-        ].includes(t.status)
-      )
-      .sort((a, b) => {
-        // Priority: assigned > submitted/pending_review > in_progress > on_hold
-        const statusOrder: Record<string, number> = {
-          assigned: 0,
-          submitted: 1,
-          pending_review: 1,
-          in_progress: 2,
-          on_hold: 3,
-        };
-        const statusDiff =
-          (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
-        if (statusDiff !== 0) return statusDiff;
-
-        // Then by creation date (newest first)
-        return (
-          new Date(b.createdAt || b.created_at).getTime() -
-          new Date(a.createdAt || a.created_at).getTime()
-        );
-      })
-      .slice(0, 8);
-  }, [myTickets]);
-
-  // Completion trend
-  const completionTrend = useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-      });
-
-      const dayTickets = myTickets.filter((t) => {
-        const ticketDate = new Date(t.updatedAt || t.updated_at);
-        return (
-          ticketDate.toDateString() === date.toDateString() &&
-          ["waiting_for_submitter", "closed"].includes(t.status)
-        );
-      });      
-      
-      last7Days.push({
-        date: dateStr,
-        completed: dayTickets.length,
-      });
-    }
-    return last7Days;
-  }, [myTickets]);
-
   // Incoming tickets trend (per hari)
   const incomingTrend = useMemo(() => {
     const last7Days = [];
@@ -182,38 +120,6 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     }
     return last7Days;
   }, [myTickets]);
-
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: any; label: string }> = {
-      assigned: { variant: "secondary", label: "Assigned" },
-      submitted: { variant: "secondary", label: "Submitted" },
-      pending_review: { variant: "secondary", label: "Pending Review" },
-      in_progress: { variant: "default", label: "In Progress" },
-      on_hold: { variant: "secondary", label: "On Hold" },
-      waiting_for_submitter: { variant: "default", label: "Waiting Confirmation" },
-      closed: { variant: "default", label: "Closed" },
-    };
-    const statusConfig = config[status] || {
-      variant: "secondary",
-      label: status,
-    };
-    return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    const config = {
-      sangat_mendesak: { variant: "destructive" as const, label: "Urgent" },
-      mendesak: { variant: "default" as const, label: "High" },
-      normal: { variant: "outline" as const, label: "Normal" },
-    };
-    const urgencyConfig =
-      config[urgency as keyof typeof config] || config.normal;
-    return (
-      <Badge variant={urgencyConfig.variant} className="text-xs">
-        {urgencyConfig.label}
-      </Badge>
-    );
-  };
 
   return (
     <>

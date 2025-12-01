@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -84,7 +83,7 @@ interface PaginationMeta {
 }
 
 export const WorkOrderList: React.FC<WorkOrderListProps> = ({
-  currentUser,
+  currentUser: _currentUser,
 }) => {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(false);

@@ -5,7 +5,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Filter,
   Upload,
   Download,
 } from "lucide-react";
@@ -49,7 +48,7 @@ interface AssetBMN {
 }
 
 interface BmnAssetManagementProps {
-  currentUser: { id: number; role: string };
+  currentUser: { id: string; role: string };
 }
 
 export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {

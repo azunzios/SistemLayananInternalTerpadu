@@ -81,7 +81,7 @@ const SectionCard = ({
   iconColorClass = "text-slate-600",
   headerBgClass = "bg-slate-50/80",
   rightElement = null,
-  className = ""
+  className = "gap-0"
 }: {
   icon: any,
   title: string,
@@ -372,8 +372,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
               title="Status Penyelesaian" 
               iconColorClass="text-green-600"
               headerBgClass="bg-green-50/50"
+              className="!gap-0"
             >
-              <div className="space-y-5">
+              <div className="!mt-0 space-y-5">
                 <div className="flex items-center justify-between p-3 bg-green-50/30 border border-green-100 rounded-lg">
                   <span className="text-sm font-medium text-green-800">Tanggal Selesai</span>
                   <span className="font-mono text-sm font-semibold text-green-700">
@@ -393,7 +394,8 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
               </div>
             </SectionCard>
 
-          </div>        </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

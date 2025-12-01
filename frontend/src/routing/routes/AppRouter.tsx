@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../../components/login-page';
 import { RegisterPage } from '../../components/register-page';

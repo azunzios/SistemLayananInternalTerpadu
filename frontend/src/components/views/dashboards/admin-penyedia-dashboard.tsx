@@ -45,7 +45,7 @@ interface DashboardStats {
 }
 
 export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
-  currentUser,
+  currentUser: _currentUser,
   onNavigate,
 }) => {
   const [stats, setStats] = useState<DashboardStats | null>(null);

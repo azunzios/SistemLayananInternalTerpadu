@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import {
@@ -12,8 +12,8 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
+  SheetTrigger
 } from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
 import {
@@ -22,14 +22,14 @@ import {
   User,
   ChevronDown,
   Check,
-  AlertCircle,
   RefreshCw,
   Menu,
   Loader2,
   X,
-  CheckCheck,
+  MailOpen,
+
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { getActiveRole, setActiveRole } from '@/lib/storage';
 import { useNotifications } from '@/hooks/use-notifications';
 import { ROUTES } from '@/routing';
@@ -50,6 +50,10 @@ import { RoleSwitcherDialog } from '@/components/views/shared';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { API_BASE_URL } from '../lib/api';
 
+// Tambahan Import Date-FNS
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+
 interface HeaderProps {
   currentUser: UserType;
   onLogout: () => void;
@@ -59,21 +63,21 @@ interface HeaderProps {
   onRoleSwitch?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, sidebarCollapsed, onToggleSidebar, onRoleSwitch }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, onToggleSidebar, onRoleSwitch }) => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showRoleSwitchDialog, setShowRoleSwitchDialog] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   
-  // Use API-based notifications
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+  // Use API-based notifications with pagination
+  const { notifications, unreadCount, loading, loadingMore, hasMore, loadMore, markAsRead, markAllAsRead } = useNotifications();
 
   // Get current active role
   const activeRole = getActiveRole(currentUser.id) || currentUser.role;
   const availableRoles = currentUser.roles || [currentUser.role];
   const hasMultipleRoles = availableRoles.length > 1;
 
-  const avatarUrl = React.useMemo(() => {
+  const avatarUrl = useMemo(() => {
     if (!currentUser.avatar) return null;
     if (currentUser.avatar.startsWith('http')) return currentUser.avatar;
     const rawPath = currentUser.avatar.replace(/^\/?/, '');
@@ -82,14 +86,15 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     return fileBase ? `${fileBase}/${cleanPath}` : `/${cleanPath}`;
   }, [currentUser.avatar]);
 
-  const handleMarkAllAsRead = () => {
-    markAllAsRead();
+  // Fungsi Action: Tandai Semua Dibaca
+  const handleMarkAll = async () => {
+    await markAllAsRead();
     toast.success('Semua notifikasi ditandai dibaca');
   };
 
-  const handleDismiss = (notificationId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    markAsRead(notificationId);
+  // Fungsi Action: Close Sheet Notifikasi
+  const handleClose = () => {
+    setNotificationsOpen(false);
   };
 
   const handleLogoutClick = () => {
@@ -100,8 +105,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     setShowLogoutDialog(false);
     toast.success('Anda berhasil logout');
     onLogout();
-    
-    // Navigate ke login page setelah logout
     navigate(ROUTES.LOGIN);
   };
 
@@ -117,37 +120,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0"><Check className="h-3 w-3 text-white" /></div>;
-      case 'warning':
-        return <div className="h-5 w-5 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0"><AlertCircle className="h-3 w-3 text-white" /></div>;
-      case 'error':
-        return <div className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0"><X className="h-3 w-3 text-white" /></div>;
-      default:
-        return <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0"><Bell className="h-3 w-3 text-white" /></div>;
-    }
-  };
-
-  const getRelativeTime = (timestamp: string) => {
-    const now = new Date();
-    const then = new Date(timestamp);
-    const diffMs = now.getTime() - then.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit lalu`;
-    if (diffHours < 24) return `${diffHours} jam lalu`;
-    if (diffDays < 7) return `${diffDays} hari lalu`;
-    return then.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-  };
-
-return (
+  return (
     <>
-      <header className="bg-white h-[72px] border-b border-gray-200">
+      <header className="bg-white h-[72px]">
         <div className="flex items-center justify-between h-full px-4 sm:px-6">
           
           {/* ========================================= */}
@@ -205,7 +180,7 @@ return (
           {/* ========================================= */}
           <div className="flex items-center gap-2">
             
-            {/* 1. NOTIFICATION SHEET (Integrasi Penuh di Sini) */}
+            {/* 1. NOTIFICATION SHEET */}
             <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <SheetTrigger asChild>
                 <Button 
@@ -242,7 +217,7 @@ return (
                     {unreadCount > 0 && (
                       <Button
                         variant="ghost"
-                        size="xs" // Menggunakan size custom kecil
+                        size="sm" 
                         onClick={handleMarkAll}
                         className="h-7 text-[11px] font-medium text-gray-500 hover:text-blue-600 px-2"
                         disabled={loading}
@@ -273,37 +248,57 @@ return (
                         <p className="text-sm text-gray-400">Tidak ada notifikasi baru</p>
                       </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          onClick={() => !notification.is_read && markAsRead(notification.id)}
-                          className={`
-                            relative flex flex-col gap-1.5 p-4 text-sm transition-colors cursor-pointer
-                            border-b border-gray-100 last:border-0 hover:bg-gray-50
-                            ${!notification.is_read ? "bg-blue-50/60" : "bg-white"}
-                          `}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className={`text-sm ${!notification.is_read ? "font-semibold text-gray-900" : "font-medium text-gray-600"}`}>
-                              {notification.title}
+                      <>
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.is_read && markAsRead(notification.id)}
+                            className={`
+                              relative flex flex-col gap-1.5 p-4 text-sm transition-colors cursor-pointer
+                              border-b border-black last:border-0 hover:bg-gray-50
+                              ${!notification.is_read ? "bg-blue-50/60" : "bg-white"}
+                            `}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className={`text-sm ${!notification.is_read ? "font-semibold text-gray-900" : "font-medium text-gray-600"}`}>
+                                {notification.title}
+                              </span>
+                              {!notification.is_read && (
+                                <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm" />
+                              )}
+                            </div>
+                            
+                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                              {notification.message}
+                            </p>
+                            
+                            <span className="text-[10px] text-gray-400 font-medium">
+                              {formatDistanceToNow(new Date(notification.created_at), { 
+                                addSuffix: true,
+                                locale: id 
+                              })}
                             </span>
-                            {!notification.is_read && (
-                              <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm" />
+                          </div>
+                        ))}
+                        
+                        {/* Load More Trigger */}
+                        {hasMore && (
+                          <div className="py-4 flex justify-center">
+                            {loadingMore ? (
+                              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={loadMore}
+                                className="text-xs text-gray-500 hover:text-gray-700"
+                              >
+                                Muat lebih banyak
+                              </Button>
                             )}
                           </div>
-                          
-                          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                            {notification.message}
-                          </p>
-                          
-                          <span className="text-[10px] text-gray-400 font-medium">
-                            {formatDistanceToNow(new Date(notification.created_at), { 
-                              addSuffix: true,
-                              locale: id 
-                            })}
-                          </span>
-                        </div>
-                      ))
+                        )}
+                      </>
                     )}
                   </div>
                 </ScrollArea>
