@@ -18,10 +18,10 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   //INI NANTI DIUBAH
   const [formData, setFormData] = useState({
-    login: 'pegawai@example.com',
-    password: 'password',
+    login: '',
+    password: '',
     rememberMe: true,
-  }); //nanti ini dubah ya
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
@@ -279,6 +279,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       placeholder="nama@bps-ntb.go.id"
                       required
                       autoComplete="email"
+                      className="pr-10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                     />
                   </div>
 
@@ -294,21 +295,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         placeholder="Masukkan password"
                         required
                         autoComplete="current-password"
+                        className="!pr-12"
+                        style={{ paddingRight: '3rem' }}
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="link"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         onClick={() => setShowPassword(!showPassword)}
                         tabIndex={-1}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
+                          <EyeOff className="h-4 w-4" />
                         ) : (
-                          <Eye className="h-4 w-4 text-gray-400" />
+                          <Eye className="h-4 w-4" />
                         )}
-                      </Button>
+                      </button>
                     </div>
                   </div>
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Package,
   Search,
   Plus,
   Pencil,
@@ -302,28 +301,28 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Package className="h-8 w-8" />
+          <h1 className="text-3xl font-bold  text-gray-900 flex items-center gap-2">
             Asset BMN
           </h1>
           <p className="text-gray-600 mt-1">Kelola data Barang Milik Negara</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadTemplate} size="lg">
-            <Download className="h-4 w-4 mr-2" />
-            Download Template
+          <Button variant="outline" onClick={handleDownloadTemplate} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2" >
+            <Download className="h-4 w-4" />
+            Template
           </Button>
-          <Button variant="outline" onClick={handleDownloadAll} size="lg">
-            <Download className="h-4 w-4 mr-2" />
-            Download Semua
+          <Button variant="outline" onClick={handleDownloadAll} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2">
+            <Download className="h-4 w-4" />
+            Export Data
           </Button>
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             size="lg"
+            className="rounded-full w-30 !outline !outline-black !outline-2"
             disabled={importing}
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="h-4 w-4" />
             {importing ? "Importing..." : "Import Excel"}
           </Button>
           <input
@@ -333,8 +332,8 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
             onChange={handleImportExcel}
             className="hidden"
           />
-          <Button onClick={() => handleOpenDialog()} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => handleOpenDialog()} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2">
+            <Plus className="h-4 w-4" />
             Tambah Asset
           </Button>
         </div>
@@ -387,77 +386,127 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200">
+{/* Table Section */}
+      <div className="bg-white rounded-md border shadow-sm overflow-hidden">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-gray-100/80">
             <TableRow>
-              <TableHead>Kode Barang</TableHead>
-              <TableHead>NUP</TableHead>
-              <TableHead>Nama Barang</TableHead>
-              <TableHead>Merek</TableHead>
-              <TableHead>Kondisi</TableHead>
-              <TableHead>Ruangan</TableHead>
-              <TableHead>Pengguna</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
+              <TableHead className="w-[140px] border-r border-b font-semibold text-gray-900 whitespace-nowrap pl-4">
+                Kode Barang
+              </TableHead>
+              <TableHead className="w-[80px] border-r border-b font-semibold text-gray-900 whitespace-nowrap text-center">
+                NUP
+              </TableHead>
+              <TableHead className="min-w-[200px] border-r border-b font-semibold text-gray-900 whitespace-nowrap">
+                Nama Barang
+              </TableHead>
+              <TableHead className="w-[150px] border-r border-b font-semibold text-gray-900 whitespace-nowrap">
+                Merek
+              </TableHead>
+              <TableHead className="w-[120px] border-r border-b font-semibold text-gray-900 whitespace-nowrap text-center">
+                Kondisi
+              </TableHead>
+              <TableHead className="w-[150px] border-r border-b font-semibold text-gray-900 whitespace-nowrap">
+                Ruangan
+              </TableHead>
+              <TableHead className="w-[150px] border-r border-b font-semibold text-gray-900 whitespace-nowrap">
+                Pengguna
+              </TableHead>
+              <TableHead className="w-[1%] border-b font-semibold text-gray-900 whitespace-nowrap text-center px-2">
+                Aksi
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  Loading...
+                <TableCell colSpan={8} className="text-center py-12 border-b">
+                  <div className="flex flex-col items-center justify-center text-gray-500">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+                    <span className="text-sm">Memuat data...</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : assets.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center py-8 text-gray-500"
-                >
-                  Tidak ada data asset
+                <TableCell colSpan={8} className="text-center py-12 text-gray-500 border-b">
+                  <div className="flex flex-col items-center justify-center">
+                    <p className="font-medium text-gray-900">Tidak ada data asset</p>
+                    <p className="text-sm">Sesuaikan filter pencarian Anda</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               assets.map((asset) => (
-                <TableRow key={asset.id}>
-                  <TableCell className="font-mono">
+                <TableRow 
+                  key={asset.id} 
+                  className="group hover:bg-blue-50/40 transition-colors"
+                >
+                  {/* Kode Barang */}
+                  <TableCell className="border-r border-b font-mono text-sm pl-4 align-middle bg-gray-50/50 group-hover:bg-blue-50/40">
                     {asset.kodeBarang}
                   </TableCell>
-                  <TableCell className="font-mono">{asset.nup}</TableCell>
-                  <TableCell>{asset.namaBarang}</TableCell>
-                  <TableCell>{asset.merek}</TableCell>
-                  <TableCell>
+                  
+                  {/* NUP */}
+                  <TableCell className="border-r border-b font-mono text-sm text-center align-middle">
+                    {asset.nup}
+                  </TableCell>
+                  
+                  {/* Nama Barang */}
+                  <TableCell className="border-r border-b font-medium align-middle">
+                    {asset.namaBarang}
+                  </TableCell>
+                  
+                  {/* Merek */}
+                  <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
+                    {asset.merek || "-"}
+                  </TableCell>
+                  
+                  {/* Kondisi */}
+                  <TableCell className="border-r border-b text-center align-middle p-2">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                         asset.kondisi === "Baik"
-                          ? "bg-green-100 text-green-800"
+                          ? "bg-green-50 text-green-700 border-green-200"
                           : asset.kondisi === "Rusak Ringan"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                          : "bg-red-50 text-red-700 border-red-200"
                       }`}
                     >
                       {asset.kondisi}
                     </span>
                   </TableCell>
-                  <TableCell>{asset.ruangan}</TableCell>
-                  <TableCell>{asset.pengguna || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                  
+                  {/* Ruangan */}
+                  <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
+                    {asset.ruangan || "-"}
+                  </TableCell>
+                  
+                  {/* Pengguna */}
+                  <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
+                    {asset.pengguna || "-"}
+                  </TableCell>
+                  
+                  {/* Aksi - Compact Width */}
+                  <TableCell className="border-b px-2 py-1 align-middle text-center whitespace-nowrap bg-white/50 group-hover:bg-blue-50/40">
+                    <div className="flex items-center justify-center gap-1">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-7 w-7 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-sm"
                         onClick={() => handleOpenDialog(asset)}
+                        title="Edit Asset"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-7 w-7 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-sm"
                         onClick={() => handleDelete(asset.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Hapus Asset"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
@@ -469,9 +518,9 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="text-sm text-gray-700">
-              Halaman {currentPage} dari {totalPages}
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+            <div className="text-xs text-gray-500">
+              Halaman <span className="font-medium text-gray-900">{currentPage}</span> dari {totalPages}
             </div>
             <div className="flex gap-2">
               <Button
@@ -479,16 +528,16 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                className="h-8 text-xs bg-white hover:bg-gray-100"
               >
                 Sebelumnya
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                className="h-8 text-xs bg-white hover:bg-gray-100"
               >
                 Selanjutnya
               </Button>

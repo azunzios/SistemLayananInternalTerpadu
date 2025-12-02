@@ -5241,4 +5241,15 @@ html {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Hide browser's built-in password reveal button */
+  input[type="password"]::-webkit-outer-spin-button,
+  input[type="password"]::-webkit-inner-spin-button {
+    display: none;
+  }
+  
+  /* Chrome password field reveal button */
+  input[type="password"]::after {
+    display: none !important;
+  }
 }

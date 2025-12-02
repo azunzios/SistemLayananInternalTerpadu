@@ -344,7 +344,7 @@ export const TicketList: React.FC<TicketListProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Kelola Tiket</h1>
+          <h1 className="text-3xl font-bold">Kelola Tiket</h1>
           <p className="text-muted-foreground">
             {isAdminPenyedia
               ? "Review dan kelola semua tiket yang membutuhkan work order"

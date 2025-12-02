@@ -31,7 +31,7 @@ export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNaviga
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl flex items-center gap-3 font-semibold">
+        <h1 className="text-3xl flex items-center gap-3 font-bold">
           Kelola Zoom
           <Video className="h-8 w-8 text-blue-600" />
         </h1>
