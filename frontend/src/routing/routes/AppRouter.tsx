@@ -41,6 +41,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({
             </PublicRoute>
           }
         />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute user={currentUser}>
+              <ResetPasswordPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Protected Routes - All menu views under MainLayout with role param */}
         <Route
@@ -65,7 +73,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({
           path="/"
           element={
             currentUser ? (
-              <Navigate to={buildRoute(ROUTES.DASHBOARD, currentUser.role)} replace />
+              <Navigate
+                to={buildRoute(ROUTES.DASHBOARD, currentUser.role)}
+                replace
+              />
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />
             )

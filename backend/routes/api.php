@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CategoryController;
@@ -17,6 +18,11 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\TicketDiagnosisController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+// Password Reset routes (public)
+Route::post('/password/forgot', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/password/verify-token', [PasswordResetController::class, 'verifyToken']);
+Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
 
 // Public endpoints (no auth required)
 Route::get('/categories/by-type/{type}', [CategoryController::class, 'getByType']);

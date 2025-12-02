@@ -7,9 +7,14 @@ import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import { Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
 import { toast, Toaster } from "sonner";
-import { motion, AnimatePresence } from 'motion/react';
-import { loginUser, setCurrentUser, addAuditLog, setRememberToken } from '../lib/storage';
-import type { User } from '../types';
+import { motion, AnimatePresence } from "motion/react";
+import {
+  loginUser,
+  setCurrentUser,
+  addAuditLog,
+  setRememberToken,
+} from "../lib/storage";
+import type { User } from "../types";
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -24,29 +29,32 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    setError('');
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError("");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const response = await loginUser(formData.login.toLowerCase(), formData.password);
+      const response = await loginUser(
+        formData.login.toLowerCase(),
+        formData.password
+      );
       const user = response.user;
 
       //Check if account is active
       if (!user.isActive) {
-        setError('Akun Anda sedang dinonaktifkan. Hubungi administrator');
+        setError("Akun Anda sedang dinonaktifkan. Hubungi administrator");
         setIsLoading(false);
         return;
       }
@@ -62,18 +70,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       // Log successful login
       addAuditLog({
         userId: user.id,
-        action: 'LOGIN_SUCCESS',
+        action: "LOGIN_SUCCESS",
         details: `User logged in successfully`,
-        ipAddress: 'N/A',
+        ipAddress: "N/A",
       });
 
       // Get role label untuk toast
       const roleLabels: Record<string, string> = {
-        super_admin: 'Super Administrator',
-        admin_layanan: 'Admin Layanan',
-        admin_penyedia: 'Admin Penyedia',
-        teknisi: 'Teknisi',
-        pegawai: 'Pegawai',
+        super_admin: "Super Administrator",
+        admin_layanan: "Admin Layanan",
+        admin_penyedia: "Admin Penyedia",
+        teknisi: "Teknisi",
+        pegawai: "Pegawai",
       };
 
       const roleLabel = roleLabels[user.role] || user.role;
@@ -93,16 +101,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       onLogin(user);
     } catch (err: any) {
-      console.error('Login error:', err);
-      const errorMessage = err?.body?.message || err?.body?.errors?.email?.[0] || 'Email atau password tidak valid';
+      console.error("Login error:", err);
+      const errorMessage =
+        err?.body?.message ||
+        err?.body?.errors?.email?.[0] ||
+        "Email atau password tidak valid";
       setError(errorMessage);
 
       // Log failed attempt
       addAuditLog({
-        userId: 'unknown',
-        action: 'LOGIN_FAILED',
+        userId: "unknown",
+        action: "LOGIN_FAILED",
         details: `Failed login attempt for: ${formData.login}`,
-        ipAddress: 'N/A',
+        ipAddress: "N/A",
       });
     } finally {
       setIsLoading(false);
@@ -112,17 +123,32 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
     try {
-      // In production, this would send an actual email via backend API
-      // await api.post('auth/forgot-password', { email: forgotPasswordEmail });
+      const response = await fetch(
+        `${import.meta.env.VITE_API}/password/forgot`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ email: forgotPasswordEmail }),
+        }
+      );
 
-      toast.success('Link reset password telah dikirim ke email Anda (Demo)');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal mengirim email reset password");
+      }
+
+      toast.success("Link reset password telah dikirim ke email Anda");
       setResetSuccess(true);
-    } catch (err) {
-      toast.error('Gagal mengirim reset password');
-      console.error('Forgot password error:', err);
-      setResetSuccess(true);
+    } catch (err: any) {
+      console.error("Forgot password error:", err);
+      toast.error(err.message || "Gagal mengirim email reset password");
     } finally {
       setIsLoading(false);
     }
@@ -150,8 +176,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 <CardTitle className="text-2xl">Reset Password</CardTitle>
                 <CardDescription className="mt-2">
                   {resetSuccess
-                    ? 'Link reset password telah dikirim'
-                    : 'Masukkan email terdaftar untuk reset password'}
+                    ? "Link reset password telah dikirim"
+                    : "Masukkan email terdaftar untuk reset password"}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -174,13 +200,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   <Alert className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="text-sm">
-                      Link reset password akan dikirim ke email Anda dan berlaku selama 1 jam
+                      Link reset password akan dikirim ke email Anda dan berlaku
+                      selama 1 jam
                     </AlertDescription>
                   </Alert>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-2">
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Mengirim...' : 'Kirim Link Reset'}
+                    {isLoading ? "Mengirim..." : "Kirim Link Reset"}
                   </Button>
                   <Button
                     type="button"
@@ -189,7 +216,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     onClick={() => {
                       setShowForgotPassword(false);
                       setResetSuccess(false);
-                      setForgotPasswordEmail('');
+                      setForgotPasswordEmail("");
                     }}
                   >
                     Kembali ke Login
@@ -200,7 +227,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <CardContent className="space-y-4">
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                   <p className="text-green-800">
-                    Email reset password telah dikirim ke <strong>{forgotPasswordEmail}</strong>
+                    Email reset password telah dikirim ke{" "}
+                    <strong>{forgotPasswordEmail}</strong>
                   </p>
                   <p className="text-sm text-green-600 mt-2">
                     Silakan cek inbox Anda dan klik link yang diberikan
@@ -212,7 +240,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   onClick={() => {
                     setShowForgotPassword(false);
                     setResetSuccess(false);
-                    setForgotPasswordEmail('');
+                    setForgotPasswordEmail("");
                   }}
                 >
                   Kembali ke Login
@@ -248,7 +276,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     />
                   </div>
                 </div>
-
               </CardHeader>
 
               <form onSubmit={handleLogin}>
@@ -257,7 +284,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     {error && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
+                        animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                       >
                         <Alert variant="destructive" className="mt-4">
@@ -289,7 +316,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       <Input
                         id="password"
                         name="password"
-                        type={showPassword ? 'text' : 'password'}
+                        type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={handleInputChange}
                         placeholder="Masukkan password"
@@ -319,10 +346,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         id="remember"
                         checked={formData.rememberMe}
                         onCheckedChange={(checked) =>
-                          setFormData(prev => ({ ...prev, rememberMe: !!checked }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            rememberMe: !!checked,
+                          }))
                         }
                       />
-                      <Label htmlFor="remember" className="text-sm cursor-pointer font-normal">
+                      <Label
+                        htmlFor="remember"
+                        className="text-sm cursor-pointer font-normal"
+                      >
                         Ingat Saya (30 hari)
                       </Label>
                     </div>
@@ -371,7 +404,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat</span>
                 </div>
               </div>
-
             </div>
           </CardContent>
         </Card>
