@@ -1,11 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from '../../components/login-page';
-import { RegisterPage } from '../../components/register-page';
-import { MainLayout } from '../../components/main-layout';
-import { ProtectedRoute } from '../guards/ProtectedRoute';
-import { PublicRoute } from '../guards/PublicRoute';
-import { ROUTES, buildRoute, isValidRole } from '../constants';
-import type { User } from '../../types';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { LoginPage } from "../../components/login-page";
+import { RegisterPage } from "../../components/register-page";
+import { ResetPasswordPage } from "../../components/reset-password-page";
+import { MainLayout } from "../../components/main-layout";
+import { ProtectedRoute } from "../guards/ProtectedRoute";
+import { PublicRoute } from "../guards/PublicRoute";
+import { ROUTES, buildRoute, isValidRole } from "../constants";
+import type { User } from "../../types";
 
 interface AppRouterProps {
   currentUser: User | null;
@@ -40,6 +41,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({
             </PublicRoute>
           }
         />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute user={currentUser}>
+              <ResetPasswordPage />
+            </PublicRoute>
+          }
+        />
 
         {/* Protected Routes - All menu views under MainLayout with role param */}
         <Route
@@ -64,7 +73,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({
           path="/"
           element={
             currentUser ? (
-              <Navigate to={buildRoute(ROUTES.DASHBOARD, currentUser.role)} replace />
+              <Navigate
+                to={buildRoute(ROUTES.DASHBOARD, currentUser.role)}
+                replace
+              />
             ) : (
               <Navigate to={ROUTES.LOGIN} replace />
             )
