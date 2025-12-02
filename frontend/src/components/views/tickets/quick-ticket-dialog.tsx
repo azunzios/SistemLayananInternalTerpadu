@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,8 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Package, Wrench, Video, ArrowRight } from 'lucide-react';
+import { Wrench, Video, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { ViewType } from '@/components/main-layout';
 

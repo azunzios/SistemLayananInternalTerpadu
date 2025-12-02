@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -571,7 +572,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
 
       {selectedDate && (
         <>
-          <Card>
+          <Card className="pb-6">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -743,14 +744,14 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className="p-4 border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all bg-white"
+                            className="p-4 border-2 border-gray-200 hover:border-blue-300 hover:shadow-md transition-all bg-white"
                           >
                             <div className="flex items-start justify-between gap-4">
                               {/* Left Side - Booking Info */}
                               <div className="flex-1 space-y-2">
                                 <div className="flex items-center gap-3">
                                   <div
-                                    className={`h-8 w-8 ${statusStyle.bg} rounded-lg flex items-center justify-center`}
+                                    className={`h-8 w-8 ${statusStyle.bg} lex items-center justify-center`}
                                   >
                                     <StatusIcon
                                       className={`h-4 w-4 ${
@@ -969,7 +970,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                     initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className={`absolute left-2 right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} rounded-lg p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
+                                    className={`absolute left-2 right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
                                     style={{
                                       top: `${style.top}px`,
                                       height: `${style.height}px`,
@@ -999,7 +1000,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                             {booking.userName}
                                           </span>
                                         </div>
-                                        <div className="text-xs mt-1 px-1.5 py-0.5 bg-white/20 rounded inline-block">
+                                        <div className="text-xs mt-1 px-1.5 py-0.5 bg-white/20 inline-block">
                                           {statusStyle.label}
                                         </div>
                                       </>

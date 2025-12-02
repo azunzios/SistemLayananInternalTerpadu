@@ -46,11 +46,9 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
           (status === "assigned" && action.includes("assigned")) ||
           (status === "in_progress" &&
             (action.includes("started") || details.includes("diagnosis"))) ||
-          (status === "resolved" && action.includes("resolved")) ||
           (status === "closed" && action.includes("closed")) ||
           (status === "pending_review" && action.includes("created")) ||
-          (status === "approved" && action.includes("approved")) ||
-          (status === "completed" && action.includes("completed"))
+          (status === "approved" && action.includes("approved"))
         );
       });
     });
@@ -80,7 +78,6 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
         return [
           { label: "Pengajuan Tiket", statuses: ["pending_review"] },
           { label: "Disetujui & Link Ready", statuses: ["approved"] },
-          { label: "Meeting Selesai", statuses: ["completed"] },
         ];
 
       default:
@@ -102,7 +99,7 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
   const currentStepIndex = getCurrentStepIndex();
   const isRejected =
     ticket.type === "perbaikan"
-      ? ticket.status === "closed_unrepairable"
+      ? ticket.status === "rejected"
       : ticket.type === "zoom_meeting"
       ? ["rejected", "cancelled"].includes(ticket.status)
       : false;
@@ -111,7 +108,7 @@ export const TicketProgressTracker: React.FC<TicketProgressTrackerProps> = ({
     ticket.type === "perbaikan"
       ? ticket.status === "closed"
       : ticket.type === "zoom_meeting"
-      ? ticket.status === "completed"
+      ? ticket.status === "approved"
       : false;
 
   return (

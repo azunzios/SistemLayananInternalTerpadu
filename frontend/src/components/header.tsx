@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +10,11 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover';
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger
+} from './ui/sheet';
 import { ScrollArea } from './ui/scroll-area';
 import {
   Bell,
@@ -22,14 +22,16 @@ import {
   User,
   ChevronDown,
   Check,
-  Clock,
-  AlertCircle,
   RefreshCw,
   Menu,
-  Building,
+  Loader2,
+  X,
+  MailOpen,
+
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { getNotifications, saveNotifications, getActiveRole, setActiveRole } from '@/lib/storage';
+import { motion } from 'motion/react';
+import { getActiveRole, setActiveRole } from '@/lib/storage';
+import { useNotifications } from '@/hooks/use-notifications';
 import { ROUTES } from '@/routing';
 import type { User as UserType, UserRole } from '@/types';
 import type { ViewType } from './main-layout';
@@ -48,6 +50,10 @@ import { RoleSwitcherDialog } from '@/components/views/shared';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { API_BASE_URL } from '../lib/api';
 
+// Tambahan Import Date-FNS
+import { formatDistanceToNow } from 'date-fns';
+import { id } from 'date-fns/locale';
+
 interface HeaderProps {
   currentUser: UserType;
   onLogout: () => void;
@@ -57,20 +63,21 @@ interface HeaderProps {
   onRoleSwitch?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, sidebarCollapsed, onToggleSidebar, onRoleSwitch }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, onToggleSidebar, onRoleSwitch }) => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showRoleSwitchDialog, setShowRoleSwitchDialog] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const notifications = getNotifications(currentUser.id);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  
+  // Use API-based notifications with pagination
+  const { notifications, unreadCount, loading, loadingMore, hasMore, loadMore, markAsRead, markAllAsRead } = useNotifications();
 
   // Get current active role
   const activeRole = getActiveRole(currentUser.id) || currentUser.role;
   const availableRoles = currentUser.roles || [currentUser.role];
   const hasMultipleRoles = availableRoles.length > 1;
 
-  const avatarUrl = React.useMemo(() => {
+  const avatarUrl = useMemo(() => {
     if (!currentUser.avatar) return null;
     if (currentUser.avatar.startsWith('http')) return currentUser.avatar;
     const rawPath = currentUser.avatar.replace(/^\/?/, '');
@@ -79,22 +86,14 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     return fileBase ? `${fileBase}/${cleanPath}` : `/${cleanPath}`;
   }, [currentUser.avatar]);
 
-  const handleMarkAsRead = (notificationId: string) => {
-    const allNotifications = getNotifications(currentUser.id);
-    const updated = allNotifications.map((n: any) =>
-      n.id === notificationId ? { ...n, read: true } : n
-    );
-    saveNotifications(updated);
-    // Force re-render by closing and reopening
-    setNotificationsOpen(false);
-    setTimeout(() => setNotificationsOpen(true), 10);
+  // Fungsi Action: Tandai Semua Dibaca
+  const handleMarkAll = async () => {
+    await markAllAsRead();
+    toast.success('Semua notifikasi ditandai dibaca');
   };
 
-  const handleMarkAllAsRead = () => {
-    const allNotifications = getNotifications(currentUser.id);
-    const updated = allNotifications.map((n: any) => ({ ...n, read: true }));
-    saveNotifications(updated);
-    toast.success('Semua notifikasi ditandai sebagai dibaca');
+  // Fungsi Action: Close Sheet Notifikasi
+  const handleClose = () => {
     setNotificationsOpen(false);
   };
 
@@ -106,8 +105,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     setShowLogoutDialog(false);
     toast.success('Anda berhasil logout');
     onLogout();
-    
-    // Navigate ke login page setelah logout
     navigate(ROUTES.LOGIN);
   };
 
@@ -118,213 +115,251 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
   const handleRoleSwitch = (newRole: UserRole) => {
     setActiveRole(newRole, currentUser.id);
     toast.success(`Berhasil beralih ke ${newRole}`);
-    // Trigger re-render via callback instead of reload
     if (onRoleSwitch) {
       onRoleSwitch();
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <Check className="h-4 w-4 text-green-600" />;
-      case 'warning':
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-blue-600" />;
-    }
-  };
-
-  const getRelativeTime = (timestamp: string) => {
-    const now = new Date();
-    const then = new Date(timestamp);
-    const diffMs = now.getTime() - then.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit lalu`;
-    if (diffHours < 24) return `${diffHours} jam lalu`;
-    if (diffDays < 7) return `${diffDays} hari lalu`;
-    return then.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-  };
-
   return (
     <>
       <header className="bg-white h-[72px]">
-        <div className="flex items-center justify-between h-full">
-          {/* Left side - Toggle and App Name */}
-          <div className="flex items-center h-full">
-            {/* Hamburger button container - sama dengan sidebar collapsed width (72px) */}
-            <div className="w-[72px] h-[72px] flex items-center m-0 justify-center p-0 flex-shrink-0 outline-1">
-              <Button
-                variant="link"
-                size="sm"
-                onClick={onToggleSidebar}
-                className="h-11 w-11 p-0 text-gray-700 hover:text-black hover:bg-[#f0f0f4f9] rounded-lg flex items-center justify-center"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </div>
+        <div className="flex items-center justify-between h-full px-4 sm:px-6">
+          
+          {/* ========================================= */}
+          {/* LEFT SIDE: Toggle, Logo, App Name, Badge  */}
+          {/* ========================================= */}
+          <div className="flex items-center h-full gap-4">
+            {/* Hamburger button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleSidebar}
+              className="h-10 w-10 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full flex items-center justify-center transition-colors"
+            >
+              <Menu className="h-5 w-5" strokeWidth={2.5} />
+            </Button>
+
             {/* App Name and Badge */}
-            <div className="flex items-center gap-3 ml-4">
-              <div className="h-9 w-9 bg-gradient-to-br rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                <img src="/logo.svg" alt="BPS NTB logo" className="object-contain" />
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden bg-gray-50">
+                <img src="/logo.svg" alt="BPS Logo" className="h-full w-full object-contain p-0.5" />
               </div>
-              <div className="flex items-center gap-2">
-                <div>
-                  <h1 className="text-gray-900 leading-tight">SIGAP-TI</h1>
-                  <p className="text-xs text-gray-500 leading-tight">BPS Provinsi Nusa Tenggara Barat</p>
+              
+              <div className="md:flex items-center gap-3">
+                <div className="flex flex-col">
+                  <h1 className="text-sm font-bold text-gray-900">SIGAP-TI</h1>
+                  <p className="text-[10px] text-gray-500 !mb-0">BPS Provinsi NTB</p>
                 </div>
-                <Badge variant="secondary" className="ml-2 bg-cyan-50 text-cyan-700 hover:bg-cyan-50">
+              </div>
+              
+              {/* Separator kecil */}
+              <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
+
+              {/* Role Badge - selalu terlihat */}
+              <div className="flex flex-col items-center justify-center gap-0.5">
+                <span className="text-[9px] text-gray-400 uppercase tracking-wider font-medium">FOR</span>
+                <div
+                  className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide"
+                  style={{
+                    background: "radial-gradient(ellipse at center, rgba(14,116,144,0.15) 0%, rgba(14,116,144,0.1) 100%)",
+                    border: "1px solid rgba(14,116,144,0.2)",
+                    color: "#0e7490",
+                  }}
+                >
                   {activeRole === 'super_admin' ? 'SUPER ADMIN' : 
                    activeRole === 'admin_layanan' ? 'ADMIN LAYANAN' :
                    activeRole === 'admin_penyedia' ? 'ADMIN PENYEDIA' :
                    activeRole === 'teknisi' ? 'TEKNISI' : 'PEGAWAI'}
-                </Badge>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right side - Notifications and User Menu */}
+          {/* ========================================= */}
+          {/* RIGHT SIDE: Notifications & User Menu     */}
+          {/* ========================================= */}
           <div className="flex items-center gap-2">
-            {/* Notifications */}
-            <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
-                  <Bell className="h-5 w-5" />
+            
+            {/* 1. NOTIFICATION SHEET */}
+            <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="relative h-9 w-9 p-0 rounded-full hover:bg-gray-100"
+                >
+                  <Bell className="h-5 w-5 text-gray-600" />
                   {unreadCount > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center"
+                      className="absolute top-0 right-0 h-3.5 w-3.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white"
                     >
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </motion.span>
                   )}
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-96 p-0" align="end">
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Notifikasi</h3>
+              </SheetTrigger>
+
+              {/* Content Notifikasi */}
+              <SheetContent 
+                side="right" 
+                className="w-full sm:max-w-sm p-0 flex flex-col gap-0 [&>button]:hidden"
+              >
+                {/* Header: Judul & Action Buttons */}
+                <div className="flex items-center justify-between p-4 bg-white">
+                  <SheetTitle className="text-base font-bold text-gray-900">
+                    NOTIFIKASI
+                  </SheetTitle>
+                  
+                  <div className="flex items-center gap-1">
+                    {/* Tombol Tandai Baca */}
                     {unreadCount > 0 && (
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleMarkAllAsRead}
+                        variant="ghost"
+                        size="sm" 
+                        onClick={handleMarkAll}
+                        className="h-7 text-[11px] font-medium text-gray-500 hover:text-blue-600 px-2"
+                        disabled={loading}
                       >
-                        Tandai semua dibaca
+                        <Check className="mr-1 h-3 w-3" />
+                        Tandai dibaca
                       </Button>
                     )}
+
+                    {/* Tombol Close Custom (Merah saat Hover) */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleClose}
+                      className="h-7 w-7 rounded-full text-gray-400 hover:bg-red-500 hover:text-white transition-all duration-200"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <ScrollArea className="h-96">
-                  {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                      <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>Tidak ada notifikasi</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {notifications.map(notification => (
-                        <motion.div
-                          key={notification.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            !notification.read ? 'bg-blue-50/50' : ''
-                          }`}
-                          onClick={() => {
-                            handleMarkAsRead(notification.id);
-                            if (notification.link) {
-                              onNavigate(notification.link as ViewType);
-                              setNotificationsOpen(false);
-                            }
-                          }}
-                        >
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 mt-1">
-                              {getNotificationIcon(notification.type)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className={`text-sm ${!notification.read ? 'font-semibold' : ''}`}>
-                                  {notification.title}
-                                </p>
-                                {!notification.read && (
-                                  <span className="h-2 w-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                {getRelativeTime(notification.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </PopoverContent>
-            </Popover>
 
-            {/* User Menu */}
+                {/* List Body */}
+                <ScrollArea className="flex-1 h-full bg-white">
+                  <div className="flex flex-col">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <MailOpen className="h-12 w-12 mb-3 text-gray-200" />
+                        <p className="text-sm text-gray-400">Tidak ada notifikasi baru</p>
+                      </div>
+                    ) : (
+                      <>
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.is_read && markAsRead(notification.id)}
+                            className={`
+                              relative flex flex-col gap-1.5 p-4 text-sm transition-colors cursor-pointer
+                              border-b border-black last:border-0 hover:bg-gray-50
+                              ${!notification.is_read ? "bg-blue-50/60" : "bg-white"}
+                            `}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className={`text-sm ${!notification.is_read ? "font-semibold text-gray-900" : "font-medium text-gray-600"}`}>
+                                {notification.title}
+                              </span>
+                              {!notification.is_read && (
+                                <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm" />
+                              )}
+                            </div>
+                            
+                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+                              {notification.message}
+                            </p>
+                            
+                            <span className="text-[10px] text-gray-400 font-medium">
+                              {formatDistanceToNow(new Date(notification.created_at), { 
+                                addSuffix: true,
+                                locale: id 
+                              })}
+                            </span>
+                          </div>
+                        ))}
+                        
+                        {/* Load More Trigger */}
+                        {hasMore && (
+                          <div className="py-4 flex justify-center">
+                            {loadingMore ? (
+                              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={loadMore}
+                                className="text-xs text-gray-500 hover:text-gray-700"
+                              >
+                                Muat lebih banyak
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
+            {/* 2. USER MENU DROPDOWN */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 h-9 px-2.5 hover:bg-transparent">
-                  <Avatar className="h-8 w-8">
+                <Button variant="ghost" size="sm" className="gap-2 h-9 pl-2 pr-1 hover:bg-gray-100 rounded-full ml-1">
+                  <Avatar className="h-8 w-8 border border-gray-200">
                     {avatarUrl && <AvatarImage src={avatarUrl} alt={currentUser.name} />}
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-blue-500 text-white text-xs">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 mt-2">
                 <DropdownMenuLabel>
-                  <div>
-                    <p className="font-semibold">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500 font-normal">{currentUser.email}</p>
-                    <p className="text-xs text-blue-600 font-medium mt-1">
-                      {activeRole === 'super_admin' ? 'Super Admin' : 
-                       activeRole === 'admin_layanan' ? 'Admin Layanan' :
-                       activeRole === 'admin_penyedia' ? 'Admin Penyedia' :
-                       activeRole === 'teknisi' ? 'Teknisi' : 'Pegawai'}
-                    </p>
+                  <div className="flex flex-col space-y-1">
+                    <p className="font-semibold text-sm leading-none">{currentUser.name}</p>
+                    <p className="text-xs text-gray-500 font-normal leading-none">{currentUser.email}</p>
+                    <span className="inline-flex mt-2 w-fit items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                       {activeRole === 'super_admin' ? 'Super Admin' : 
+                        activeRole === 'admin_layanan' ? 'Admin Layanan' :
+                        activeRole === 'admin_penyedia' ?   'Admin Penyedia' :
+                        activeRole === 'teknisi' ? 'Teknisi' : 'Pegawai'}
+                    </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onNavigate('profile')}>
+                <DropdownMenuItem onClick={() => onNavigate('profile')} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profil Saya
                 </DropdownMenuItem>
                 {hasMultipleRoles && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleRoleSwitchClick}>
+                    <DropdownMenuItem onClick={handleRoleSwitchClick} className="cursor-pointer">
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Ganti Peran
                     </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogoutClick} className="text-red-600">
+                <DropdownMenuItem onClick={handleLogoutClick} className="text-red-600 focus:text-red-600 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
           </div>
         </div>
       </header>
+
+      {/* ========================================= */}
+      {/* GLOBAL DIALOGS (Outside Header)           */}
+      {/* ========================================= */}
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
@@ -337,7 +372,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmLogout} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={handleConfirmLogout} className="bg-red-600 hover:bg-red-700 text-white">
               Ya, Logout
             </AlertDialogAction>
           </AlertDialogFooter>

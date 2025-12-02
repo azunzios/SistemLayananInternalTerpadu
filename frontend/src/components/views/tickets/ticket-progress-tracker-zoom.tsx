@@ -12,7 +12,6 @@ interface TicketProgressTrackerZoomProps {
 const ZOOM_STEPS: { label: string; statuses: ZoomStatus[] }[] = [
   { label: 'Pengajuan Tiket', statuses: ['pending_review'] },
   { label: 'Disetujui & Jadwal Siap', statuses: ['approved'] },
-  { label: 'Meeting Selesai', statuses: ['completed'] },
 ];
 
 export const TicketProgressTrackerZoom: React.FC<TicketProgressTrackerZoomProps> = ({ ticket }) => {
@@ -27,7 +26,7 @@ export const TicketProgressTrackerZoom: React.FC<TicketProgressTrackerZoomProps>
   })();
 
   const isRejected = ['rejected', 'cancelled'].includes(status);
-  const isCompleted = status === 'completed';
+  const isCompleted = status === 'approved';
 
   return (
     <Card className="pb-4">

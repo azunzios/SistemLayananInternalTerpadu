@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Models\Timeline;
 use App\Http\Resources\WorkOrderResource;
 use App\Traits\HasRoleHelper;
+use App\Services\TicketNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,12 +24,12 @@ class WorkOrderController extends Controller
         $query = WorkOrder::query();
 
         // Filter by status
-        if ($request->has('status')) {
+        if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
         // Filter by type
-        if ($request->has('type')) {
+        if ($request->has('type') && $request->type !== 'all') {
             $query->where('type', $request->type);
         }
 
@@ -37,9 +38,34 @@ class WorkOrderController extends Controller
             $query->where('ticket_id', $request->ticket_id);
         }
 
-        // Role-based filtering
+        // Filter by created_by (for teknisi viewing their own work orders)
+        if ($request->has('created_by')) {
+            $query->where('created_by', $request->created_by);
+        }
+
+        // Search filter - search by ticket number, title, sparepart name, vendor name, license name
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                // Search in ticket
+                $q->whereHas('ticket', function ($ticketQ) use ($search) {
+                    $ticketQ->where('ticket_number', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%");
+                })
+                // Search in items JSON (sparepart names)
+                ->orWhere('items', 'like', "%{$search}%")
+                // Search in vendor fields
+                ->orWhere('vendor_name', 'like', "%{$search}%")
+                ->orWhere('vendor_description', 'like', "%{$search}%")
+                // Search in license fields
+                ->orWhere('license_name', 'like', "%{$search}%")
+                ->orWhere('license_description', 'like', "%{$search}%");
+            });
+        }
+
+        // Role-based filtering (only if not filtering by specific created_by)
         $user = Auth::user();
-        if ($user && !$this->userHasAnyRole($user, ['super_admin', 'admin_penyedia'])) {
+        if (!$request->has('created_by') && $user && !$this->userHasAnyRole($user, ['super_admin', 'admin_penyedia'])) {
             // Teknisi can only see work orders for assigned tickets
             // Pegawai can only see work orders for their own tickets
             $query->whereHas('ticket', function ($q) use ($user) {
@@ -196,6 +222,9 @@ class WorkOrderController extends Controller
             ],
         ]);
 
+        // Notifikasi ke admin_penyedia
+        TicketNotificationService::onWorkOrderCreated($ticket, $validated['type']);
+
         return response()->json([
             'success' => true,
             'message' => 'Work order created successfully',
@@ -285,12 +314,16 @@ class WorkOrderController extends Controller
     }
 
     /**
-     * Update work order status with transition validation
+     * Update work order status - flexible transitions allowed
      * PATCH /work-orders/{id}/status
+     * 
      * Request body:
      * {
-     *   "status": "in_procurement",
-     *   "notes": "Procuring spare parts from supplier"
+     *   "status": "requested" | "in_procurement" | "completed" | "unsuccessful",
+     *   "vendor_name": "PT ABC",     // optional for vendor type
+     *   "vendor_contact": "08xx",    // optional for vendor type
+     *   "completion_notes": "...",   // required for completed
+     *   "failure_reason": "..."      // required for unsuccessful
      * }
      */
     public function updateStatus(Request $request, WorkOrder $workOrder): JsonResponse
@@ -306,8 +339,7 @@ class WorkOrderController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:requested,in_procurement,delivered,completed,failed,cancelled',
-            'notes' => 'nullable|string',
+            'status' => 'required|in:requested,in_procurement,completed,unsuccessful',
             'completion_notes' => 'nullable|string',
             'failure_reason' => 'nullable|string',
             'vendor_name' => 'nullable|string|max:255',
@@ -317,27 +349,29 @@ class WorkOrderController extends Controller
         $newStatus = $validated['status'];
         $oldStatus = $workOrder->status;
 
-        // Validate transition
+        // Validate transition (sekarang fleksibel, hanya cek tidak boleh sama)
         if (!$workOrder->canTransitionTo($newStatus)) {
             return response()->json([
                 'success' => false,
-                'message' => "Cannot transition from {$oldStatus} to {$newStatus}",
+                'message' => $oldStatus === $newStatus 
+                    ? 'Status sudah ' . WorkOrder::getStatusLabel($oldStatus)
+                    : "Tidak dapat mengubah status dari {$oldStatus} ke {$newStatus}",
                 'current_status' => $oldStatus,
-                'available_transitions' => [
-                    'requested' => ['in_procurement', 'cancelled'],
-                    'in_procurement' => ['delivered', 'failed'],
-                    'delivered' => ['completed', 'failed'],
-                    'completed' => [],
-                    'failed' => ['requested'],
-                    'cancelled' => [],
-                ][$oldStatus] ?? [],
+            ], 422);
+        }
+
+        // Validation for specific statuses
+        if ($newStatus === 'unsuccessful' && empty($validated['failure_reason'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Alasan kegagalan wajib diisi saat menandai tidak berhasil',
             ], 422);
         }
 
         // Update status
         $workOrder->status = $newStatus;
 
-        // Update vendor info if provided
+        // Update vendor info if provided (untuk type vendor)
         if (isset($validated['vendor_name'])) {
             $workOrder->vendor_name = $validated['vendor_name'];
         }
@@ -351,13 +385,14 @@ class WorkOrderController extends Controller
             if (isset($validated['completion_notes'])) {
                 $workOrder->completion_notes = $validated['completion_notes'];
             }
+
+            // Check if all work orders for this ticket are completed
+            $this->checkAndUpdateTicketWorkOrdersReady($workOrder);
         }
 
-        // Handle failure
-        if ($newStatus === 'failed') {
-            if (isset($validated['failure_reason'])) {
-                $workOrder->failure_reason = $validated['failure_reason'];
-            }
+        // Handle unsuccessful
+        if ($newStatus === 'unsuccessful') {
+            $workOrder->failure_reason = $validated['failure_reason'] ?? null;
         }
 
         $workOrder->save();
@@ -372,20 +407,37 @@ class WorkOrderController extends Controller
             'metadata' => [
                 'from' => $oldStatus,
                 'to' => $newStatus,
-                'notes' => $validated['notes'] ?? null,
                 'completion_notes' => $validated['completion_notes'] ?? null,
                 'failure_reason' => $validated['failure_reason'] ?? null,
             ],
         ]);
-
-        // Note: Work order completion does NOT automatically change ticket status
-        // Ticket status can only be changed by teknisi via the "Selesaikan" button (completion form)
 
         return response()->json([
             'success' => true,
             'message' => 'Work order status updated successfully',
             'data' => new WorkOrderResource($workOrder->load(['ticket', 'createdBy', 'timeline'])),
         ], 200);
+    }
+
+    /**
+     * Check if all work orders for ticket are completed, update work_orders_ready flag
+     */
+    private function checkAndUpdateTicketWorkOrdersReady(WorkOrder $workOrder): void
+    {
+        $ticket = $workOrder->ticket;
+        if (!$ticket) {
+            return;
+        }
+
+        // Check if all work orders for this ticket are completed
+        $allWorkOrdersCompleted = !WorkOrder::where('ticket_id', $ticket->id)
+            ->whereNotIn('status', ['completed', 'unsuccessful'])
+            ->exists();
+
+        if ($allWorkOrdersCompleted) {
+            $ticket->work_orders_ready = true;
+            $ticket->save();
+        }
     }
 
     /**
@@ -438,24 +490,286 @@ class WorkOrderController extends Controller
      */
     public function stats(Request $request): JsonResponse
     {
-        $stats = [
-            'total' => WorkOrder::count(),
-            'by_status' => [],
-            'by_type' => [],
+        // Count by status
+        $byStatus = [
+            'requested' => WorkOrder::where('status', 'requested')->count(),
+            'in_procurement' => WorkOrder::where('status', 'in_procurement')->count(),
+            'completed' => WorkOrder::where('status', 'completed')->count(),
+            'unsuccessful' => WorkOrder::where('status', 'unsuccessful')->count(),
         ];
 
-        foreach (WorkOrder::getStatuses() as $status) {
-            $stats['by_status'][$status] = WorkOrder::where('status', $status)->count();
-        }
+        // Count by type
+        $byType = [
+            'sparepart' => WorkOrder::where('type', 'sparepart')->count(),
+            'vendor' => WorkOrder::where('type', 'vendor')->count(),
+            'license' => WorkOrder::where('type', 'license')->count(),
+        ];
 
-        foreach (WorkOrder::getTypes() as $type) {
-            $stats['by_type'][$type] = WorkOrder::where('type', $type)->count();
-        }
+        // Recent work orders (latest 10)
+        $recentWorkOrders = WorkOrder::with(['ticket'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($wo) {
+                return [
+                    'id' => $wo->id,
+                    'type' => $wo->type,
+                    'status' => $wo->status,
+                    'ticketNumber' => $wo->ticket?->ticket_number,
+                    'ticketTitle' => $wo->ticket?->title,
+                    'createdAt' => $wo->created_at->toISOString(),
+                ];
+            });
+
+        $stats = [
+            'total' => WorkOrder::count(),
+            'by_status' => $byStatus,
+            'by_type' => $byType,
+            'recent' => $recentWorkOrders,
+        ];
 
         return response()->json([
             'success' => true,
             'message' => 'Work order statistics retrieved',
             'data' => $stats,
         ], 200);
+    }
+
+    /**
+     * Get Kartu Kendali - completed work orders grouped by ticket
+     * GET /work-orders/kartu-kendali
+     */
+    public function kartuKendali(Request $request): JsonResponse
+    {
+        $query = WorkOrder::where('status', 'completed')
+            ->with(['ticket.user', 'ticket.diagnosis.technician', 'createdBy']);
+
+        // Search
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('ticket', function ($ticketQ) use ($search) {
+                    $ticketQ->where('ticket_number', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%");
+                })
+                ->orWhere('vendor_name', 'like', "%{$search}%")
+                ->orWhere('license_name', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by type
+        if ($request->has('type') && $request->type !== 'all') {
+            $query->where('type', $request->type);
+        }
+
+        $perPage = $request->per_page ?? 15;
+        $workOrders = $query->orderBy('completed_at', 'desc')->paginate($perPage);
+
+        // Transform data untuk kartu kendali
+        $data = $workOrders->map(function ($wo) {
+            $ticket = $wo->ticket;
+            $ticketData = is_string($ticket?->data) ? json_decode($ticket->data, true) : ($ticket?->data ?? []);
+            
+            // Get asset NUP untuk hitung total perawatan
+            $assetNup = $ticketData['asset_nup'] ?? $ticketData['nup'] ?? $ticket?->nup ?? null;
+            
+            // Hitung berapa kali aset ini sudah dirawat (completed work orders dengan NUP yang sama)
+            $maintenanceCount = 0;
+            if ($assetNup) {
+                $maintenanceCount = WorkOrder::where('status', 'completed')
+                    ->whereHas('ticket', function ($q) use ($assetNup) {
+                        $q->where('nup', $assetNup)
+                            ->orWhere('form_data->nup', $assetNup)
+                            ->orWhere('form_data->asset_nup', $assetNup);
+                    })
+                    ->count();
+            }
+
+            // Get diagnosis data
+            $diagnosis = $ticket?->diagnosis;
+            $diagnosisData = null;
+            if ($diagnosis) {
+                $diagnosisData = [
+                    'physicalCondition' => $diagnosis->physical_condition,
+                    'visualInspection' => $diagnosis->visual_inspection,
+                    'problemDescription' => $diagnosis->problem_description,
+                    'problemCategory' => $diagnosis->problem_category,
+                    'testingResult' => $diagnosis->testing_result,
+                    'faultyComponents' => $diagnosis->faulty_components ?? [],
+                    'isRepairable' => $diagnosis->is_repairable,
+                    'repairType' => $diagnosis->repair_type,
+                    'repairDifficulty' => $diagnosis->repair_difficulty,
+                    'repairRecommendation' => $diagnosis->repair_recommendation,
+                    'requiresSparepart' => $diagnosis->requires_sparepart,
+                    'requiredSpareparts' => $diagnosis->required_spareparts ?? [],
+                    'requiresVendor' => $diagnosis->requires_vendor,
+                    'vendorReason' => $diagnosis->vendor_reason,
+                    'technicianNotes' => $diagnosis->technician_notes,
+                    'diagnosedAt' => $diagnosis->diagnosed_at?->toISOString(),
+                    'technicianName' => $diagnosis->technician?->name,
+                ];
+            }
+
+            return [
+                'id' => $wo->id,
+                'ticketId' => $wo->ticket_id,
+                'ticketNumber' => $ticket?->ticket_number,
+                'ticketTitle' => $ticket?->title,
+                'type' => $wo->type,
+                'completedAt' => $wo->completed_at?->toISOString(),
+                'completionNotes' => $wo->completion_notes,
+                // Asset info
+                'assetCode' => $ticketData['asset_code'] ?? $ticketData['kode_barang'] ?? $ticket?->kode_barang ?? null,
+                'assetName' => $ticketData['asset_name'] ?? $ticketData['nama_barang'] ?? $ticket?->title,
+                'assetNup' => $assetNup,
+                'maintenanceCount' => $maintenanceCount, // Berapa kali aset ini sudah dirawat
+                // Work order specific data (apa yang diminta)
+                'items' => $wo->items,
+                'vendorName' => $wo->vendor_name,
+                'vendorContact' => $wo->vendor_contact,
+                'vendorDescription' => $wo->vendor_description,
+                'licenseName' => $wo->license_name,
+                'licenseDescription' => $wo->license_description,
+                // Diagnosis data
+                'diagnosis' => $diagnosisData,
+                // Technician info
+                'technicianId' => $wo->created_by,
+                'technicianName' => $wo->createdBy?->name,
+                // Requester info
+                'requesterId' => $ticket?->user_id,
+                'requesterName' => $ticket?->user?->name,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kartu Kendali retrieved successfully',
+            'data' => $data,
+            'pagination' => [
+                'total' => $workOrders->total(),
+                'per_page' => $workOrders->perPage(),
+                'current_page' => $workOrders->currentPage(),
+                'last_page' => $workOrders->lastPage(),
+                'from' => $workOrders->firstItem(),
+                'to' => $workOrders->lastItem(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Export Kartu Kendali ke Excel
+     * GET /kartu-kendali/export
+     */
+    public function exportKartuKendali(Request $request)
+    {
+        $workOrders = WorkOrder::where('status', 'completed')
+            ->with(['ticket.user', 'ticket.diagnosis.technician', 'createdBy'])
+            ->orderBy('completed_at', 'desc')
+            ->get();
+
+        // Transform data
+        $rows = [];
+        $no = 1;
+        foreach ($workOrders as $wo) {
+            $ticket = $wo->ticket;
+            $ticketData = is_string($ticket?->data) ? json_decode($ticket->data, true) : ($ticket?->data ?? []);
+            $diagnosis = $ticket?->diagnosis;
+            
+            // Parse items JSON
+            $items = $wo->items;
+            if (is_string($items)) {
+                $items = json_decode($items, true) ?? [];
+            }
+            $itemsText = collect($items)->map(fn($i) => ($i['name'] ?? $i['item_name'] ?? '') . ' x' . ($i['quantity'] ?? 1))->implode(', ');
+
+            $rows[] = [
+                'no' => $no++,
+                'ticket_number' => $ticket?->ticket_number ?? '-',
+                'ticket_title' => $ticket?->title ?? '-',
+                'asset_code' => $ticketData['asset_code'] ?? $ticketData['kode_barang'] ?? '-',
+                'asset_nup' => $ticketData['asset_nup'] ?? $ticketData['nup'] ?? '-',
+                'requester' => $ticket?->user?->name ?? '-',
+                'technician' => $wo->createdBy?->name ?? '-',
+                // Diagnosis
+                'problem' => $diagnosis?->problem_description ?? '-',
+                'physical_condition' => $diagnosis?->physical_condition ?? '-',
+                'is_repairable' => $diagnosis?->is_repairable ? 'Ya' : 'Tidak',
+                'repair_recommendation' => $diagnosis?->repair_recommendation ?? '-',
+                // Work order
+                'spareparts' => $itemsText ?: '-',
+                'vendor_name' => $wo->vendor_name ?? '-',
+                'vendor_description' => $wo->vendor_description ?? '-',
+                'license_name' => $wo->license_name ?? '-',
+                'license_description' => $wo->license_description ?? '-',
+                'completion_notes' => $wo->completion_notes ?? '-',
+                'completed_at' => $wo->completed_at?->format('d/m/Y H:i') ?? '-',
+            ];
+        }
+
+        // Generate Excel menggunakan PhpSpreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Kartu Kendali');
+
+        // Header
+        $headers = [
+            'No', 'No. Tiket', 'Judul Tiket', 'Kode Aset', 'NUP', 
+            'Pelapor', 'Teknisi', 'Masalah', 'Kondisi Fisik', 
+            'Dapat Diperbaiki', 'Rekomendasi', 'Suku Cadang', 
+            'Nama Vendor', 'Deskripsi Vendor', 'Nama Lisensi', 
+            'Deskripsi Lisensi', 'Catatan Penyelesaian', 'Tanggal Selesai'
+        ];
+        
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $sheet->getStyle($col . '1')->getFont()->setBold(true);
+            $sheet->getStyle($col . '1')->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('4472C4');
+            $sheet->getStyle($col . '1')->getFont()->getColor()->setRGB('FFFFFF');
+            $col++;
+        }
+
+        // Data rows
+        $rowNum = 2;
+        foreach ($rows as $row) {
+            $sheet->setCellValue('A' . $rowNum, $row['no']);
+            $sheet->setCellValue('B' . $rowNum, $row['ticket_number']);
+            $sheet->setCellValue('C' . $rowNum, $row['ticket_title']);
+            $sheet->setCellValue('D' . $rowNum, $row['asset_code']);
+            $sheet->setCellValue('E' . $rowNum, $row['asset_nup']);
+            $sheet->setCellValue('F' . $rowNum, $row['requester']);
+            $sheet->setCellValue('G' . $rowNum, $row['technician']);
+            $sheet->setCellValue('H' . $rowNum, $row['problem']);
+            $sheet->setCellValue('I' . $rowNum, $row['physical_condition']);
+            $sheet->setCellValue('J' . $rowNum, $row['is_repairable']);
+            $sheet->setCellValue('K' . $rowNum, $row['repair_recommendation']);
+            $sheet->setCellValue('L' . $rowNum, $row['spareparts']);
+            $sheet->setCellValue('M' . $rowNum, $row['vendor_name']);
+            $sheet->setCellValue('N' . $rowNum, $row['vendor_description']);
+            $sheet->setCellValue('O' . $rowNum, $row['license_name']);
+            $sheet->setCellValue('P' . $rowNum, $row['license_description']);
+            $sheet->setCellValue('Q' . $rowNum, $row['completion_notes']);
+            $sheet->setCellValue('R' . $rowNum, $row['completed_at']);
+            $rowNum++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'R') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Stream response sebagai Excel
+        $filename = 'kartu_kendali_' . date('Y-m-d_His') . '.xlsx';
+        
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

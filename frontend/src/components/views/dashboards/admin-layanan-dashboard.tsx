@@ -92,7 +92,6 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
         <div>
           <h1 className="text-3xl font-semibold flex items-center gap-3">
             Admin Layanan Dashboard
-            <ClipboardCheck className="h-8 w-8 text-blue-600" />
           </h1>
           <div className="flex flex-row gap-4">
           <p className="text-gray-500 mt-1">Memuat data dashboard...</p>
@@ -118,19 +117,25 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
+          className="    
+          bg-blue-500 
+          rounded-3xl 
+          p-8 
+          text-white
+          border border-white/30
+          shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
         >
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl mb-2">
                 Admin Layanan Dashboard
               </h1>
-              <p className="text-blue-600">
+              <p className="text-blue-100">
                 Pantau dan kelola semua tiket dari seluruh pengguna
               </p>
             </div>
             <div className="hidden md:block">
-              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
+              <Sparkles className="h-20 w-20 text-blue-100 opacity-50" />
             </div>
           </div>
 
@@ -140,28 +145,29 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
           <div className="flex items-center justify-between">
             {loading ? (
               <div className="w-full flex items-center justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader className="h-6 w-6 animate-spin text-blue-100" />
               </div>
             ) : stats && stats.statistics ? (
               <>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.total}</p>
+                  <p className="text-xs text-blue-100 mt-1">semua status</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Tiket Perbaikan</p>
+                  <p className="text-blue-100 text-sm">Tiket Perbaikan</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.perbaikan.count}</p>
-                  <p className="text-xs text-blue-300 mt-1">{stats.statistics.perbaikan.status}</p>
+                  <p className="text-xs text-blue-100 mt-1">{stats.statistics.perbaikan.status}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Tiket Zoom</p>
+                  <p className="text-blue-100 text-sm">Tiket Zoom</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.zoom.count}</p>
-                  <p className="text-xs text-blue-300 mt-1">{stats.statistics.zoom.status}</p>
+                  <p className="text-xs text-blue-100 mt-1">{stats.statistics.zoom.status}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center">
-                  <p className="text-blue-400 text-sm">Closed</p>
+                  <p className="text-blue-100 text-sm">Closed</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.closed.count}</p>
-                  <p className="text-xs text-blue-300 mt-1">{stats.statistics.closed.description}</p>
+                  <p className="text-xs text-blue-100 mt-1">{stats.statistics.closed.description}</p>
                 </div>
               </>
             ) : null}
@@ -234,14 +240,14 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
                       transition={{ delay: index * 0.05 }}
                       className="flex items-start gap-3 p-3 rounded-lg border border-gray-200"
                     >
-                      <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <TypeIcon className="h-5 w-5 text-blue-600" />
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <TypeIcon className="h-5 w-5" />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-sm truncate">{ticket.title}</h4>
                         <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                          <span className="font-mono text-blue-600">{ticket.ticketNumber}</span>
+                          <span className="font-mono">{ticket.ticketNumber}</span>
                           <span>•</span>
                           <span>{new Date(ticket.createdAt).toLocaleDateString('id-ID')}</span>
                         </div>
@@ -254,7 +260,7 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
                   <div className="pt-2 mt-2 border-t border-gray-200">
                     <button
                       onClick={() => onNavigate('tickets')}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors hover:underline"
+                      className="text-sm text-blue-100 hover:text-blue-700 font-medium transition-colors hover:underline"
                     >
                       + {recentPendingTickets.length - 3} tiket lainnya
                     </button>

@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { User, Ticket, RepairType } from "@/types";
+import type { User, Ticket } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -40,7 +40,7 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
   currentUser,
   onShowReviewDialog,
   onShowRejectDialog,
-  onShowAssignDialog,
+  onShowAssignDialog: _onShowAssignDialog,
   onShowDiagnosaDialog,
   onShowSparepartDialog,
   getWorkOrdersByTicket,

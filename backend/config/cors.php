@@ -23,9 +23,15 @@ return [
     'allowed_origins' => [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'https://sigap-ti.vercel.app',
+        'https://sigap-op7xy0nhs-naranggaku-4793s-projects.vercel.app',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '/^https:\/\/.*\.vercel\.app$/',  // Allow all Vercel preview URLs
+    ],
 
     'allowed_headers' => ['*'],
 

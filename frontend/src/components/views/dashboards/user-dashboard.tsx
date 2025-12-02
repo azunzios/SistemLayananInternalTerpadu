@@ -6,7 +6,7 @@ import {
   Wrench,
   Video,
   ArrowRight,
-  Sparkles,
+  IdCardLanyard,
   ArrowUpRight,
   Loader,
 } from 'lucide-react';
@@ -88,7 +88,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
 
   useEffect(() => {
     const hasSeenOnboarding = sessionStorage.getItem(`onboarding_seen_${currentUser.id}`);
-    
+
     if (!hasSeenOnboarding && stats && stats.total === 0) {
       setShowOnboarding(true);
     }
@@ -260,25 +260,31 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
   return (
     <>
       <UserOnboarding open={showOnboarding} onComplete={handleCompleteOnboarding} />
-      
+
       <div className="space-y-6">
         {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
+          className="    
+          bg-blue-500
+          rounded-3xl 
+          p-8 
+          text-white
+          border border-white/30
+          shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
         >
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl mb-2">
                 Selamat Datang, {currentUser.name.split(' ')[0]}!
               </h1>
-              <p className="text-blue-600">
+              <p className="text-blue-100">
                 {currentUser.unitKerja} • {roleLabels[activeRole] || 'Pegawai'}
               </p>
             </div>
             <div className="hidden md:block">
-              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
+              <IdCardLanyard className="h-20 w-20 text-blue-200 opacity-50" />
             </div>
           </div>
 
@@ -288,24 +294,24 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
           <div className="flex items-center justify-between">
             {loading ? (
               <div className="w-full flex items-center justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader className="h-6 w-6 animate-spin text-white" />
               </div>
             ) : stats ? (
               <>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Sedang Proses</p>
+                  <p className="text-blue-100 text-sm">Sedang Proses</p>
                   <p className="text-3xl mt-1 font-bold">{stats.in_progress}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Selesai</p>
+                  <p className="text-blue-100 text-sm">Selesai</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center">
-                  <p className="text-blue-400 text-sm">Completion Rate</p>
+                  <p className="text-blue-100 text-sm">Completion Rate</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completion_rate.toFixed(0)}%</p>
                 </div>
               </>
@@ -316,7 +322,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
         {/* Quick Actions */}
         <div>
           <h2 className="text-xl mb-4 flex items-center gap-2">
-            <ArrowUpRight className="h-5 w-5" />
+            <ArrowUpRight className="h-5 w-5" strokeWidth={4} />
             Layanan Cepat
           </h2>
           <div className="grid gap-4 md:grid-cols-2">

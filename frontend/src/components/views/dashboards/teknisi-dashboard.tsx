@@ -6,13 +6,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle,
   AlertCircle,
   Package,
-  Sparkles,
+  ToolCase,
   Loader,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -36,7 +35,7 @@ interface TeknisiDashboardProps {
 
 export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
   currentUser,
-  onNavigate,
+  onNavigate: _onNavigate,
 }) => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,67 +97,6 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     };
   }, [myTickets]);
 
-  // Recent assignments - Updated for new status values
-  const recentAssignments = useMemo(() => {
-    return myTickets
-      .filter((t) =>
-        [
-          "assigned",
-          "submitted",
-          "pending_review",
-          "in_progress",
-          "on_hold",
-        ].includes(t.status)
-      )
-      .sort((a, b) => {
-        // Priority: assigned > submitted/pending_review > in_progress > on_hold
-        const statusOrder: Record<string, number> = {
-          assigned: 0,
-          submitted: 1,
-          pending_review: 1,
-          in_progress: 2,
-          on_hold: 3,
-        };
-        const statusDiff =
-          (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
-        if (statusDiff !== 0) return statusDiff;
-
-        // Then by creation date (newest first)
-        return (
-          new Date(b.createdAt || b.created_at).getTime() -
-          new Date(a.createdAt || a.created_at).getTime()
-        );
-      })
-      .slice(0, 8);
-  }, [myTickets]);
-
-  // Completion trend
-  const completionTrend = useMemo(() => {
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-      });
-
-      const dayTickets = myTickets.filter((t) => {
-        const ticketDate = new Date(t.updatedAt || t.updated_at);
-        return (
-          ticketDate.toDateString() === date.toDateString() &&
-          ["waiting_for_submitter", "closed"].includes(t.status)
-        );
-      });      
-      
-      last7Days.push({
-        date: dateStr,
-        completed: dayTickets.length,
-      });
-    }
-    return last7Days;
-  }, [myTickets]);
-
   // Incoming tickets trend (per hari)
   const incomingTrend = useMemo(() => {
     const last7Days = [];
@@ -183,38 +121,6 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
     return last7Days;
   }, [myTickets]);
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: any; label: string }> = {
-      assigned: { variant: "secondary", label: "Assigned" },
-      submitted: { variant: "secondary", label: "Submitted" },
-      pending_review: { variant: "secondary", label: "Pending Review" },
-      in_progress: { variant: "default", label: "In Progress" },
-      on_hold: { variant: "secondary", label: "On Hold" },
-      waiting_for_submitter: { variant: "default", label: "Waiting Confirmation" },
-      closed: { variant: "default", label: "Closed" },
-    };
-    const statusConfig = config[status] || {
-      variant: "secondary",
-      label: status,
-    };
-    return <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>;
-  };
-
-  const getUrgencyBadge = (urgency: string) => {
-    const config = {
-      sangat_mendesak: { variant: "destructive" as const, label: "Urgent" },
-      mendesak: { variant: "default" as const, label: "High" },
-      normal: { variant: "outline" as const, label: "Normal" },
-    };
-    const urgencyConfig =
-      config[urgency as keyof typeof config] || config.normal;
-    return (
-      <Badge variant={urgencyConfig.variant} className="text-xs">
-        {urgencyConfig.label}
-      </Badge>
-    );
-  };
-
   return (
     <>
       <div className="space-y-6">
@@ -222,19 +128,25 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#f0f4f4f9] rounded-xl p-8 text-black"
+          className="    
+    bg-blue-500 
+    rounded-3xl 
+    p-8 
+    text-white
+    border border-white/30
+    shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
         >
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl mb-2">
                 Teknisi Dashboard
               </h1>
-              <p className="text-blue-600">
+              <p className="text-blue-100">
                 Kelola tugas perbaikan dan tracking progress
               </p>
             </div>
             <div className="hidden md:block">
-              <Sparkles className="h-20 w-20 text-blue-200 opacity-50" />
+              <ToolCase className="h-20 w-20 text-blue-100 opacity-50"/>
             </div>
           </div>
 
@@ -244,28 +156,28 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
           <div className="flex items-center justify-between">
             {loading ? (
               <div className="w-full flex items-center justify-center py-8">
-                <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                <Loader className="h-6 w-6 animate-spin text-blue-100" />
               </div>
             ) : (
               <>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Total Tiket</p>
+                  <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">Perlu Didiagnosa</p>
+                  <p className="text-blue-100 text-sm">Perlu Didiagnosa</p>
                   <p className="text-3xl mt-1 font-bold">{stats.needsDiagnosis}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">In Progress</p>
+                  <p className="text-blue-100 text-sm">In Progress</p>
                   <p className="text-3xl mt-1 font-bold">{stats.inProgress}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
-                  <p className="text-blue-400 text-sm">On Hold</p>
+                  <p className="text-blue-100 text-sm">On Hold</p>
                   <p className="text-3xl mt-1 font-bold">{stats.waitingSparepart}</p>
                 </div>
                 <div className="flex-1 px-4 py-4 text-center">
-                  <p className="text-blue-400 text-sm">Selesai</p>
+                  <p className="text-blue-100 text-sm">Selesai</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
                 </div>
               </>

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/select";
 import {
   Search,
-  Eye,
   Wrench,
   Video,
   AlertCircle,
@@ -21,9 +20,14 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Info,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { api } from "@/lib/api";
+import { api, resolveApiUrl } from "@/lib/api";
+import { StatusInfoDialog } from "./status-info-dialog";
+import { toast } from "sonner";
 import type { User, Ticket, UserRole } from "@/types";
 
 interface TicketListProps {
@@ -62,6 +66,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
+  const [showStatusInfo, setShowStatusInfo] = useState(false);
   const [stats, setStats] = useState<TicketStats>({
     total: 0,
     pending: 0,
@@ -72,6 +77,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Role effective mengikuti activeRole (bukan sekadar daftar roles)
   const effectiveRole = activeRole || currentUser.role;
@@ -80,6 +86,11 @@ export const TicketList: React.FC<TicketListProps> = ({
   const isTeknisiOnly = effectiveRole === "teknisi";
   const isAdminPenyedia = effectiveRole === "admin_penyedia";
   const isPegawaiOnly = !isAdmin && !isTeknisiOnly && !isAdminPenyedia;
+
+  // Reset filterStatus ketika filterType berubah
+  useEffect(() => {
+    setFilterStatus("all");
+  }, [filterType]);
 
   // Load statistics on mount and when filter type changes
   useEffect(() => {
@@ -106,7 +117,7 @@ export const TicketList: React.FC<TicketListProps> = ({
       } else if (isTeknisiOnly) {
         query.push("scope=assigned");
       }
-      if (filterType !== "all") {
+      if (!isAdminPenyedia && filterType !== "all") {
         query.push(`type=${filterType}`);
       }
 
@@ -115,10 +126,10 @@ export const TicketList: React.FC<TicketListProps> = ({
 
       setStats({
         total: statsData.total || 0,
-        pending: statsData.pending || 0,
-        in_progress: statsData.in_progress || 0,
+        pending: statsData.submitted || statsData.pending || 0,
+        in_progress: statsData.in_progress || statsData.processing || 0,
         approved: statsData.approved || 0,
-        completed: statsData.completed || 0,
+        completed: statsData.closed || statsData.completed || 0,
         rejected: statsData.rejected || 0,
       });
     } catch (err) {
@@ -140,14 +151,39 @@ export const TicketList: React.FC<TicketListProps> = ({
         query.push(`search=${encodeURIComponent(searchTerm)}`);
       }
 
-      // Add type filter
-      if (filterType !== "all") {
+      // Add type filter - only for non-admin-penyedia
+      if (!isAdminPenyedia && filterType !== "all") {
         query.push(`type=${filterType}`);
       }
 
-      // Add status filter
+      // Add status filter - map filters to actual status values based on type
       if (filterStatus !== "all") {
-        query.push(`status=${filterStatus}`);
+        if (isAdminPenyedia) {
+          // Admin penyedia: perbaikan only
+          if (filterStatus === "submitted") {
+            query.push(`status=submitted`);
+          } else if (filterStatus === "processing") {
+            query.push(`statuses=assigned,in_progress,on_hold,waiting_for_submitter`);
+          } else if (filterStatus === "closed") {
+            query.push(`status=closed`);
+          }
+        } else if (filterType === "perbaikan") {
+          // Perbaikan: submitted, in_progress (maps to multiple), closed
+          if (filterStatus === "in_progress") {
+            query.push(`statuses=assigned,in_progress,on_hold,waiting_for_submitter`);
+          } else {
+            query.push(`status=${filterStatus}`);
+          }
+        } else if (filterType === "zoom_meeting") {
+          // Zoom: pending_review, completed (maps to approved,rejected,cancelled)
+          if (filterStatus === "completed") {
+            query.push(`statuses=approved,rejected,cancelled`);
+          } else {
+            query.push(`status=${filterStatus}`);
+          }
+        } else {
+          query.push(`status=${filterStatus}`);
+        }
       }
 
       // Scope according to active role to force backend filtering even for multi-role users
@@ -243,6 +279,39 @@ export const TicketList: React.FC<TicketListProps> = ({
     }
   };
 
+  // Export ke Excel
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const token = sessionStorage.getItem("auth_token");
+      const response = await fetch(resolveApiUrl("/tickets/export/all"), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Export failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `laporan_tiket_${new Date().toISOString().split("T")[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Berhasil mengunduh laporan tiket");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Gagal mengunduh laporan");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("id-ID", {
@@ -275,77 +344,142 @@ export const TicketList: React.FC<TicketListProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Kelola Tiket</h1>
+          <h1 className="text-3xl font-bold">Kelola Tiket</h1>
           <p className="text-muted-foreground">
-            Review dan kelola semua tiket dari pengguna
+            {isAdminPenyedia
+              ? "Review dan kelola semua tiket yang membutuhkan work order"
+              : "Review dan kelola semua tiket dari pengguna"}
           </p>
+        </div>
+
+        {/* Export Button */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all"
+          >
+            {exporting ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-3.5 w-3.5 text-slate-500" />
+            )}
+            Unduh Laporan (.xlsx)
+          </Button>
         </div>
       </div>
 
       {/* Filter Controls */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid gap-4 md:grid-cols-4">
-            {/* Search */}
-            <div className="relative">
+          <div className="flex gap-3 items-center">
+            {/* Search - 2x growth */}
+            <div className="relative flex-[2]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Cari tiket..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 text-sm"
+                className="pl-9 h-10 text-sm w-full"
               />
             </div>
 
-            {/* Type Filter */}
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder="Semua Tipe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Tipe</SelectItem>
-                <SelectItem value="perbaikan">Perbaikan</SelectItem>
-                <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Admin Penyedia - Status Filter only (flex-1) */}
+            {isAdminPenyedia && (
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-10 text-sm flex-1">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    Semua ({statsLoading ? "..." : stats.total})
+                  </SelectItem>
+                  <SelectItem value="submitted">
+                    Pending ({statsLoading ? "..." : stats.pending})
+                  </SelectItem>
+                  <SelectItem value="processing">
+                    Diproses ({statsLoading ? "..." : stats.in_progress})
+                  </SelectItem>
+                  <SelectItem value="closed">
+                    Selesai ({statsLoading ? "..." : stats.completed})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
-            {/* Status Filter */}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder="Semua Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  Semua ({statsLoading ? "..." : stats.total})
-                </SelectItem>
-                <SelectItem value="pending_review">
-                  Pending ({statsLoading ? "..." : stats.pending})
-                </SelectItem>
-                <SelectItem value="approved">
-                  Disetujui ({statsLoading ? "..." : stats.approved})
-                </SelectItem>
-                <SelectItem value="completed">
-                  Selesai ({statsLoading ? "..." : stats.completed})
-                </SelectItem>
-                <SelectItem value="rejected">
-                  Ditolak ({statsLoading ? "..." : stats.rejected})
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Non-Admin Penyedia - Type (flex-1) + Status (flex-1) */}
+            {!isAdminPenyedia && (
+              <>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="h-10 text-sm flex-1">
+                    <SelectValue placeholder="Tipe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tipe</SelectItem>
+                    <SelectItem value="perbaikan">Perbaikan</SelectItem>
+                    <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {/* Refresh Button */}
+                <Select
+                  value={filterType === "all" ? "all" : filterStatus}
+                  onValueChange={setFilterStatus}
+                  disabled={filterType === "all"}
+                >
+                  <SelectTrigger
+                    className="h-10 text-sm flex-1"
+                    title={filterType === "all" ? "Pilih tipe tiket terlebih dahulu untuk filter status" : undefined}
+                  >
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filterType === "perbaikan" ? (
+                      <>
+                        <SelectItem value="all">Semua</SelectItem>
+                        <SelectItem value="submitted">Pending</SelectItem>
+                        <SelectItem value="in_progress">Diproses</SelectItem>
+                        <SelectItem value="closed">Selesai</SelectItem>
+                      </>
+                    ) : filterType === "zoom_meeting" ? (
+                      <>
+                        <SelectItem value="all">Semua</SelectItem>
+                        <SelectItem value="pending_review">Pending</SelectItem>
+                        <SelectItem value="completed">Selesai</SelectItem>
+                      </>
+                    ) : (
+                      <SelectItem value="all">Semua</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+
+            {/* Info Button - fixed size, no flex */}
+            <Button
+              variant="outline"
+              onClick={() => setShowStatusInfo(true)}
+              className="h-10 w-10 p-0 flex-shrink-0"
+              size="icon"
+              title="Informasi Status"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+
+            {/* Refresh Button - fixed size, no flex */}
             <Button
               variant="outline"
               onClick={handleRefreshData}
               disabled={loading || statsLoading}
-              className="h-10"
+              className="h-10 w-10 p-0 flex-shrink-0"
+              size="icon"
+              title="Refresh"
             >
               <RotateCcw
-                className={`h-4 w-4 mr-2 ${
-                  loading || statsLoading ? "animate-spin" : ""
-                }`}
+                className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
+                  }`}
               />
-              Refresh
             </Button>
           </div>
         </CardContent>
@@ -426,7 +560,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                                 {getTypeLabel(ticket.type)}
                               </Badge>
                             </div>
-                            
+
                             {/* Status Badge */}
                             <div className="text-right">
                               {getStatusBadge(ticket.status)}
@@ -487,6 +621,9 @@ export const TicketList: React.FC<TicketListProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Status Info Dialog - Available for all roles */}
+      <StatusInfoDialog open={showStatusInfo} onOpenChange={setShowStatusInfo} />
     </div>
   );
 };

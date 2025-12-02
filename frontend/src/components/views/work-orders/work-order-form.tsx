@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, Users, Key, Plus, X, Loader2 } from "lucide-react";
+import { Package, Users, Key, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
@@ -41,7 +41,6 @@ interface WorkOrderFormProps {
   ticketStatus?: string;
   workOrderCount?: number;
   onSuccess: () => void;
-  existingWorkOrders?: any[];
 }
 
 export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
@@ -51,7 +50,6 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   ticketStatus = "in_progress",
   workOrderCount = 0,
   onSuccess,
-  existingWorkOrders = [],
 }) => {
   const [type, setType] = useState<"sparepart" | "vendor" | "license">(
     "sparepart"
@@ -74,7 +72,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
   const fetchWorkOrders = async () => {
     setIsLoadingWorkOrders(true);
     try {
-      const response = await api.get(`/tickets/${ticketId}/work-orders`);
+      const response = await api.get(`/tickets/${ticketId}/work-orders`) as { success?: boolean; data?: any[] };
       if (response.success && Array.isArray(response.data)) {
         setWorkOrders(response.data);
       } else if (Array.isArray(response.data)) {
@@ -283,7 +281,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[90%] min-w-[80%] flex flex-col p-0">
+      <DialogContent className="max-w-[90%] min-w-[80%] max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle>Kelola Work Order</DialogTitle>
           <DialogDescription>
@@ -291,7 +289,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-h-0">
           {/* Loading State */}
           {isLoadingWorkOrders && (
             <div className="flex items-center justify-center py-4">
@@ -304,7 +302,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
           {!isLoadingWorkOrders && workOrders && workOrders.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-semibold text-sm">Daftar Work Order</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {workOrders.map((wo) => (
                   <Card key={wo.id} className="p-3">
                     <div className="space-y-2 text-sm">
@@ -352,7 +350,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="work-order-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Pilih Tipe Work Order */}
             <div className="space-y-3">
               <Label>Tipe Work Order</Label>
@@ -557,27 +555,27 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                 </div>
               </div>
             )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3 pt-4 border-t">
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
-                {isSubmitting ? "Menyimpan..." : "Simpan Work Order"}
-              </Button>
-
-              {/* Check if all work orders are completed */}
-              {workOrders.length > 0 && (
-                <Button
-                  type="button"
-                  className="bg-green-600 hover:bg-green-700 text-white w-full"
-                  onClick={() => setShowContinueConfirm(true)}
-                  disabled={isSubmitting || !workOrders.every(wo => ['delivered', 'completed', 'failed', 'cancelled'].includes(wo.status))}
-                >
-                  {isSubmitting ? "Melanjutkan..." : "Lanjutkan Perbaikan"}
-                </Button>
-              )}
-            </div>
           </form>
+        </div>
+
+        {/* Action Buttons - Sticky Footer */}
+        <div className="flex flex-col gap-3 px-6 py-4 border-t bg-white flex-shrink-0">
+          <Button type="submit" form="work-order-form" disabled={isSubmitting} className="w-full">
+            {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
+            {isSubmitting ? "Menyimpan..." : "Simpan Work Order"}
+          </Button>
+
+          {/* Check if all work orders are completed */}
+          {workOrders.length > 0 && (
+            <Button
+              type="button"
+              className="bg-green-600 hover:bg-green-700 text-white w-full"
+              onClick={() => setShowContinueConfirm(true)}
+              disabled={isSubmitting || !workOrders.every(wo => ['delivered', 'completed', 'failed', 'cancelled'].includes(wo.status))}
+            >
+              {isSubmitting ? "Melanjutkan..." : "Lanjutkan Perbaikan"}
+            </Button>
+          )}
         </div>
 
         {/* Confirmation Dialog */}
