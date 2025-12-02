@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import { Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import {
   loginUser,
@@ -21,7 +21,6 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  //INI NANTI DIUBAH
   const [formData, setFormData] = useState({
     login: '',
     password: '',
@@ -33,6 +32,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // --- STYLES DEFINITION ---
+
+  // 1. Tombol Utama (Biru Mengilap)
+  const soapButtonPrimary = "w-full h-11 rounded-full bg-gradient-to-b from-blue-500 to-blue-600 shadow-[inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2),0_4px_6px_rgba(0,0,0,0.1)] border-t border-blue-400 hover:brightness-110 active:scale-[0.98] active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] transition-all duration-200 text-white font-medium";
+
+  // 2. Tombol Sekunder/Kembali (Putih/Abu Mengilap)
+  const soapButtonSecondary = "w-full h-11 rounded-full bg-gradient-to-b from-white to-gray-100 border border-gray-200 text-gray-700 shadow-[inset_0_1px_0_rgba(255,255,255,1),0_2px_3px_rgba(0,0,0,0.05)] hover:bg-gray-50 hover:text-gray-900 active:scale-[0.98] active:shadow-inner transition-all duration-200 font-medium";
+
+  // 3. Style Icon Mail dengan Border Besi
+  const metalIconWrapper = "mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-[0_8px_16px_rgba(0,0,0,0.15),inset_0_4px_6px_rgba(255,255,255,0.3)] border-[6px] border-[#E2E8F0] ring-1 ring-white";
+
+  // 4. Style Alert Info
+  const soapAlertStyle = "mb-4 rounded-2xl border border-blue-200 bg-blue-50/80 shadow-[inset_0_0_10px_rgba(59,130,246,0.1)] backdrop-blur-sm";
+
+  // -------------------------
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -52,22 +67,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       );
       const user = response.user;
 
-      //Check if account is active
       if (!user.isActive) {
         setError("Akun Anda sedang dinonaktifkan. Hubungi administrator");
         setIsLoading(false);
         return;
       }
 
-      // Set remember me token
       if (formData.rememberMe) {
         setRememberToken(user.id, 30);
       }
 
-      // Set current user
       setCurrentUser(user);
 
-      // Log successful login
       addAuditLog({
         userId: user.id,
         action: "LOGIN_SUCCESS",
@@ -75,7 +86,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         ipAddress: "N/A",
       });
 
-      // Get role label untuk toast
       const roleLabels: Record<string, string> = {
         super_admin: "Super Administrator",
         admin_layanan: "Admin Layanan",
@@ -98,7 +108,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         },
       });
 
-
       onLogin(user);
     } catch (err: any) {
       console.error("Login error:", err);
@@ -108,7 +117,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         "Email atau password tidak valid";
       setError(errorMessage);
 
-      // Log failed attempt
       addAuditLog({
         userId: "unknown",
         action: "LOGIN_FAILED",
@@ -157,24 +165,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   if (showForgotPassword) {
     return (
       <div className="min-h-screen m-0 flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-white to-blue-50">
-        <Toaster />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md shadow-xl border-t-white/50">
             <CardHeader className="text-center space-y-4">
+              {/* LOGO DENGAN BORDER BESI */}
               <motion.div
-                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600"
+                className={metalIconWrapper}
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400 }}
               >
-                <Mail className="h-10 w-10 text-white" />
+                <Mail className="h-10 w-10 text-white drop-shadow-md" />
               </motion.div>
               <div>
-                <CardTitle className="text-2xl">Reset Password</CardTitle>
-                <CardDescription className="mt-2">
+                <CardTitle className="text-2xl text-gray-800">Reset Password</CardTitle>
+                <CardDescription className="mt-2 text-gray-500">
                   {resetSuccess
                     ? "Link reset password telah dikirim"
                     : "Masukkan email terdaftar untuk reset password"}
@@ -184,7 +192,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
             {!resetSuccess ? (
               <form onSubmit={handleForgotPassword}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -194,25 +202,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       onChange={(e) => setForgotPasswordEmail(e.target.value)}
                       placeholder="nama@bps-ntb.go.id"
                       required
+                      className="rounded-lg border-gray-300 focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
-                  <Alert className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-sm">
+                  {/* ALERT INFO YANG DIPERBAIKI */}
+                  <Alert className={soapAlertStyle}>
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-sm text-blue-700 font-medium">
                       Link reset password akan dikirim ke email Anda dan berlaku
                       selama 1 jam
                     </AlertDescription>
                   </Alert>
                 </CardContent>
-                <CardFooter className="flex flex-col space-y-2">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                <CardFooter className="flex flex-col space-y-3 pb-8">
+                  <Button type="submit" className={soapButtonPrimary} disabled={isLoading}>
                     {isLoading ? "Mengirim..." : "Kirim Link Reset"}
                   </Button>
+                  
+                  {/* TOMBOL KEMBALI (GAYA SABUN SEKUNDER) */}
                   <Button
                     type="button"
-                    variant="link"
-                    className="w-full"
+                    variant="ghost" 
+                    className={soapButtonSecondary}
                     onClick={() => {
                       setShowForgotPassword(false);
                       setResetSuccess(false);
@@ -224,19 +236,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </CardFooter>
               </form>
             ) : (
-              <CardContent className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <p className="text-green-800">
-                    Email reset password telah dikirim ke{" "}
-                    <strong>{forgotPasswordEmail}</strong>
+              <CardContent className="space-y-6 pb-8">
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center shadow-inner">
+                  <p className="text-green-800 font-medium">
+                    Email reset password telah dikirim ke
+                  </p>
+                  <p className="text-green-900 font-bold text-lg my-1">
+                     {forgotPasswordEmail}
                   </p>
                   <p className="text-sm text-green-600 mt-2">
                     Silakan cek inbox Anda dan klik link yang diberikan
                   </p>
                 </div>
+                
+                {/* TOMBOL KEMBALI KEDUA (GAYA SABUN SEKUNDER) */}
                 <Button
-                  variant="outline"
-                  className="w-full"
+                  variant="ghost"
+                  className={soapButtonSecondary}
                   onClick={() => {
                     setShowForgotPassword(false);
                     setResetSuccess(false);
@@ -255,20 +271,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-svh flex items-center justify-center p-4 bg-[#F8F9FA]">
-      <Toaster />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-4xl"
       >
-        <Card className="w-full max-w-4xl overflow-hidden shadow-lg">
+        <Card className="w-full max-w-4xl overflow-hidden shadow-2xl rounded-2xl border-white/50">
           <CardContent className="grid p-0 md:grid-cols-2">
-            <div className="flex flex-col justify-center p-6 pb-0 !mb-0 sm:p-10">
-              <CardHeader className="p-0 px-6 mb-4 text-center md:text-left max-w-full">
-                {/* Logo */}
+            <div className="flex flex-col justify-center p-6 pb-0 !mb-0 sm:p-10 bg-white/50 backdrop-blur-sm">
+              <CardHeader className="p-0 px-6 mb-6 text-center md:text-left max-w-full">
                 <div className="flex justify-center md:justify-start">
-                  <div className="h-20 w-20 flex items-center justify-center rounded-full">
+                  <div className="h-20 w-20 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
                     <img
                       src="/logo.svg"
                       alt="Logo BPS Provinsi NTB"
@@ -279,7 +293,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </CardHeader>
 
               <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5">
                   <AnimatePresence mode="wait">
                     {error && (
                       <motion.div
@@ -287,7 +301,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                       >
-                        <Alert variant="destructive" className="mt-4">
+                        <Alert variant="destructive" className="mt-4 rounded-xl shadow-sm">
                           <AlertCircle className="h-3 w-3" />
                           <AlertDescription>{error}</AlertDescription>
                         </Alert>
@@ -296,7 +310,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   </AnimatePresence>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login">Email</Label>
+                    <Label htmlFor="login" className="text-gray-700 font-medium ml-1">Email</Label>
                     <Input
                       id="login"
                       name="login"
@@ -306,12 +320,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       placeholder="nama@bps-ntb.go.id"
                       required
                       autoComplete="email"
-                      className="pr-10 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                      className="rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-11 pr-10"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-gray-700 font-medium ml-1">Password</Label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -322,12 +336,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         placeholder="Masukkan password"
                         required
                         autoComplete="current-password"
-                        className="!pr-12"
-                        style={{ paddingRight: '3rem' }}
+                        className="rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-11 !pr-12"
                       />
+                      
+                      {/* TOMBOL MATA DIPERBAIKI */}
                       <button
                         type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all active:scale-90"
                         onClick={() => setShowPassword(!showPassword)}
                         tabIndex={-1}
                       >
@@ -340,8 +355,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center space-x-2">
+                      {/* CHECKBOX DENGAN EFEK */}
                       <Checkbox
                         id="remember"
                         checked={formData.rememberMe}
@@ -351,19 +367,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                             rememberMe: !!checked,
                           }))
                         }
+                        className="rounded border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 shadow-sm"
                       />
                       <Label
                         htmlFor="remember"
-                        className="text-sm cursor-pointer font-normal"
+                        className="text-sm cursor-pointer font-normal text-gray-600 select-none hover:text-gray-900 transition-colors"
                       >
                         Ingat Saya (30 hari)
                       </Label>
                     </div>
 
+                    {/* LUPA PASSWORD DENGAN EFEK PILL */}
                     <Button
                       type="button"
-                      variant="link"
-                      className="px-0 text-sm font-normal"
+                      variant="ghost"
+                      className="px-3 h-8 text-sm font-medium text-blue-600 rounded-full hover:bg-blue-50 hover:text-blue-700 transition-colors"
                       onClick={() => setShowForgotPassword(true)}
                     >
                       Lupa Password?
@@ -371,20 +389,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   </div>
                 </CardContent>
 
-                <CardFooter className="flex flex-col space-y-3 p-0 !pl-6 !pr-6 mt-4">
+                <CardFooter className="flex flex-col space-y-4 p-0 !pl-6 !pr-6 mt-6 pb-6">
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                    className={soapButtonPrimary}
                     disabled={isLoading}
                   >
                     {isLoading ? 'Memverifikasi...' : 'Masuk'}
                   </Button>
-                  <p className="text-center text-sm text-gray-500">
-                    Belum punya akun? Hubungi administrator untuk pendaftaran
+                  <p className="text-center text-xs text-gray-400">
+                    Belum punya akun? Hubungi administrator
                   </p>
                 </CardFooter>
               </form>
             </div>
+            
+            {/* Banner Side (Kanan) */}
             <div className="relative hidden h-full bg-muted md:block">
               <img
                 src="/banner.jpg"
@@ -395,13 +415,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <img
                 src="/banner.svg"
                 alt="Image"
-                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale z-10"
+                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale z-10 opacity-80"
               />
-              <div className="absolute inset-0 z-15 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="absolute bottom-4 z-20 w-[100%] px-4 flex flex-col gap-0">
-                <h2 className="text-white text-lg font-medium mb-1">SIGAP-TI</h2>
-                <div className="flex items-start gap-1 text-white text-md font-normal">
-                  <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat</span>
+              <div className="absolute inset-0 z-15 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="absolute bottom-8 z-20 w-full px-8 flex flex-col gap-2">
+                <h2 className="text-white text-2xl font-bold tracking-tight">SIGAP-TI</h2>
+                <div className="text-gray-200 text-sm font-light leading-relaxed max-w-sm">
+                  Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat
                 </div>
               </div>
             </div>

@@ -7,6 +7,7 @@ import { ProtectedRoute } from '../guards/ProtectedRoute';
 import { PublicRoute } from '../guards/PublicRoute';
 import { ROUTES, buildRoute, isValidRole } from '../constants';
 import type { User } from '../../types';
+import {ResetPasswordPage} from '@/components/reset-password-page';
 
 interface AppRouterProps {
   currentUser: User | null;
