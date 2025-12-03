@@ -159,21 +159,6 @@ export function resetTicketsCache() {
   datasetLoaded.tickets = false;
 }
 
-async function loadCategoriesFromApi(force = false): Promise<Category[]> {
-  if (!force && datasetLoaded.categories && cache.categories.length > 0) {
-    return cache.categories;
-  }
-  try {
-    const res = await api.get<any>("categories?per_page=100").catch(() => ({}));
-    cache.categories = Array.isArray(res) ? res : res?.data || [];
-    datasetLoaded.categories = true;
-  } catch (err) {
-    console.warn("Failed to load categories from API", err);
-    if (force) throw err;
-  }
-  return cache.categories;
-}
-
 async function loadUsersFromApi(force = false): Promise<User[]> {
   if (!force && datasetLoaded.users && cache.users.length > 0) {
     return cache.users;
