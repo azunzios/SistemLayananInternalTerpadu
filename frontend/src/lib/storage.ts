@@ -234,7 +234,8 @@ const datasetLoaders: Record<keyof typeof datasetLoaded, () => Promise<void>> =
       }
     },
     categories: async () => {
-      await loadCategoriesFromApi();
+      // Categories API endpoint disabled - not used
+      // await loadCategoriesFromApi();
     },
     users: async () => {
       await loadUsersFromApi();
