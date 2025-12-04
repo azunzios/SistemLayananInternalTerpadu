@@ -23,8 +23,17 @@ class UserResource extends JsonResource
             $roles = ['pegawai'];
         }
         
-        // Get the primary (first) role, defaulting to 'pegawai'
-        $primaryRole = $roles[0] ?? 'pegawai';
+        // Get the primary role dengan prioritas: pegawai > teknisi > admin_penyedia > admin_layanan > super_admin
+        // Untuk multi-role users, default ke role dengan privilege paling rendah (pegawai)
+        $rolePriority = ['pegawai', 'teknisi', 'admin_penyedia', 'admin_layanan', 'super_admin'];
+        $primaryRole = 'pegawai'; // Default fallback
+        
+        foreach ($rolePriority as $role) {
+            if (in_array($role, $roles)) {
+                $primaryRole = $role;
+                break; // Ambil yang pertama match (prioritas tertinggi)
+            }
+        }
 
         return [
             'id' => (string) $this->id,

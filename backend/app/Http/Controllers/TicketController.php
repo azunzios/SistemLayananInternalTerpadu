@@ -85,11 +85,10 @@ class TicketController extends Controller
         
         if ($user) {
             if ($scope === 'my') {
-                $query->where(function($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('assigned_to', $user->id);
-                });
+                // Explicit "my tickets": tiket yang dibuat oleh user (bukan yang di-assign)
+                $query->where('user_id', $user->id);
             } elseif ($scope === 'assigned') {
+                // Explicit "assigned": tiket yang di-assign ke user
                 $query->where('assigned_to', $user->id);
             } elseif ($scope === 'work_order_needed') {
                 // Admin penyedia: tiket yang punya work order atau butuh work order
@@ -268,11 +267,10 @@ class TicketController extends Controller
             $user = auth()->user();
             if ($user) {
                 if ($scope === 'my') {
-                    $query->where(function($q) use ($user) {
-                        $q->where('user_id', $user->id)
-                          ->orWhere('assigned_to', $user->id);
-                    });
+                    // "my tickets": tiket yang dibuat user
+                    $query->where('user_id', $user->id);
                 } elseif ($scope === 'assigned') {
+                    // "assigned": tiket yang di-assign ke user
                     $query->where('assigned_to', $user->id);
                 } elseif ($scope === 'work_order_needed') {
                     // Admin penyedia: tiket yang punya work order

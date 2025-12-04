@@ -25,6 +25,7 @@ import { StatusInfoDialog } from "./status-info-dialog";
 
 interface MyTicketsViewProps {
   currentUser: User;
+  activeRole?: string; // Role aktif saat ini (untuk multi-role)
   onViewTicket: (ticketId: string) => void;
 }
 
@@ -40,6 +41,7 @@ interface PaginationMeta {
 
 export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   currentUser,
+  activeRole,
   onViewTicket,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,14 +52,19 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   const [showStatusInfo, setShowStatusInfo] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Determine scope based on user role
-  const userRoles = Array.isArray(currentUser.roles)
-    ? currentUser.roles
-    : typeof currentUser.roles === "string"
-    ? JSON.parse(currentUser.roles)
-    : [];
-  const isTeknisi = userRoles.includes("teknisi");
-  const scope = isTeknisi ? "assigned" : "my"; // teknisi: assigned_to, pegawai: my
+  // Multi-role: gunakan activeRole untuk menentukan scope (bukan includes logic)
+  const effectiveRole = activeRole || currentUser.role;
+  const isTeknisi = effectiveRole === "teknisi";
+  const scope = isTeknisi ? "assigned" : "my";
+
+  console.log("🔍 MY TICKETS VIEW DEBUG:", {
+    activeRole,
+    "currentUser.role": currentUser.role,
+    "currentUser.roles": currentUser.roles,
+    effectiveRole,
+    isTeknisi,
+    scope,
+  });
 
   // Reset filterStatus ketika filterType berubah
   useEffect(() => {
@@ -96,7 +103,9 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
           if (filterStatus === "pending") {
             query.push(`status=submitted`);
           } else if (filterStatus === "inProgress") {
-            query.push(`status=assigned,in_progress,on_hold,waiting_for_submitter`);
+            query.push(
+              `status=assigned,in_progress,on_hold,waiting_for_submitter`
+            );
           } else if (filterStatus === "completed") {
             query.push(`status=closed`);
           }
@@ -158,7 +167,10 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   const getStatusBadge = (status: string) => {
     return (
       <div className="text-sm">
-        <span className="text-muted-foreground font-medium">status:</span> <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{status}</span>
+        <span className="text-muted-foreground font-medium">status:</span>{" "}
+        <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+          {status}
+        </span>
       </div>
     );
   };
@@ -207,101 +219,103 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Tiket Saya</h1>
-          <p className="text-muted-foreground">
-            Pantau semua tiket Anda
-          </p>
+          <p className="text-muted-foreground">Pantau semua tiket Anda</p>
         </div>
       </div>
 
-  {/* Filter Controls */}
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 w-full">
-          
-          {/* 1. Search - flex-1 agar mengisi sisa ruang (paling panjang) */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Cari tiket..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-10 text-sm w-full"
-            />
-          </div>
+      {/* Filter Controls */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 w-full">
+            {/* 1. Search - flex-1 agar mengisi sisa ruang (paling panjang) */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Cari tiket..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-10 text-sm w-full"
+              />
+            </div>
 
-          {/* 2. Filter Tipe - Fixed width & tidak menyusut */}
-          {!isTeknisi && (
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-10 text-sm w-36 flex-shrink-0">
-                <SelectValue placeholder="Tipe" />
+            {/* 2. Filter Tipe - Fixed width & tidak menyusut */}
+            {!isTeknisi && (
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="h-10 text-sm w-36 flex-shrink-0">
+                  <SelectValue placeholder="Tipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Tipe</SelectItem>
+                  <SelectItem value="perbaikan">Perbaikan</SelectItem>
+                  <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* 3. Filter Status - Fixed width & tidak menyusut */}
+            <Select
+              value={filterType === "all" ? "all" : filterStatus}
+              onValueChange={setFilterStatus}
+              disabled={filterType === "all"}
+            >
+              <SelectTrigger
+                className="h-10 text-sm w-36 flex-shrink-0"
+                title={
+                  filterType === "all"
+                    ? "Pilih tipe tiket terlebih dahulu"
+                    : undefined
+                }
+              >
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Tipe</SelectItem>
-                <SelectItem value="perbaikan">Perbaikan</SelectItem>
-                <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
+                {filterType === "perbaikan" ? (
+                  <>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="inProgress">Diproses</SelectItem>
+                    <SelectItem value="completed">Selesai</SelectItem>
+                  </>
+                ) : filterType === "zoom_meeting" ? (
+                  <>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="completed">Selesai</SelectItem>
+                  </>
+                ) : (
+                  <SelectItem value="all">Semua</SelectItem>
+                )}
               </SelectContent>
             </Select>
-          )}
 
-          {/* 3. Filter Status - Fixed width & tidak menyusut */}
-          <Select
-            value={filterType === "all" ? "all" : filterStatus}
-            onValueChange={setFilterStatus}
-            disabled={filterType === "all"}
-          >
-            <SelectTrigger
-              className="h-10 text-sm w-36 flex-shrink-0"
-              title={filterType === "all" ? "Pilih tipe tiket terlebih dahulu" : undefined}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {filterType === "perbaikan" ? (
-                <>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="inProgress">Diproses</SelectItem>
-                  <SelectItem value="completed">Selesai</SelectItem>
-                </>
-              ) : filterType === "zoom_meeting" ? (
-                <>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="completed">Selesai</SelectItem>
-                </>
-              ) : (
-                <SelectItem value="all">Semua</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+            {/* 4. Action Buttons - Fixed size & tidak menyusut */}
+            <div className="flex gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowStatusInfo(true)}
+                className="h-10 w-10"
+                title="Informasi Status"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
 
-          {/* 4. Action Buttons - Fixed size & tidak menyusut */}
-          <div className="flex gap-2 flex-shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowStatusInfo(true)}
-              className="h-10 w-10"
-              title="Informasi Status"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefreshData}
-              disabled={loading}
-              className="h-10 w-10"
-              title="Refresh"
-            >
-              <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefreshData}
+                disabled={loading}
+                className="h-10 w-10"
+                title="Refresh"
+              >
+                <RotateCcw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+              </Button>
+            </div>
           </div>
-
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
       {/* Tickets List */}
       <Card>
         <CardContent className="p-4">
@@ -312,9 +326,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
           ) : tickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
               <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                Tidak ada tiket
-              </h3>
+              <h3 className="text-lg font-semibold mb-2">Tidak ada tiket</h3>
               <p className="text-muted-foreground text-center">
                 {filterStatus === "all" && "Belum ada tiket yang dibuat"}
                 {filterStatus === "pending" && "Tidak ada tiket pending"}
@@ -337,23 +349,18 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
-                              {React.createElement(
-                                getTypeIcon(ticket.type),
-                                {
-                                  className: `h-5 w-5 ${
-                                    ticket.type === "perbaikan"
-                                      ? "text-orange-600"
-                                      : "text-purple-600"
-                                  }`,
-                                }
-                              )}
+                              {React.createElement(getTypeIcon(ticket.type), {
+                                className: `h-5 w-5 ${
+                                  ticket.type === "perbaikan"
+                                    ? "text-orange-600"
+                                    : "text-purple-600"
+                                }`,
+                              })}
                               <h3 className="font-semibold text-lg">
                                 {ticket.title}
                               </h3>
                             </div>
-                            <Badge
-                              className={getTypeColor(ticket.type)}
-                            >
+                            <Badge className={getTypeColor(ticket.type)}>
                               {getTypeLabel(ticket.type)}
                             </Badge>
                           </div>
@@ -363,9 +370,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                             </span>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              <span>
-                                {formatDate(ticket.createdAt)}
-                              </span>
+                              <span>{formatDate(ticket.createdAt)}</span>
                             </div>
                             <div className="flex items-center gap-1">
                               {getStatusBadge(ticket.status)}
@@ -377,8 +382,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                             variant="link"
                             size="sm"
                             className="h-8 w-8 p-0"
-                          >
-                          </Button>
+                          ></Button>
                         </div>
                       </div>
                     </CardContent>
@@ -393,9 +397,8 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                     {pagination ? (
                       <>
                         Halaman {pagination.current_page} dari{" "}
-                        {pagination.last_page} • Menampilkan{" "}
-                        {pagination.from}-{pagination.to} dari{" "}
-                        {pagination.total}
+                        {pagination.last_page} • Menampilkan {pagination.from}-
+                        {pagination.to} dari {pagination.total}
                       </>
                     ) : (
                       "Memuat..."
@@ -429,7 +432,10 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       </Card>
 
       {/* Status Info Dialog */}
-      <StatusInfoDialog open={showStatusInfo} onOpenChange={setShowStatusInfo} />
+      <StatusInfoDialog
+        open={showStatusInfo}
+        onOpenChange={setShowStatusInfo}
+      />
     </div>
   );
 };

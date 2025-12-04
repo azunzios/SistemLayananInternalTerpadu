@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { AppRouter } from '@/routing';
-import { Toaster } from '@/components/ui/sonner';
-import { Spinner } from '@/components/ui/spinner';
-import { initializeDefaultData, getCurrentUser, setCurrentUser as saveCurrentUser, clearRememberToken, loadDataFromApiOnce, resetAllCaches } from '@/lib/storage';
-import type { User } from '@/types';
+import React, { useState, useEffect } from "react";
+import { AppRouter } from "@/routing";
+import { Toaster } from "@/components/ui/sonner";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  initializeDefaultData,
+  getCurrentUser,
+  setCurrentUser as saveCurrentUser,
+  clearRememberToken,
+  loadDataFromApiOnce,
+  resetAllCaches,
+  getActiveRole,
+  setActiveRole,
+} from "@/lib/storage";
+import type { User } from "@/types";
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -18,8 +27,15 @@ const App: React.FC = () => {
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
+
+      // CRITICAL: Ensure activeRole is set for multi-role users
+      // If not set, default to user.role (yang sudah diprioritaskan dari backend)
+      if (!getActiveRole(user.id)) {
+        setActiveRole(user.role, user.id);
+      }
+
       // Load API data only if user is already logged in
-      loadDataFromApiOnce(user.role ?? 'pegawai')
+      loadDataFromApiOnce(user.role ?? "pegawai")
         .catch(() => {})
         .finally(() => setIsLoading(false));
     } else {
@@ -32,7 +48,7 @@ const App: React.FC = () => {
     resetAllCaches();
     setCurrentUser(user);
     // Load API data after successful login
-    loadDataFromApiOnce(user.role ?? 'pegawai').catch(() => {});
+    loadDataFromApiOnce(user.role ?? "pegawai").catch(() => {});
   };
 
   const handleLogout = () => {
@@ -50,8 +66,8 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center">
-          <Spinner/>
-          <p className="text-gray-600 m-2">Memuat sistem ...</p>
+        <Spinner />
+        <p className="text-gray-600 m-2">Memuat sistem ...</p>
       </div>
     );
   }

@@ -1,18 +1,26 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
-import { Alert, AlertDescription } from './ui/alert';
-import { Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
-import { toast } from "sonner";
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Eye, EyeOff, AlertCircle, Mail } from "lucide-react";
+import { toast, Toaster } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import {
   loginUser,
   setCurrentUser,
   addAuditLog,
   setRememberToken,
+  setActiveRole,
 } from "../lib/storage";
 import type { User } from "../types";
 
@@ -22,8 +30,8 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [formData, setFormData] = useState({
-    login: '',
-    password: '',
+    login: "",
+    password: "",
     rememberMe: true,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -395,7 +403,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     className={soapButtonPrimary}
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Memverifikasi...' : 'Masuk'}
+                    {isLoading ? "Memverifikasi..." : "Masuk"}
                   </Button>
                   <p className="text-center text-xs text-gray-400">
                     Belum punya akun? Hubungi administrator

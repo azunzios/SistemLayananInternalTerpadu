@@ -568,10 +568,11 @@ class WorkOrderController extends Controller
         // Transform data untuk kartu kendali
         $data = $workOrders->map(function ($wo) {
             $ticket = $wo->ticket;
-            $ticketData = is_string($ticket?->data) ? json_decode($ticket->data, true) : ($ticket?->data ?? []);
+            $formData = is_string($ticket?->form_data) ? json_decode($ticket->form_data, true) : ($ticket?->form_data ?? []);
             
-            // Get asset NUP untuk hitung total perawatan
-            $assetNup = $ticketData['asset_nup'] ?? $ticketData['nup'] ?? $ticket?->nup ?? null;
+            // Get asset info dari form_data atau langsung dari ticket
+            $assetCode = $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket?->kode_barang ?? null;
+            $assetNup = $formData['assetNUP'] ?? $formData['nup'] ?? $ticket?->nup ?? null;
             
             // Hitung berapa kali aset ini sudah dirawat (completed work orders dengan NUP yang sama)
             $maintenanceCount = 0;
@@ -590,22 +591,15 @@ class WorkOrderController extends Controller
             $diagnosisData = null;
             if ($diagnosis) {
                 $diagnosisData = [
-                    'physicalCondition' => $diagnosis->physical_condition,
-                    'visualInspection' => $diagnosis->visual_inspection,
                     'problemDescription' => $diagnosis->problem_description,
                     'problemCategory' => $diagnosis->problem_category,
-                    'testingResult' => $diagnosis->testing_result,
-                    'faultyComponents' => $diagnosis->faulty_components ?? [],
-                    'isRepairable' => $diagnosis->is_repairable,
                     'repairType' => $diagnosis->repair_type,
-                    'repairDifficulty' => $diagnosis->repair_difficulty,
-                    'repairRecommendation' => $diagnosis->repair_recommendation,
-                    'requiresSparepart' => $diagnosis->requires_sparepart,
-                    'requiredSpareparts' => $diagnosis->required_spareparts ?? [],
-                    'requiresVendor' => $diagnosis->requires_vendor,
-                    'vendorReason' => $diagnosis->vendor_reason,
+                    'isRepairable' => $diagnosis->repair_type !== 'unrepairable',
+                    'repairDescription' => $diagnosis->repair_description,
+                    'unrepairableReason' => $diagnosis->unrepairable_reason,
+                    'alternativeSolution' => $diagnosis->alternative_solution,
                     'technicianNotes' => $diagnosis->technician_notes,
-                    'diagnosedAt' => $diagnosis->diagnosed_at?->toISOString(),
+                    'diagnosedAt' => $diagnosis->created_at?->toISOString(),
                     'technicianName' => $diagnosis->technician?->name,
                 ];
             }
@@ -619,8 +613,8 @@ class WorkOrderController extends Controller
                 'completedAt' => $wo->completed_at?->toISOString(),
                 'completionNotes' => $wo->completion_notes,
                 // Asset info
-                'assetCode' => $ticketData['asset_code'] ?? $ticketData['kode_barang'] ?? $ticket?->kode_barang ?? null,
-                'assetName' => $ticketData['asset_name'] ?? $ticketData['nama_barang'] ?? $ticket?->title,
+                'assetCode' => $assetCode,
+                'assetName' => $formData['assetName'] ?? $formData['nama_barang'] ?? $ticket?->title,
                 'assetNup' => $assetNup,
                 'maintenanceCount' => $maintenanceCount, // Berapa kali aset ini sudah dirawat
                 // Work order specific data (apa yang diminta)
@@ -672,7 +666,7 @@ class WorkOrderController extends Controller
         $no = 1;
         foreach ($workOrders as $wo) {
             $ticket = $wo->ticket;
-            $ticketData = is_string($ticket?->data) ? json_decode($ticket->data, true) : ($ticket?->data ?? []);
+            $formData = is_string($ticket?->form_data) ? json_decode($ticket->form_data, true) : ($ticket?->form_data ?? []);
             $diagnosis = $ticket?->diagnosis;
             
             // Parse items JSON
@@ -686,15 +680,14 @@ class WorkOrderController extends Controller
                 'no' => $no++,
                 'ticket_number' => $ticket?->ticket_number ?? '-',
                 'ticket_title' => $ticket?->title ?? '-',
-                'asset_code' => $ticketData['asset_code'] ?? $ticketData['kode_barang'] ?? '-',
-                'asset_nup' => $ticketData['asset_nup'] ?? $ticketData['nup'] ?? '-',
+                'asset_code' => $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket?->kode_barang ?? '-',
+                'asset_nup' => $formData['assetNUP'] ?? $formData['nup'] ?? $ticket?->nup ?? '-',
                 'requester' => $ticket?->user?->name ?? '-',
                 'technician' => $wo->createdBy?->name ?? '-',
                 // Diagnosis
                 'problem' => $diagnosis?->problem_description ?? '-',
-                'physical_condition' => $diagnosis?->physical_condition ?? '-',
-                'is_repairable' => $diagnosis?->is_repairable ? 'Ya' : 'Tidak',
-                'repair_recommendation' => $diagnosis?->repair_recommendation ?? '-',
+                'is_repairable' => $diagnosis?->repair_type !== 'unrepairable' ? 'Ya' : 'Tidak',
+                'repair_notes' => $diagnosis?->technician_notes ?? '-',
                 // Work order
                 'spareparts' => $itemsText ?: '-',
                 'vendor_name' => $wo->vendor_name ?? '-',
@@ -714,8 +707,8 @@ class WorkOrderController extends Controller
         // Header
         $headers = [
             'No', 'No. Tiket', 'Judul Tiket', 'Kode Aset', 'NUP', 
-            'Pelapor', 'Teknisi', 'Masalah', 'Kondisi Fisik', 
-            'Dapat Diperbaiki', 'Rekomendasi', 'Suku Cadang', 
+            'Pelapor', 'Teknisi', 'Masalah', 
+            'Dapat Diperbaiki', 'Catatan Teknisi', 'Suku Cadang', 
             'Nama Vendor', 'Deskripsi Vendor', 'Nama Lisensi', 
             'Deskripsi Lisensi', 'Catatan Penyelesaian', 'Tanggal Selesai'
         ];
@@ -742,21 +735,20 @@ class WorkOrderController extends Controller
             $sheet->setCellValue('F' . $rowNum, $row['requester']);
             $sheet->setCellValue('G' . $rowNum, $row['technician']);
             $sheet->setCellValue('H' . $rowNum, $row['problem']);
-            $sheet->setCellValue('I' . $rowNum, $row['physical_condition']);
-            $sheet->setCellValue('J' . $rowNum, $row['is_repairable']);
-            $sheet->setCellValue('K' . $rowNum, $row['repair_recommendation']);
-            $sheet->setCellValue('L' . $rowNum, $row['spareparts']);
-            $sheet->setCellValue('M' . $rowNum, $row['vendor_name']);
-            $sheet->setCellValue('N' . $rowNum, $row['vendor_description']);
-            $sheet->setCellValue('O' . $rowNum, $row['license_name']);
-            $sheet->setCellValue('P' . $rowNum, $row['license_description']);
-            $sheet->setCellValue('Q' . $rowNum, $row['completion_notes']);
-            $sheet->setCellValue('R' . $rowNum, $row['completed_at']);
+            $sheet->setCellValue('I' . $rowNum, $row['is_repairable']);
+            $sheet->setCellValue('J' . $rowNum, $row['repair_notes']);
+            $sheet->setCellValue('K' . $rowNum, $row['spareparts']);
+            $sheet->setCellValue('L' . $rowNum, $row['vendor_name']);
+            $sheet->setCellValue('M' . $rowNum, $row['vendor_description']);
+            $sheet->setCellValue('N' . $rowNum, $row['license_name']);
+            $sheet->setCellValue('O' . $rowNum, $row['license_description']);
+            $sheet->setCellValue('P' . $rowNum, $row['completion_notes']);
+            $sheet->setCellValue('Q' . $rowNum, $row['completed_at']);
             $rowNum++;
         }
 
         // Auto-size columns
-        foreach (range('A', 'R') as $col) {
+        foreach (range('A', 'Q') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

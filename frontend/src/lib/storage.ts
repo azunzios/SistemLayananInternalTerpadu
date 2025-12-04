@@ -16,14 +16,14 @@ import { api } from "./api";
 
 // Valid roles from backend - must match backend enum
 export const VALID_ROLES = [
-  'super_admin',
-  'admin_layanan',
-  'admin_penyedia',
-  'teknisi',
-  'pegawai',
+  "super_admin",
+  "admin_layanan",
+  "admin_penyedia",
+  "teknisi",
+  "pegawai",
 ] as const;
 
-export type ValidRole = typeof VALID_ROLES[number];
+export type ValidRole = (typeof VALID_ROLES)[number];
 
 // Check if role is valid
 export const isValidRole = (role: any): role is ValidRole => {
@@ -304,9 +304,7 @@ export const getZoomMeetingTickets = (): Ticket[] => {
 };
 
 // Get ticket counts from backend (for dashboard metrics)
-export async function getTicketCounts(
-  type?: string
-): Promise<{
+export async function getTicketCounts(type?: string): Promise<{
   total: number;
   pending: number;
   in_progress: number;
@@ -361,12 +359,12 @@ export const loginUser = async (
       : raw.role
       ? [raw.role]
       : ["pegawai"];
-    
+
     // Validate that role from backend is in VALID_ROLES
-    const validRoles = roles.filter(r => isValidRole(r)) as ValidRole[];
+    const validRoles = roles.filter((r) => isValidRole(r)) as ValidRole[];
     if (validRoles.length === 0) {
-      console.warn('⚠️ Backend returned invalid role. Defaulting to pegawai');
-      validRoles.push('pegawai');
+      console.warn("⚠️ Backend returned invalid role. Defaulting to pegawai");
+      validRoles.push("pegawai");
     }
 
     const normalizedUser: User = {
@@ -461,7 +459,20 @@ export const setCurrentUser = (user: User | null) => {
 // Active Role management for multi-role users
 export const getActiveRole = (userId?: string): string | null => {
   const key = userId || "default";
-  return cache.activeRole.get(key) || null;
+
+  // Check cache first
+  let activeRole = cache.activeRole.get(key);
+
+  // If not in cache, try to restore from sessionStorage
+  if (!activeRole) {
+    const stored = sessionStorage.getItem(`bps_active_role_${key}`);
+    if (stored) {
+      activeRole = stored;
+      cache.activeRole.set(key, stored);
+    }
+  }
+
+  return activeRole || null;
 };
 
 export const setActiveRole = (role: string, userId?: string) => {
