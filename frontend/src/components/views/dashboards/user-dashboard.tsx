@@ -7,7 +7,6 @@ import {
   Video,
   ArrowRight,
   IdCardLanyard,
-  ArrowUpRight,
   Loader,
 } from 'lucide-react';
 import { motion } from 'motion/react';

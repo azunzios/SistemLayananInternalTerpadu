@@ -13,14 +13,13 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Eye, EyeOff, AlertCircle, Mail } from "lucide-react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import {
   loginUser,
   setCurrentUser,
   addAuditLog,
   setRememberToken,
-  setActiveRole,
 } from "../lib/storage";
 import type { User } from "../types";
 

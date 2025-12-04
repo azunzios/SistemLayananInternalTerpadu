@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import {
   Package,
   Building,
-  Wrench,
   CheckCircle,
   Stethoscope,
   User,
@@ -247,16 +246,6 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
       unrepairable: "Tidak Dapat Diperbaiki",
     };
     return repairType ? map[repairType] || repairType : "-";
-  };
-
-  const copyTicketNumbers = () => {
-    const allTickets = [item?.ticketNumber];
-    if (item?.relatedTickets?.length) {
-      allTickets.push(...item.relatedTickets.map((t) => t.ticketNumber));
-    }
-    const numbers = allTickets.filter(Boolean).join(", ");
-    navigator.clipboard.writeText(numbers);
-    toast.success("Nomor tiket disalin");
   };
 
   const handlePrint = () => {
