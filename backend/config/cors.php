@@ -17,7 +17,7 @@ return [
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
     // Explicit origins needed because supports_credentials=true disallows wildcard
     'allowed_origins' => [
@@ -34,7 +34,6 @@ return [
     ],
 
     'allowed_headers' => ['*'],
-
     'exposed_headers' => [],
 
     'max_age' => 0,

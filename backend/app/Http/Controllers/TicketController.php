@@ -1577,4 +1577,88 @@ class TicketController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend(true);
     }
+
+    public function superAdminDashboardStats()
+    {
+        $today = now();
+        $last7Days = now()->subDays(7);
+        $last30Days = now()->subDays(30);
+
+        // Fresh query setiap kali untuk menghindari query yang sudah dimodifikasi
+        $totalUsers = \App\Models\User::count();
+        $activeUsers = \App\Models\User::where('is_active', true)->count();
+        
+        $totalTickets = Ticket::count();
+        $pendingTickets = Ticket::whereIn('status', [
+            'menunggu_review', 'pending_approval', 'pending_review', 'submitted'
+        ])->count();
+        $completedTickets = Ticket::where('status', 'closed')->count();
+        $rejectedTickets = Ticket::whereIn('status', [
+            'ditolak', 'rejected', 'cancelled', 'closed_unrepairable'
+        ])->count();
+
+        $ticketsLast7Days = Ticket::where('created_at', '>=', $last7Days)->count();
+        $ticketsLast30Days = Ticket::where('created_at', '>=', $last30Days)->count();
+
+        $avgResolutionTime = 0;
+        $completedTicketsForAvg = Ticket::where('status', 'closed')->get();
+        if ($completedTicketsForAvg->count() > 0) {
+            $totalHours = $completedTicketsForAvg->reduce(function ($carry, $ticket) {
+                $hours = $ticket->updated_at->diffInHours($ticket->created_at);
+                return $carry + $hours;
+            }, 0);
+            $avgResolutionTime = round($totalHours / $completedTicketsForAvg->count());
+        }
+
+        // Query fresh untuk ticketsByType - tidak menggunakan clone dari query yang sudah dimodifikasi
+        $ticketsByType = [
+            ['name' => 'Perbaikan', 'value' => Ticket::where('type', 'perbaikan')->count()],
+            ['name' => 'Zoom Meeting', 'value' => Ticket::where('type', 'zoom_meeting')->count()],
+        ];
+
+        // Query fresh untuk usersByRole
+        $allUsers = \App\Models\User::all();
+        $roleCount = [
+            'super_admin' => 0,
+            'admin_layanan' => 0,
+            'admin_penyedia' => 0,
+            'teknisi' => 0,
+            'pegawai' => 0,
+        ];
+
+        foreach ($allUsers as $user) {
+            $roles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+            if (is_array($roles)) {
+                foreach ($roles as $role) {
+                    if (isset($roleCount[$role])) {
+                        $roleCount[$role]++;
+                    }
+                }
+            }
+        }
+
+        $usersByRole = [
+            ['name' => 'Super Admin', 'value' => $roleCount['super_admin']],
+            ['name' => 'Admin Layanan', 'value' => $roleCount['admin_layanan']],
+            ['name' => 'Admin Penyedia', 'value' => $roleCount['admin_penyedia']],
+            ['name' => 'Teknisi', 'value' => $roleCount['teknisi']],
+            ['name' => 'Pegawai', 'value' => $roleCount['pegawai']],
+        ];
+
+        return response()->json([
+            'stats' => [
+                'totalUsers' => $totalUsers,
+                'activeUsers' => $activeUsers,
+                'totalTickets' => $totalTickets,
+                'pendingTickets' => $pendingTickets,
+                'completedTickets' => $completedTickets,
+                'rejectedTickets' => $rejectedTickets,
+                'ticketsLast7Days' => $ticketsLast7Days,
+                'ticketsLast30Days' => $ticketsLast30Days,
+                'avgResolutionTime' => $avgResolutionTime,
+            ],
+            'ticketsByType' => $ticketsByType,
+            'usersByRole' => $usersByRole,
+        ]);
+    }
 }

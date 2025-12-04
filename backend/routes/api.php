@@ -42,8 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/users/{user}/roles', [UserController::class, 'updateRoles']);
     Route::post('/users/bulk/update', [UserController::class, 'bulkUpdate']);
     
-    // Category Management Routes
-    Route::apiResource('categories', CategoryController::class);
+    // Category Management Routes (Disabled - not used, categories table doesn't exist)
+    // Route::apiResource('categories', CategoryController::class);
     
     // Asset Management Routes (Legacy - keep for backward compatibility)
     Route::get('/assets/search/by-code-nup', [AssetController::class, 'searchByCodeAndNup']);
@@ -65,6 +65,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets-counts', [TicketController::class, 'counts']);
     Route::get('/tickets/stats/dashboard', [TicketController::class, 'dashboardStats']);
     Route::get('/tickets/stats/admin-dashboard', [TicketController::class, 'adminDashboardStats']);
+    Route::get('/tickets/stats/super-admin-dashboard', [TicketController::class, 'superAdminDashboardStats']);
     Route::get('/tickets/stats/admin-layanan-dashboard', [TicketController::class, 'adminLayananDashboardData']);
     Route::get('/tickets/stats/zoom-bookings', [TicketController::class, 'zoomBookingStats']);
     Route::get('/tickets/zoom-bookings', [TicketController::class, 'zoomBookings']);
