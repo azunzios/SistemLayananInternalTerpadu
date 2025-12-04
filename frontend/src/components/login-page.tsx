@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
-import { Alert, AlertDescription } from './ui/alert';
-import { Eye, EyeOff, AlertCircle, Mail } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Eye, EyeOff, AlertCircle, Mail } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -13,6 +20,7 @@ import {
   setCurrentUser,
   addAuditLog,
   setRememberToken,
+  setActiveRole,
 } from "../lib/storage";
 import type { User } from "../types";
 
@@ -23,8 +31,8 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   //INI NANTI DIUBAH
   const [formData, setFormData] = useState({
-    login: '',
-    password: '',
+    login: "",
+    password: "",
     rememberMe: true,
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -67,6 +75,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       // Set current user
       setCurrentUser(user);
 
+      // CRITICAL: Set active role untuk multi-role users
+      // Default ke user.role yang sudah diprioritaskan dari backend (pegawai first)
+      setActiveRole(user.role, user.id);
+
       // Log successful login
       addAuditLog({
         userId: user.id,
@@ -97,7 +109,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           color: "#000000",
         },
       });
-
 
       onLogin(user);
     } catch (err: any) {
@@ -323,7 +334,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         required
                         autoComplete="current-password"
                         className="!pr-12"
-                        style={{ paddingRight: '3rem' }}
+                        style={{ paddingRight: "3rem" }}
                       />
                       <button
                         type="button"
@@ -377,7 +388,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
                     disabled={isLoading}
                   >
-                    {isLoading ? 'Memverifikasi...' : 'Masuk'}
+                    {isLoading ? "Memverifikasi..." : "Masuk"}
                   </Button>
                   <p className="text-center text-sm text-gray-500">
                     Belum punya akun? Hubungi administrator untuk pendaftaran
@@ -399,9 +410,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               />
               <div className="absolute inset-0 z-15 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="absolute bottom-4 z-20 w-[100%] px-4 flex flex-col gap-0">
-                <h2 className="text-white text-lg font-medium mb-1">SIGAP-TI</h2>
+                <h2 className="text-white text-lg font-medium mb-1">
+                  SIGAP-TI
+                </h2>
                 <div className="flex items-start gap-1 text-white text-md font-normal">
-                  <span>Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat</span>
+                  <span>
+                    Sistem Layanan Internal Terpadu Badan Pusat Statistik
+                    Provinsi Nusa Tenggara Barat
+                  </span>
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TicketProgressTracker } from "./ticket-progress-tracker";
 import { TicketProgressTrackerZoom } from "./ticket-progress-tracker-zoom";
 import { WorkOrderForm } from "@/components/views/work-orders/work-order-form";
-import { ZoomAdminReviewModal } from '@/components/views/zoom';
+import { ZoomAdminReviewModal } from "@/components/views/zoom";
 import {
   Dialog,
   DialogContent,
@@ -35,11 +35,7 @@ import { motion } from "motion/react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import {
-  getTickets,
-  getUsersSync,
-  getWorkOrdersByTicket,
-} from "@/lib/storage";
+import { getTickets, getUsersSync, getWorkOrdersByTicket } from "@/lib/storage";
 import type { ViewType } from "@/components/main-layout";
 import { TicketDetailHeader, TicketDetailInfo } from "./ticket-detail-info";
 import { TicketDetailAlerts } from "./ticket-detail-alerts";
@@ -56,6 +52,7 @@ import {
 interface TicketDetailProps {
   ticketId: string;
   currentUser: User;
+  activeRole?: string;
   onBack: () => void;
   onNavigate: (view: ViewType) => void;
 }
@@ -63,14 +60,21 @@ interface TicketDetailProps {
 export const TicketDetail: React.FC<TicketDetailProps> = ({
   ticketId,
   currentUser,
+  activeRole,
   onBack,
 }) => {
   // === ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS ===
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [ticketDetail, setTicketDetail] = React.useState<any>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(true);
-  const [diagnosisSubmitCallback, setDiagnosisSubmitCallback] = React.useState<(() => Promise<void>) | null>(null);
+  const [diagnosisSubmitCallback, setDiagnosisSubmitCallback] = React.useState<
+    (() => Promise<void>) | null
+  >(null);
   const [showDiagnosisConfirm, setShowDiagnosisConfirm] = React.useState(false);
+
+  // Multi-role support
+  const effectiveRole = activeRole || currentUser.role;
+
   const tickets = useMemo(() => getTickets(), [refreshKey]);
   const users = getUsersSync();
 
@@ -115,12 +119,14 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const ticket = ticketDetail || tickets.find((t) => t.id === ticketId);
 
   // === COMPUTED VALUES (useMemo must be before conditional returns) ===
-  const [technicianStats, setTechnicianStats] = React.useState<Record<string, number>>({});
+  const [technicianStats, setTechnicianStats] = React.useState<
+    Record<string, number>
+  >({});
 
   React.useEffect(() => {
     const fetchTechnicianStats = async () => {
       try {
-        const response = await api.get<any[]>('technician-stats');
+        const response = await api.get<any[]>("technician-stats");
         const stats = response.reduce((acc, curr) => {
           acc[curr.id] = curr.active_tickets;
           return acc;
@@ -137,7 +143,16 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   }, [adminDialogs.showAssignDialog]);
 
   const technicians = useMemo(
-    () => users.filter((u) => u.role === "teknisi"),
+    () =>
+      users.filter((u) => {
+        // Support multi-role: cek u.roles array atau u.role singular
+        const userRoles = Array.isArray(u.roles)
+          ? u.roles
+          : u.role
+          ? [u.role]
+          : [];
+        return userRoles.includes("teknisi");
+      }),
     [users]
   );
 
@@ -172,11 +187,9 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
 
   // === PERMISSION CHECKS ===
   const canComplete =
-    currentUser.role === "pegawai" &&
+    effectiveRole === "pegawai" &&
     ticket.userId === currentUser.id &&
-    ["waiting_for_submitter"].includes(ticket.status as any)
-    ;
-
+    ["waiting_for_submitter"].includes(ticket.status as any);
   // === HANDLERS (KEPT INLINE) ===
   const handleApprove = async () => {
     // Jika tiket perbaikan, buka dialog assign teknisi
@@ -282,7 +295,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         toast.success("Status tiket berhasil diubah menjadi In Progress");
         diagnosaDialog.setShowStatusChangeConfirm(false);
         setRefreshKey((prev) => prev + 1);
-        
+
         // Execute diagnosis submission after status is changed
         setTimeout(async () => {
           if (diagnosisSubmitCallback) {
@@ -313,13 +326,14 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         currentUser={currentUser}
         canComplete={canComplete}
         onBack={onBack}
-        onShowCompleteDialog={() => { }}
+        onShowCompleteDialog={() => {}}
       />
 
       {/* Alerts */}
       <TicketDetailAlerts
         ticket={ticket}
         currentUser={currentUser}
+        activeRole={activeRole}
         onShowReviewDialog={() => {
           if (ticket.type === "perbaikan") {
             adminDialogs.setShowAssignDialog(true);
@@ -447,17 +461,25 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       </Dialog>
 
       {/* Status Change Confirmation Dialog */}
-      <AlertDialog open={diagnosaDialog.showStatusChangeConfirm} onOpenChange={diagnosaDialog.setShowStatusChangeConfirm}>
+      <AlertDialog
+        open={diagnosaDialog.showStatusChangeConfirm}
+        onOpenChange={diagnosaDialog.setShowStatusChangeConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Ubah Status Tiket</AlertDialogTitle>
           </AlertDialogHeader>
           <p className="text-sm text-gray-600">
-            Ini akan mengubah status tiket menjadi <span className="font-semibold text-blue-600">In Progress</span>. Lanjutkan?
+            Ini akan mengubah status tiket menjadi{" "}
+            <span className="font-semibold text-blue-600">In Progress</span>.
+            Lanjutkan?
           </p>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleStatusChangeOnDiagnosisSubmit} className="bg-blue-600 hover:bg-blue-700">
+            <AlertDialogAction
+              onClick={handleStatusChangeOnDiagnosisSubmit}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               Lanjutkan
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -465,7 +487,10 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       </AlertDialog>
 
       {/* Diagnosis Confirmation Dialog */}
-      <AlertDialog open={showDiagnosisConfirm} onOpenChange={setShowDiagnosisConfirm}>
+      <AlertDialog
+        open={showDiagnosisConfirm}
+        onOpenChange={setShowDiagnosisConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>

@@ -1,12 +1,13 @@
 // @ts-nocheck
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from '../../components/login-page';
-import { RegisterPage } from '../../components/register-page';
-import { MainLayout } from '../../components/main-layout';
-import { ProtectedRoute } from '../guards/ProtectedRoute';
-import { PublicRoute } from '../guards/PublicRoute';
-import { ROUTES, buildRoute, isValidRole } from '../constants';
-import type { User } from '../../types';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { LoginPage } from "../../components/login-page";
+import { RegisterPage } from "../../components/register-page";
+import { ResetPasswordPage } from "../../components/reset-password-page";
+import { MainLayout } from "../../components/main-layout";
+import { ProtectedRoute } from "../guards/ProtectedRoute";
+import { PublicRoute } from "../guards/PublicRoute";
+import { ROUTES, buildRoute, isValidRole } from "../constants";
+import type { User } from "../../types";
 
 interface AppRouterProps {
   currentUser: User | null;
