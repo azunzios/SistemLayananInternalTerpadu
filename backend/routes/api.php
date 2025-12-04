@@ -108,8 +108,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/sparepart-requests/{sparepartRequest}/fulfill', [SparepartRequestController::class, 'fulfill']);
     Route::get('/sparepart-requests/stats/summary', [SparepartRequestController::class, 'stats']);
     
-    // Kartu Kendali - data from completed work orders
+    // Kartu Kendali - data from completed work orders (grouped by ticket)
     Route::get('/kartu-kendali', [WorkOrderController::class, 'kartuKendali']);
+    Route::get('/kartu-kendali/{ticket}', [WorkOrderController::class, 'kartuKendaliDetail']);
     Route::get('/kartu-kendali/export', [WorkOrderController::class, 'exportKartuKendali']);
     
     // Notification Routes

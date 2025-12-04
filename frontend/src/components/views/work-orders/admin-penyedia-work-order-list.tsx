@@ -288,12 +288,10 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="requested">Diminta</SelectItem>
+                <SelectItem value="requested">Diajukan</SelectItem>
                 <SelectItem value="in_procurement">Dalam Pengadaan</SelectItem>
-                <SelectItem value="delivered">Sudah Dikirim</SelectItem>
                 <SelectItem value="completed">Selesai</SelectItem>
-                <SelectItem value="failed">Gagal</SelectItem>
-                <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                <SelectItem value="unsuccessful">Tidak Berhasil</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -518,12 +516,10 @@ export const AdminPenyediaWorkOrderList: React.FC<AdminPenyediaWorkOrderListProp
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="requested">Diminta</SelectItem>
+                      <SelectItem value="requested">Diajukan</SelectItem>
                       <SelectItem value="in_procurement">Dalam Pengadaan</SelectItem>
-                      <SelectItem value="delivered">Sudah Dikirim</SelectItem>
                       <SelectItem value="completed">Selesai</SelectItem>
-                      <SelectItem value="failed">Gagal</SelectItem>
-                      <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                      <SelectItem value="unsuccessful">Tidak Berhasil</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

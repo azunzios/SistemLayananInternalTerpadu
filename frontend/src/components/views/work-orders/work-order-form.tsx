@@ -314,13 +314,14 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                         </div>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${wo.status === 'requested' ? 'bg-yellow-100 text-yellow-800' :
                           wo.status === 'in_procurement' ? 'bg-blue-100 text-blue-800' :
-                            wo.status === 'delivered' ? 'bg-purple-100 text-purple-800' :
                               wo.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                wo.status === 'failed' ? 'bg-red-100 text-red-800' :
-                                  wo.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                                wo.status === 'unsuccessful' ? 'bg-red-100 text-red-800' :
                                     'bg-gray-100 text-gray-800'
                           }`}>
-                          {wo.status}
+                          {wo.status === 'requested' ? 'Diajukan' :
+                            wo.status === 'in_procurement' ? 'Dalam Pengadaan' :
+                              wo.status === 'completed' ? 'Selesai' :
+                                wo.status === 'unsuccessful' ? 'Tidak Berhasil' : wo.status}
                         </span>
                       </div>
                       {wo.type === 'sparepart' && wo.items && (
@@ -340,6 +341,13 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                         <div className="text-gray-600">
                           <div>{wo.license_name}</div>
                           {wo.license_description && <div className="text-xs">{wo.license_description}</div>}
+                        </div>
+                      )}
+                      {/* Tampilkan alasan jika unsuccessful */}
+                      {wo.status === 'unsuccessful' && wo.failure_reason && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                          <span className="font-medium text-red-700">Alasan Tidak Berhasil:</span>
+                          <p className="text-red-600 mt-1">{wo.failure_reason}</p>
                         </div>
                       )}
                     </div>
@@ -571,7 +579,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
               type="button"
               className="bg-green-600 hover:bg-green-700 text-white w-full"
               onClick={() => setShowContinueConfirm(true)}
-              disabled={isSubmitting || !workOrders.every(wo => ['delivered', 'completed', 'failed', 'cancelled'].includes(wo.status))}
+              disabled={isSubmitting || !workOrders.every(wo => ['completed', 'unsuccessful'].includes(wo.status))}
             >
               {isSubmitting ? "Melanjutkan..." : "Lanjutkan Perbaikan"}
             </Button>

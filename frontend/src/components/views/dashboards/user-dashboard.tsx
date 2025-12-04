@@ -321,10 +321,6 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-xl mb-4 flex items-center gap-2">
-            <ArrowUpRight className="h-5 w-5" strokeWidth={4} />
-            Layanan Cepat
-          </h2>
           <div className="grid gap-4 md:grid-cols-2">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
@@ -345,8 +341,23 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
                       </div>
                       <h3 className="font-semibold mb-2">{action.title}</h3>
                       <p className="text-sm text-gray-500 mb-4">{action.description}</p>
-                      <Button variant="link" className="w-full gap-2">
-                        Buat Tiket <ArrowRight className="h-4 w-4" />
+                      <Button
+                        className="
+                          w-full rounded-full group relative overflow-hidden
+                          bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600
+                          text-white font-medium
+                          border border-blue-200/50
+                          shadow-[inset_0px_3px_3px_rgba(255,255,255,0.5),inset_0px_-3px_3px_rgba(0,0,0,0.1),0px_2px_5px_rgba(59,130,246,0.3)]
+                          hover:brightness-105 transition-all duration-300
+                        "
+                      >
+                        <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
+                          Buat Tiket
+                          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </span>
+
+                        {/* Layer kilau tambahan agar makin terasa 'sabun' (Opsional) */}
+                        <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
                       </Button>
                     </CardContent>
                   </Card>

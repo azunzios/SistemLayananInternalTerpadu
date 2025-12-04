@@ -185,28 +185,37 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             {/* 1. NOTIFICATION SHEET */}
             <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <SheetTrigger asChild>
-<Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="icon"
                   className="relative h-auto w-auto p-0 rounded-full hover:bg-transparent"
                 >
                   {/* Wrapper Frame Besi */}
                   <div className="rounded-full p-[2.5px] bg-gradient-to-br from-slate-300 via-white to-slate-400 shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-md transition-all duration-300">
-                    
+
                     {/* Inner White Circle */}
                     <div className="h-9 w-9 bg-white rounded-full flex items-center justify-center relative">
                       <Bell className="h-5 w-5 text-gray-600" />
-                      
-                      {/* Red Badge */}
+
                       {unreadCount > 0 && (
                         <motion.span
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-0 right-0 h-3.5 w-3.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-sm"
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                          className="
+                                      absolute -top-1.5 -right-1.5
+                                      flex items-center justify-center
+                                      h-5 w-5
+                                      rounded-full
+                                      bg-red-600 text-white text-xs font-bold
+                                      ring-2 ring-white
+                                      leading-none
+                                    "
                         >
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </motion.span>
                       )}
+
                     </div>
                   </div>
                 </Button>
@@ -215,10 +224,10 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
               {/* Content Notifikasi */}
               <SheetContent
                 side="right"
-                className="w-full sm:max-w-sm p-0 flex flex-col gap-0 [&>button]:hidden"
+                className="w-full sm:max-w-sm p-0 flex flex-col h-full [&>button]:hidden"
               >
                 {/* Header: Judul & Action Buttons */}
-                <div className="flex items-center justify-between p-4 bg-white border-b border-gray-100">
+                <div className="flex-shrink-0 flex items-center justify-between p-4 bg-white border-b border-gray-100">
                   <SheetTitle className="text-base font-bold text-gray-900">
                     NOTIFIKASI
                   </SheetTitle>
@@ -250,72 +259,73 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
                   </div>
                 </div>
 
-                {/* List Body */}
-                <ScrollArea className="flex-1 h-full bg-white">
-                  <div className="flex flex-col">
-                    {notifications.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                        <MailOpen className="h-12 w-12 mb-3 text-gray-200" />
-                        <p className="text-sm text-gray-400">Tidak ada notifikasi baru</p>
-                      </div>
-                    ) : (
-                      <>
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            onClick={() => !notification.is_read && markAsRead(notification.id)}
-                            // UPDATED: Styling notifikasi belum dibaca (Gray, Inset 3D, Gradient Bottom->Top, Top Lighting)
-                            className={`
-                              relative flex flex-col gap-1.5 p-4 text-sm transition-all cursor-pointer
-                              border-b border-gray-100 last:border-0
-                              ${!notification.is_read
-                                ? "bg-gradient-to-t from-gray-300 via-gray-100/2 to-gray-50 shadow-[inset_0_2px_5px_rgba(0,0,0,0.06)] border-t border-t-white"
-                                : "bg-white hover:bg-gray-50"}
-                            `}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <span className={`text-sm ${!notification.is_read ? "font-bold text-gray-800 drop-shadow-[0_1px_0_rgba(255,255,255,1)]" : "font-medium text-gray-600"}`}>
-                                {notification.title}
+                {/* List Body - overflow-hidden penting agar ScrollArea bekerja */}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="flex flex-col">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                          <MailOpen className="h-12 w-12 mb-3 text-gray-200" />
+                          <p className="text-sm text-gray-400">Tidak ada notifikasi baru</p>
+                        </div>
+                      ) : (
+                        <>
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              onClick={() => !notification.is_read && markAsRead(notification.id)}
+                              className={`
+                                relative flex flex-col gap-1.5 p-4 text-sm transition-all cursor-pointer
+                                border-b border-gray-100 last:border-0
+                                ${!notification.is_read
+                                  ? "bg-gradient-to-t from-gray-300 via-gray-100/2 to-gray-50 shadow-[inset_0_2px_5px_rgba(0,0,0,0.06)] border-t border-t-white"
+                                  : "bg-white hover:bg-gray-50"}
+                              `}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <span className={`text-sm ${!notification.is_read ? "font-bold text-gray-800 drop-shadow-[0_1px_0_rgba(255,255,255,1)]" : "font-medium text-gray-600"}`}>
+                                  {notification.title}
+                                </span>
+                                {!notification.is_read && (
+                                  <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm ring-1 ring-white" />
+                                )}
+                              </div>
+
+                              <p className={`text-xs line-clamp-2 leading-relaxed ${!notification.is_read ? "text-gray-600" : "text-gray-500"}`}>
+                                {notification.message}
+                              </p>
+
+                              <span className="text-[10px] text-gray-400 font-medium pt-1">
+                                {formatDistanceToNow(new Date(notification.created_at), {
+                                  addSuffix: true,
+                                  locale: id
+                                })}
                               </span>
-                              {!notification.is_read && (
-                                <span className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm ring-1 ring-white" />
+                            </div>
+                          ))}
+
+                          {/* Load More Trigger */}
+                          {hasMore && (
+                            <div className="py-4 flex justify-center">
+                              {loadingMore ? (
+                                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={loadMore}
+                                  className="text-xs text-gray-500 hover:text-gray-700"
+                                >
+                                  Muat lebih banyak
+                                </Button>
                               )}
                             </div>
-
-                            <p className={`text-xs line-clamp-2 leading-relaxed ${!notification.is_read ? "text-gray-600" : "text-gray-500"}`}>
-                              {notification.message}
-                            </p>
-
-                            <span className="text-[10px] text-gray-400 font-medium pt-1">
-                              {formatDistanceToNow(new Date(notification.created_at), {
-                                addSuffix: true,
-                                locale: id
-                              })}
-                            </span>
-                          </div>
-                        ))}
-
-                        {/* Load More Trigger */}
-                        {hasMore && (
-                          <div className="py-4 flex justify-center">
-                            {loadingMore ? (
-                              <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={loadMore}
-                                className="text-xs text-gray-500 hover:text-gray-700"
-                              >
-                                Muat lebih banyak
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </ScrollArea>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </SheetContent>
             </Sheet>
 

@@ -478,15 +478,15 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="critical">
-                          Critical (Segera)
+                          Critical (Genting)
                         </SelectItem>
                         <SelectItem value="high">
-                          High (approx: 1 hari kerja)
+                          High
                         </SelectItem>
                         <SelectItem value="normal">
-                          Normal (approx: 3 hari kerja)
+                          Normal
                         </SelectItem>
-                        <SelectItem value="low">Low (approx: 1 minggu)</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">

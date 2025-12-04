@@ -54,22 +54,6 @@ export const TicketDiagnosisDisplay: React.FC<TicketDiagnosisDisplayProps> = ({
         <p className="text-gray-700">{getRepairTypeLabel()}</p>
       </div>
 
-      <hr className="my-3" />
-
-      {/* Status Perbaikan */}
-      <div>
-        <h4 className="font-semibold mb-1">Status Perbaikan</h4>
-        {diagnosis.repair_type === "direct_repair" && (
-          <p className="text-gray-700">Dapat diperbaiki</p>
-        )}
-        {diagnosis.repair_type === "unrepairable" && (
-          <p className="text-gray-700">Tidak dapat diperbaiki</p>
-        )}
-        {["need_sparepart", "need_vendor", "need_license"].includes(diagnosis.repair_type) && (
-          <p className="text-gray-700">Membutuhkan pihak eksternal</p>
-        )}
-      </div>
-
       {/* Deskripsi Perbaikan */}
       {diagnosis.repair_description && (
         <>

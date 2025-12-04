@@ -12,7 +12,7 @@ interface ReportsViewProps {
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = () => {
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -78,8 +78,8 @@ export const ReportsView: React.FC<ReportsViewProps> = () => {
       </div>
 
       <KartuKendaliList
-        onViewDetail={(item) => {
-          setSelectedItem(item);
+        onViewDetail={(ticketId) => {
+          setSelectedTicketId(ticketId);
           setShowDetailDialog(true);
         }}
       />
@@ -88,9 +88,9 @@ export const ReportsView: React.FC<ReportsViewProps> = () => {
         isOpen={showDetailDialog}
         onClose={() => {
           setShowDetailDialog(false);
-          setSelectedItem(null);
+          setSelectedTicketId(null);
         }}
-        item={selectedItem}
+        ticketId={selectedTicketId}
       />
     </div>
   );

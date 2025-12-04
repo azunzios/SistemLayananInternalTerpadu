@@ -478,21 +478,26 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-3 items-center">
-            {/* Search */}
-            <div className="relative flex-[2]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          {/* Parent: items-stretch (bukan items-center) untuk memaksa semua child mengisi tinggi baris yang sama, 
+        tapi kita akan kunci height-nya manual jadi items-center lebih aman untuk alignment text */}
+          <div className="flex items-center gap-3">
+
+            {/* 1. WRAPPER SEARCH: Kunci height di sini juga */}
+            <div className="relative flex-[2] h-10">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
               <Input
                 placeholder="Cari work order..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 text-sm w-full"
+                // KUNCI: h-full agar mengisi wrapper h-10, dan !h-full untuk override style bawaan shadcn
+                className="h-full w-full pl-9 text-sm !ring-offset-0"
               />
             </div>
 
-            {/* Filter Status */}
+            {/* 2. FILTER STATUS */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-10 text-sm flex-1">
+              {/* KUNCI: Tambahkan !h-10 untuk override */}
+              <SelectTrigger className="!h-10 flex-1 text-sm bg-background border-input">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -504,9 +509,10 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
               </SelectContent>
             </Select>
 
-            {/* Filter Type */}
+            {/* 3. FILTER TIPE */}
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-10 text-sm flex-1">
+              {/* KUNCI: Tambahkan !h-10 untuk override */}
+              <SelectTrigger className="!h-10 flex-1 text-sm bg-background border-input">
                 <SelectValue placeholder="Tipe" />
               </SelectTrigger>
               <SelectContent>
@@ -517,35 +523,43 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
               </SelectContent>
             </Select>
 
-            {/* Refresh Button */}
+            {/* 4. REFRESH BUTTON */}
             <Button
               variant="outline"
               onClick={handleRefreshData}
               disabled={loading}
-              className="h-10 w-10 p-0 flex-shrink-0"
+              // KUNCI: !h-10 dan !w-10
+              className="!h-10 !w-10 flex-shrink-0 p-0 bg-background"
               size="icon"
               title="Refresh"
             >
               <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
+
           </div>
         </CardContent>
       </Card>
 
       {/* Work Order List */}
       <Card className="pb-6">
-<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-  <CardTitle>Daftar Work Order</CardTitle>
-  
-  <div className="flex flex-col items-end gap-0.5">
-    <span className="text-sm font-medium text-slate-700">
-       Total: {pagination?.total || 0}
-    </span>
-    <span className="text-[10px] text-muted-foreground">
-       Klik baris untuk detail
-    </span>
-  </div>
-</CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+
+          {/* BAGIAN KIRI: Judul & Sub-judul */}
+          <div className="flex flex-col gap-1">
+            <CardTitle>Daftar Work Order</CardTitle>
+            <p className="text-sm text-muted-foreground font-normal">
+              Klik pada salah satu baris untuk melihat detail
+            </p>
+          </div>
+
+          {/* BAGIAN KANAN: Hanya Total */}
+          <div className="flex flex-col items-end">
+            <span className="text-sm font-medium text-slate-700">
+              Total: {pagination?.total || 0}
+            </span>
+          </div>
+
+        </CardHeader>
         <CardContent>
           <Table className="border border-gray-200">
             <TableHeader className="bg-muted/50">
@@ -882,6 +896,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };

@@ -157,6 +157,8 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
           vendorDescription: wo.vendor_description,
           licenseName: wo.license_name,
           licenseDescription: wo.license_description,
+          failureReason: wo.failure_reason,
+          completionNotes: wo.completion_notes,
           createdAt: wo.created_at,
           updatedAt: wo.updated_at,
         })) || [];
@@ -581,6 +583,16 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
                       <span className="text-gray-600">Deskripsi:</span>
                       <p className="mt-1">{selectedWO.licenseDescription}</p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Failure Reason - tampilkan jika status unsuccessful */}
+              {selectedWO.status === "unsuccessful" && selectedWO.failureReason && (
+                <div>
+                  <h4 className="font-semibold mb-3 text-red-600">Alasan Tidak Berhasil</h4>
+                  <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                    <p className="text-sm text-red-800">{selectedWO.failureReason}</p>
                   </div>
                 </div>
               )}

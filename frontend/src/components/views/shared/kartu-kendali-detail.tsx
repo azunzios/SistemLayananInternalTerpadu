@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,70 +10,153 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
-  Calendar,
   Package,
   Building,
   Wrench,
-  AlertCircle,
   CheckCircle,
   Stethoscope,
   User,
   Hash,
   KeyRound,
   X,
-  FileText
+  FileText,
+  Copy,
+  Loader2,
+  Printer,
 } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 // --- Interfaces ---
-interface KartuKendaliItem {
+interface RelatedTicket {
   id: number;
   ticketNumber: string;
-  ticketTitle: string;
-  type: string;
-  maintenanceCount: number;
-  assetCode?: string;
-  assetNup?: string;
-  requesterName?: string;
-  technicianName?: string;
-  diagnosis: any;
-  items: any;
-  vendorName?: string;
-  vendorContact?: string;
-  vendorDescription?: string;
-  licenseName?: string;
-  licenseDescription?: string;
-  completedAt: string | null;
-  completionNotes?: string;
-  [key: string]: any;
+  title: string;
+  status: string;
+  createdAt: string | null;
 }
+
+interface DiagnosisData {
+  problem_category: string | null;
+  problem_description: string | null;
+  repair_type: string | null;
+  is_repairable: boolean;
+  repair_description: string | null;
+  unrepairable_reason: string | null;
+  alternative_solution: string | null;
+  technician_notes: string | null;
+  estimasi_hari: string | null;
+  diagnosed_at: string | null;
+  technician_name: string | null;
+}
+
+// Sparepart item dari gabungan work orders
+interface SparepartItem {
+  name: string;
+  quantity: number;
+  completedAt: string | null;
+  technicianName: string | null;
+}
+
+// Vendor item dengan catatan penyelesaian masing-masing
+interface VendorItem {
+  name: string | null;
+  contact: string | null;
+  description: string | null;
+  completionNotes: string | null;
+  completedAt: string | null;
+  technicianName: string | null;
+}
+
+// License item
+interface LicenseItem {
+  name: string | null;
+  description: string | null;
+  completedAt: string | null;
+  technicianName: string | null;
+}
+
+// Pending work order
+interface PendingWorkOrder {
+  id: number;
+  type: string;
+  status: string;
+  createdAt: string | null;
+}
+
+// Data detail kartu kendali - info tiket perbaikan
+interface KartuKendaliDetailData {
+  id: number;
+  ticketId: number;
+  ticketNumber: string;
+  ticketTitle: string;
+  ticketStatus: string;
+  createdAt: string | null;
+  closedAt: string | null;
+  lastCompletedAt: string | null;
+  assetCode: string | null;
+  assetName: string | null;
+  assetNup: string | null;
+  maintenanceCount: number;
+  relatedTickets: RelatedTicket[];
+  // Gabungan semua work orders completed
+  spareparts: SparepartItem[];
+  vendors: VendorItem[];
+  licenses: LicenseItem[];
+  totalWorkOrders: number;
+  completedWorkOrders: number;
+  pendingWorkOrders: PendingWorkOrder[];
+  // Diagnosis
+  diagnosis: DiagnosisData | null;
+  // Info
+  requesterId: number;
+  requesterName: string | null;
+  technicianName: string | null;
+}
+
+// Helper untuk status badge
+const getStatusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    submitted: "Pending",
+    assigned: "Ditugaskan",
+    in_progress: "Diproses",
+    on_hold: "Ditunda",
+    waiting_for_submitter: "Menunggu User",
+    closed: "Selesai",
+  };
+  return map[status] || status;
+};
 
 interface KartuKendaliDetailProps {
   isOpen: boolean;
   onClose: () => void;
-  item: KartuKendaliItem | null;
+  ticketId: number | null;
 }
 
 // --- Helper Components ---
 
-// 1. Komponen Baris Data (Label & Value)
-const DetailItem = ({
+// UPDATED: Menggunakan Grid agar Key dan Value lurus sempurna
+const DetailRow = ({
   label,
   value,
   children,
-  className = ""
+  className = "",
 }: {
-  label: string,
-  value?: string | React.ReactNode,
-  children?: React.ReactNode,
-  className?: string
+  label: string;
+  value?: string | React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
 }) => (
-  <div className={`space-y-1 ${className}`}>
-    <dt className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</dt>
-    <dd className="text-sm font-medium text-slate-800 leading-snug">{children || value || "-"}</dd>
+  <div
+    className={`grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-3 border-b border-slate-100 last:border-0 items-start ${className}`}
+  >
+    <div className="text-sm font-medium text-slate-500 shrink-0">{label}</div>
+    <div className="text-sm font-medium text-slate-900 break-words leading-relaxed">
+      {children || value || "-"}
+    </div>
   </div>
 );
 
-// 2. Komponen Wrapper Card dengan Header Standar (Enterprise Style)
 const SectionCard = ({
   icon: Icon,
   title,
@@ -81,76 +164,248 @@ const SectionCard = ({
   iconColorClass = "text-slate-600",
   headerBgClass = "bg-slate-50/80",
   rightElement = null,
-  className = "gap-0"
 }: {
-  icon: any,
-  title: string,
-  children: React.ReactNode,
-  iconColorClass?: string,
-  headerBgClass?: string,
-  rightElement?: React.ReactNode,
-  className?: string
+  icon: any;
+  title: string;
+  children: React.ReactNode;
+  iconColorClass?: string;
+  headerBgClass?: string;
+  rightElement?: React.ReactNode;
 }) => (
-  <Card className={`shadow-sm border-slate-200 overflow-hidden pb-6 ${className}`}>
-    <div className={`px-4 py-3 border-b flex items-center justify-between ${headerBgClass}`}>
+  <Card className="shadow-sm border-slate-200 overflow-hidden !gap-0 ">
+    <div
+      className={`px-4 py-3 border-b flex items-center justify-between ${headerBgClass}`}
+    >
       <div className="flex items-center gap-2">
         <Icon className={`h-4 w-4 ${iconColorClass}`} />
         <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
       </div>
       {rightElement && <div>{rightElement}</div>}
     </div>
-    <CardContent className="pt-4 px-4">
-      {children}
-    </CardContent>
+    {/* Padding yang cukup agar konten tidak mepet header */}
+    <CardContent className="p-6">{children}</CardContent>
   </Card>
 );
 
 // --- Main Component ---
-
 export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
   isOpen,
   onClose,
-  item,
+  ticketId,
 }) => {
-  // Utility Functions
+  const [item, setItem] = useState<KartuKendaliDetailData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && ticketId) {
+      fetchDetail();
+    }
+  }, [isOpen, ticketId]);
+
+  const fetchDetail = async () => {
+    if (!ticketId) return;
+    try {
+      setLoading(true);
+      const response: any = await api.get(`kartu-kendali/${ticketId}`);
+      if (response.success) {
+        setItem(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching kartu kendali detail:", error);
+      toast.error("Gagal memuat detail kartu kendali");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("id-ID", {
-      day: "numeric", month: "short", year: "numeric", hour: '2-digit', minute: '2-digit'
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  const parseItems = (items: any): any[] => {
-    if (!items) return [];
-    if (Array.isArray(items)) return items;
-    if (typeof items === 'string') {
-      try {
-        const parsed = JSON.parse(items);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch { return []; }
-    }
-    return [];
+  const getCategoryLabel = (category: string | null) => {
+    const map: Record<string, string> = {
+      hardware: "Hardware",
+      software: "Software",
+      lainnya: "Lainnya",
+    };
+    return category ? map[category] || category : "-";
   };
 
-  if (!item) return null;
+  const getRepairTypeLabel = (repairType: string | null) => {
+    const map: Record<string, string> = {
+      direct_repair: "Bisa Diperbaiki Langsung",
+      need_sparepart: "Butuh Sparepart",
+      need_vendor: "Butuh Vendor",
+      need_license: "Butuh Lisensi",
+      unrepairable: "Tidak Dapat Diperbaiki",
+    };
+    return repairType ? map[repairType] || repairType : "-";
+  };
 
-  const diagnosis = item.diagnosis || {};
-  const parsedItems = parseItems(item.items);
+  const copyTicketNumbers = () => {
+    const allTickets = [item?.ticketNumber];
+    if (item?.relatedTickets?.length) {
+      allTickets.push(...item.relatedTickets.map((t) => t.ticketNumber));
+    }
+    const numbers = allTickets.filter(Boolean).join(", ");
+    navigator.clipboard.writeText(numbers);
+    toast.success("Nomor tiket disalin");
+  };
 
-  // Logic Visibility Section
-  const hasSpareparts = parsedItems.length > 0;
-  const hasVendor = item.vendorName || item.vendorContact || item.vendorDescription;
-  const hasLicense = item.licenseName || item.licenseDescription;
+  const handlePrint = () => {
+    if (!item) return;
+    
+    const diagnosis = item.diagnosis;
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Kartu Kendali - ${item.ticketNumber}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+          .header h1 { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+          .header .subtitle { font-size: 12px; color: #666; }
+          .ticket-info { background: #f5f5f5; padding: 10px; border-radius: 4px; margin-bottom: 20px; text-align: center; }
+          .ticket-info .number { font-family: monospace; font-size: 16px; font-weight: bold; }
+          .ticket-info .title { font-size: 14px; margin-top: 5px; }
+          .section { margin-bottom: 20px; }
+          .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+          .row { display: flex; padding: 6px 0; border-bottom: 1px dotted #eee; }
+          .row:last-child { border-bottom: none; }
+          .label { width: 160px; font-size: 11px; color: #666; flex-shrink: 0; }
+          .value { flex: 1; font-size: 11px; font-weight: 500; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; }
+          th, td { padding: 6px 8px; text-align: left; border: 1px solid #ddd; }
+          th { background: #f5f5f5; font-weight: 600; }
+          .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; }
+          .signature { text-align: center; width: 200px; }
+          .signature .line { border-top: 1px solid #333; margin-top: 60px; padding-top: 5px; font-size: 11px; }
+          .print-date { font-size: 10px; color: #999; text-align: right; margin-top: 20px; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>KARTU KENDALI PEMELIHARAAN</h1>
+          <div class="subtitle">Sistem Informasi Layanan Internal Terpadu</div>
+        </div>
+        
+        <div class="ticket-info">
+          <div class="number">#${item.ticketNumber}</div>
+          <div class="title">${item.ticketTitle}</div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Informasi Aset & Personil</div>
+          <div class="row"><span class="label">Kode Aset</span><span class="value">${item.assetCode || '-'}</span></div>
+          <div class="row"><span class="label">NUP</span><span class="value">${item.assetNup || '-'}</span></div>
+          <div class="row"><span class="label">Total Pemeliharaan</span><span class="value">${item.maintenanceCount} Kali</span></div>
+          <div class="row"><span class="label">Pelapor</span><span class="value">${item.requesterName || '-'}</span></div>
+          <div class="row"><span class="label">Teknisi</span><span class="value">${item.technicianName || '-'}</span></div>
+        </div>
+        
+        ${diagnosis ? `
+        <div class="section">
+          <div class="section-title">Laporan Diagnosis</div>
+          <div class="row"><span class="label">Dapat Diperbaiki</span><span class="value">${diagnosis.is_repairable ? 'Ya' : 'Tidak'}</span></div>
+          <div class="row"><span class="label">Kategori</span><span class="value">${getCategoryLabel(diagnosis.problem_category)}</span></div>
+          <div class="row"><span class="label">Deskripsi Masalah</span><span class="value">${diagnosis.problem_description || '-'}</span></div>
+          <div class="row"><span class="label">Hasil Diagnosis</span><span class="value">${getRepairTypeLabel(diagnosis.repair_type)}</span></div>
+          ${diagnosis.repair_description ? `<div class="row"><span class="label">Deskripsi Perbaikan</span><span class="value">${diagnosis.repair_description}</span></div>` : ''}
+          ${diagnosis.technician_notes ? `<div class="row"><span class="label">Catatan Teknisi</span><span class="value">${diagnosis.technician_notes}</span></div>` : ''}
+        </div>
+        ` : ''}
+        
+        ${item.spareparts.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Suku Cadang</div>
+          <table>
+            <thead><tr><th>Item</th><th style="width:60px;text-align:right">Qty</th></tr></thead>
+            <tbody>
+              ${item.spareparts.map((p) => `<tr><td>${p.name}</td><td style="text-align:right">${p.quantity}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+        
+        ${item.vendors.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Detail Vendor</div>
+          ${item.vendors.map((v, idx) => `
+            <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed #ddd;">
+              <div class="row"><span class="label">Vendor ${idx + 1}</span><span class="value">${v.name || '-'}</span></div>
+              ${v.contact ? `<div class="row"><span class="label">Kontak</span><span class="value">${v.contact}</span></div>` : ''}
+              ${v.description ? `<div class="row"><span class="label">Lingkup Pekerjaan</span><span class="value">${v.description}</span></div>` : ''}
+              ${v.completionNotes ? `<div class="row"><span class="label">Catatan Penyelesaian</span><span class="value">${v.completionNotes}</span></div>` : ''}
+              <div class="row"><span class="label">Selesai</span><span class="value">${formatDate(v.completedAt)}</span></div>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+        
+        ${item.licenses.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Detail Lisensi</div>
+          ${item.licenses.map((l, idx) => `
+            <div style="margin-bottom:10px;">
+              <div class="row"><span class="label">Lisensi ${idx + 1}</span><span class="value">${l.name || '-'}</span></div>
+              ${l.description ? `<div class="row"><span class="label">Keterangan</span><span class="value">${l.description}</span></div>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+        
+        <div class="section">
+          <div class="section-title">Status Penyelesaian</div>
+          <div class="row"><span class="label">Total Work Order</span><span class="value">${item.totalWorkOrders} selesai</span></div>
+          <div class="row"><span class="label">Terakhir Selesai</span><span class="value">${formatDate(item.lastCompletedAt)}</span></div>
+        </div>
+        
+        <div class="footer">
+          <div class="signature">
+            <div class="line">Teknisi</div>
+          </div>
+          <div class="signature">
+            <div class="line">Penerima</div>
+          </div>
+        </div>
+        
+        <div class="print-date">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
+      </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const diagnosis = item?.diagnosis;
+  const hasSpareparts = (item?.spareparts?.length ?? 0) > 0;
+  const hasVendors = (item?.vendors?.length ?? 0) > 0;
+  const hasLicenses = (item?.licenses?.length ?? 0) > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* LAYOUT STICKY:
-         DialogContent dibuat flex-col dengan max-h tertentu.
-         Header diberi shrink-0 (tidak mengecil).
-         Body diberi flex-1 dan overflow-y-auto (scrollable).
-      */}
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 outline-none overflow-hidden">
-
+      <DialogContent className="max-w-4xl min-w-[70vw] max-h-[90vh] flex flex-col p-0 gap-0 outline-none overflow-hidden bg-slate-50">
         {/* --- STICKY HEADER --- */}
         <div className="shrink-0 px-6 py-4 border-b bg-white z-20 flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <div className="space-y-1">
@@ -158,243 +413,403 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-slate-700" />
                 <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight leading-none">
-                  {item.ticketTitle}
+                  {loading ? "Memuat..." : item?.ticketTitle || "Kartu Kendali"}
                 </DialogTitle>
               </div>
-              <Separator orientation="vertical" className="h-5" />
-              <span className="font-mono text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                #{item.ticketNumber}
-              </span>
+              {item && (
+                <>
+                  <Separator orientation="vertical" className="h-5" />
+                  <span className="font-mono text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    #{item.ticketNumber}
+                  </span>
+                  <Badge 
+                    variant={item.ticketStatus === 'closed' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {getStatusLabel(item.ticketStatus)}
+                  </Badge>
+                </>
+              )}
             </div>
             <DialogDescription className="flex items-center gap-3 text-xs pt-1">
               <span className="flex items-center gap-1.5 text-slate-600 font-medium">
-                <Calendar className="h-3.5 w-3.5" />
-                {item.completedAt ? `Selesai: ${formatDate(item.completedAt)}` : "Status: Dalam Pengerjaan"}
+                Dibuat: {item ? formatDate(item.createdAt) : '-'}
               </span>
+              {item?.closedAt && (
+                <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                  Selesai: {formatDate(item.closedAt)}
+                </span>
+              )}
+              {item && item.totalWorkOrders > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {item.completedWorkOrders}/{item.totalWorkOrders} WO Selesai
+                </Badge>
+              )}
             </DialogDescription>
           </div>
 
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-400 hover:text-slate-700"
+              onClick={handlePrint}
+              title="Cetak"
+              disabled={loading || !item}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-400 hover:text-slate-700"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* --- SCROLLABLE BODY --- */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/60 p-6 space-y-6">
-
-          {/* Section 1: Informasi Aset & Personil */}
-          <SectionCard
-            icon={Hash}
-            title="Informasi Aset & Personil"
-            iconColorClass="text-blue-600"
-            headerBgClass="bg-blue-50/50"
-          >
-            <div className="flex flex-col gap-6">
-
-              {/* --- BAGIAN 1: INFO ASET (Grid 3 Kolom agar pas) --- */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                <DetailItem label="Kode Aset" value={item.assetCode} />
-
-                <DetailItem label="NUP" value={item.assetNup} />
-
-                <DetailItem label="Total Pemeliharaan">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200">
-                    <Wrench className="h-3.5 w-3.5 text-slate-500" />
-                    <span className="text-sm font-medium text-slate-700">{item.maintenanceCount} Kali</span>
-                  </div>
-                </DetailItem>
-              </div>
-
-              {/* Separator di luar grid agar margin atas-bawah konsisten */}
-              <Separator className="bg-slate-200" />
-
-              {/* --- BAGIAN 2: INFO PERSONIL (Grid 2 Kolom) --- */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <DetailItem label="Pelapor (User)">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0">
-                      <User className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 truncate">
-                      {item.requesterName || "-"}
-                    </span>
-                  </div>
-                </DetailItem>
-
-                <DetailItem label="Teknisi Penanggungjawab">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 shrink-0">
-                      <User className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 truncate">
-                      {item.technicianName || "-"}
-                    </span>
-                  </div>
-                </DetailItem>
-              </div>
-
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          </SectionCard>
+          ) : !item ? (
+            <div className="text-center py-20 text-muted-foreground">
+              Data tidak ditemukan
+            </div>
+          ) : (
+            <>
+              {/* Section 1: Informasi Aset & Personil */}
+              <SectionCard
+                icon={Hash}
+                title="Informasi Aset & Personil"
+                iconColorClass="text-blue-600"
+                headerBgClass="bg-blue-50/50"
+              >
+                <div className="flex flex-col">
+                  <DetailRow label="Kode Aset" value={item.assetCode} />
+                  <DetailRow label="NUP" value={item.assetNup} />
+                  <DetailRow label="Pemeliharaan">
+                    <span className="inline-flex items-center gap-1.5">
+                      {item.maintenanceCount} Kali
+                    </span>
+                  </DetailRow>
 
-          {/* Section 2: Laporan Diagnosis */}
-          <SectionCard
-            icon={Stethoscope}
-            title="Laporan Diagnosis"
-            iconColorClass="text-orange-600"
-            headerBgClass="bg-orange-50/50"
-            rightElement={
-              diagnosis.isRepairable !== undefined && (
-                <Badge variant={diagnosis.isRepairable ? "outline" : "destructive"} className={`h-5 gap-1 ${diagnosis.isRepairable ? "border-green-500 text-green-700 bg-green-50" : ""}`}>
-                  {diagnosis.isRepairable ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                  {diagnosis.isRepairable ? "Repairable" : "Not Repairable"}
-                </Badge>
-              )
-            }
-          >
-            {Object.keys(diagnosis).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <DetailItem label="Masalah Utama" value={diagnosis.problemDescription} className="md:col-span-2 p-3 bg-slate-50 rounded border border-slate-100" />
-
-                <DetailItem label="Kondisi Fisik" value={diagnosis.physicalCondition} />
-                <DetailItem label="Inspeksi Visual" value={diagnosis.visualInspection} />
-                <DetailItem label="Hasil Pengujian" value={diagnosis.testingResult} />
-                <DetailItem label="Rekomendasi" value={diagnosis.repairRecommendation} />
-
-                {diagnosis.faultyComponents?.length > 0 && (
-                  <DetailItem label="Komponen Bermasalah" className="md:col-span-2">
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {diagnosis.faultyComponents.map((comp: string, idx: number) => (
-                        <Badge key={idx} variant="outline" className="font-mono text-[10px] text-red-600 bg-red-50 border-red-100">
-                          {comp}
-                        </Badge>
-                      ))}
+                  <DetailRow label="Tiket Terkait">
+                    <div className="flex flex-col gap-2">
+                      {/* Current ticket */}
+                      <div className="flex items-center justify-between gap-2 py-1 px-2 bg-slate-50 rounded border">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="font-mono text-xs font-normal">
+                            {item.ticketNumber}
+                          </Badge>
+                          <span className="text-xs text-slate-500">(Tiket ini)</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600"
+                          onClick={() => {
+                            navigator.clipboard.writeText(item.ticketNumber);
+                            toast.success("Nomor tiket disalin");
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
+                      {/* Related tickets */}
+                      {item.relatedTickets?.length > 0 ? (
+                        item.relatedTickets.map((t) => (
+                          <div key={t.id} className="flex items-center justify-between gap-2 py-1 px-2 bg-white rounded border">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <Badge variant="outline" className="font-mono text-xs font-normal shrink-0">
+                                {t.ticketNumber}
+                              </Badge>
+                              <span className="text-xs text-slate-500 truncate">{t.title}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-slate-400 hover:text-slate-600 shrink-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(t.ticketNumber);
+                                toast.success("Nomor tiket disalin");
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Tidak ada tiket lain dengan aset yang sama</span>
+                      )}
                     </div>
-                  </DetailItem>
-                )}
+                  </DetailRow>
 
-                {diagnosis.technicianNotes && (
-                  <div className="md:col-span-2 mt-2">
-                    <dt className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Catatan Teknisi</dt>
-                    <dd className="text-sm p-3 bg-yellow-50/40 border border-yellow-100 rounded text-slate-700 italic">
-                      "{diagnosis.technicianNotes}"
-                    </dd>
+                  <DetailRow label="Pelapor (User)">
+                    <div className="flex items-center gap-2">
+                      <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center">
+                        <User className="h-3 w-3 text-slate-500" />
+                      </span>
+                      <span>{item.requesterName || "-"}</span>
+                    </div>
+                  </DetailRow>
+
+                  <DetailRow label="Teknisi" className="border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                        <User className="h-3 w-3 text-blue-600" />
+                      </span>
+                      <span>{item.technicianName || "-"}</span>
+                    </div>
+                  </DetailRow>
+                </div>
+              </SectionCard>
+
+              {/* Section 2: Laporan Diagnosis */}
+              <SectionCard
+                icon={Stethoscope}
+                title="Laporan Diagnosis"
+                iconColorClass="text-orange-600"
+                headerBgClass="bg-orange-50/50"
+              >
+                {diagnosis ? (
+                  <div className="flex flex-col">
+                    <DetailRow
+                      label="Kategori"
+                      value={getCategoryLabel(diagnosis.problem_category)}
+                    />
+                    <DetailRow
+                      label="Deskripsi Masalah"
+                      value={diagnosis.problem_description}
+                    />
+                    <DetailRow
+                      label="Status Perbaikan"
+                      value={
+                        diagnosis.is_repairable
+                          ? "Dapat Diperbaiki"
+                          : "Tidak Dapat Diperbaiki"
+                      }
+                    />
+                    <DetailRow
+                      label="Hasil Diagnosis"
+                      value={getRepairTypeLabel(diagnosis.repair_type)}
+                    />
+
+                    {diagnosis.repair_description && (
+                      <DetailRow
+                        label="Tindakan"
+                        value={diagnosis.repair_description}
+                      />
+                    )}
+
+                    {diagnosis.unrepairable_reason && (
+                      <DetailRow
+                        label="Alasan Gagal"
+                        value={diagnosis.unrepairable_reason}
+                      />
+                    )}
+
+                    {diagnosis.alternative_solution && (
+                      <DetailRow
+                        label="Solusi Alternatif"
+                        value={diagnosis.alternative_solution}
+                      />
+                    )}
+
+                    {diagnosis.technician_notes && (
+                      <DetailRow
+                        label="Catatan Teknisi"
+                        value={diagnosis.technician_notes}
+                      />
+                    )}
+
+                    {diagnosis.estimasi_hari && (
+                      <DetailRow
+                        label="Estimasi Waktu"
+                        value={diagnosis.estimasi_hari}
+                      />
+                    )}
+
+                    {/* Timestamp Diagnosis */}
+                    {diagnosis.diagnosed_at && (
+                      <DetailRow
+                        label="Waktu Diagnosis"
+                        value={formatDate(diagnosis.diagnosed_at)}
+                        className="border-0"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-muted-foreground text-sm italic opacity-60">
+                    Belum ada laporan diagnosis dari teknisi.
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="text-center py-6 text-muted-foreground text-sm italic opacity-60">
-                Belum ada laporan diagnosis dari teknisi.
-              </div>
-            )}
-          </SectionCard>
+              </SectionCard>
 
-          {/* Section 3: Detail Implementasi (Stack Layout) */}
-          <div className="space-y-6">
-            
-            {/* Suku Cadang */}
-            <SectionCard 
-              icon={Package} 
-              title="Penggunaan Suku Cadang" 
-              iconColorClass="text-purple-600"
-              headerBgClass="bg-purple-50/50"
-            >
-              {hasSpareparts ? (
-                <div className="border rounded-md overflow-hidden bg-white">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-[10px] uppercase text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">Item</th>
-                        <th className="px-3 py-2 font-semibold text-right">Qty</th>
-                        <th className="px-3 py-2 font-semibold text-center">Unit</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {parsedItems.map((part: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="px-3 py-2 font-medium text-slate-700">{part.name || part.item_name}</td>
-                          <td className="px-3 py-2 text-right font-mono text-slate-600">{part.quantity}</td>
-                          <td className="px-3 py-2 text-center text-xs text-slate-400">{part.unit || 'pcs'}</td>
+              {/* --- Section 3: Detail Implementasi --- */}
+
+              {/* Suku Cadang - menampilkan semua spareparts dari semua work orders */}
+              <SectionCard
+                icon={Package}
+                title={`Penggunaan Suku Cadang (${item.spareparts?.length || 0})`}
+                iconColorClass="text-purple-600"
+                headerBgClass="bg-purple-50/50"
+              >
+                {hasSpareparts ? (
+                  <div className="border rounded-md overflow-hidden bg-white">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-4 py-3 border-b">Item</th>
+                          <th className="px-4 py-3 border-b text-right w-24">Qty</th>
+                          <th className="px-4 py-3 border-b text-right w-32 hidden sm:table-cell">Selesai</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground text-sm italic opacity-60">
-                  Tidak ada suku cadang yang digunakan.
-                </div>
-              )}
-            </SectionCard>
-
-            {/* Vendor */}
-            <SectionCard 
-              icon={Building} 
-              title="Detail Vendor" 
-              iconColorClass="text-indigo-600"
-              headerBgClass="bg-indigo-50/50"
-            >
-              {hasVendor ? (
-                <div className="space-y-4">
-                  <DetailItem label="Perusahaan" value={item.vendorName} />
-                  <DetailItem label="Kontak Person" value={item.vendorContact} />
-                  <Separator />
-                  <DetailItem label="Lingkup Pekerjaan" value={item.vendorDescription} className="bg-slate-50 p-2 rounded border border-slate-100" />
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground text-sm italic opacity-60">
-                  Tidak menggunakan jasa vendor.
-                </div>
-              )}
-            </SectionCard>
-
-            {/* Lisensi */}
-            <SectionCard 
-              icon={KeyRound} 
-              title="Detail Lisensi" 
-              iconColorClass="text-emerald-600"
-              headerBgClass="bg-emerald-50/50"
-            >
-              {hasLicense ? (
-                <div className="space-y-4">
-                  <DetailItem label="Nama Lisensi" value={item.licenseName} />
-                  <DetailItem label="Keterangan" value={item.licenseDescription} className="bg-slate-50 p-2 rounded border border-slate-100" />
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground text-sm italic opacity-60">
-                  Tidak ada lisensi terkait.
-                </div>
-              )}
-            </SectionCard>
-
-            {/* Status Penyelesaian */}
-            <SectionCard 
-              icon={CheckCircle} 
-              title="Status Penyelesaian" 
-              iconColorClass="text-green-600"
-              headerBgClass="bg-green-50/50"
-              className="!gap-0"
-            >
-              <div className="!mt-0 space-y-5">
-                <div className="flex items-center justify-between p-3 bg-green-50/30 border border-green-100 rounded-lg">
-                  <span className="text-sm font-medium text-green-800">Tanggal Selesai</span>
-                  <span className="font-mono text-sm font-semibold text-green-700">
-                    {formatDate(item.completedAt)}
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FileText className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Catatan Penyelesaian</span>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {item.spareparts.map((part, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 text-slate-700">{part.name}</td>
+                            <td className="px-4 py-3 text-right font-medium text-slate-900">
+                              {part.quantity}
+                            </td>
+                            <td className="px-4 py-3 text-right text-xs text-slate-500 hidden sm:table-cell">
+                              {formatDate(part.completedAt)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap pl-1">
-                    {item.completionNotes || "Tidak ada catatan khusus."}
-                  </p>
-                </div>
-              </div>
-            </SectionCard>
+                ) : (
+                  <div className="text-center py-2 text-muted-foreground text-sm italic opacity-60">
+                    Tidak ada suku cadang yang digunakan.
+                  </div>
+                )}
+              </SectionCard>
 
-          </div>
+              {/* Vendor - setiap vendor punya catatan penyelesaian sendiri */}
+              <SectionCard
+                icon={Building}
+                title={`Detail Vendor (${item.vendors?.length || 0})`}
+                iconColorClass="text-indigo-600"
+                headerBgClass="bg-indigo-50/50"
+              >
+                {hasVendors ? (
+                  <div className="space-y-4">
+                    {item.vendors.map((vendor, idx) => (
+                      <div key={idx} className="border rounded-lg p-4 bg-white">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant="outline" className="text-xs">
+                            Vendor {idx + 1}
+                          </Badge>
+                          <span className="text-xs text-slate-400">
+                            {formatDate(vendor.completedAt)}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <DetailRow label="Perusahaan" value={vendor.name} />
+                          {vendor.contact && (
+                            <DetailRow label="Kontak" value={vendor.contact} />
+                          )}
+                          {vendor.description && (
+                            <DetailRow label="Pekerjaan" value={vendor.description} />
+                          )}
+                          {vendor.completionNotes && (
+                            <DetailRow 
+                              label="Catatan Penyelesaian" 
+                              value={vendor.completionNotes}
+                              className="border-0 bg-green-50/50 -mx-4 px-4 py-2 rounded-b-lg"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-muted-foreground text-sm italic opacity-60">
+                    Tidak menggunakan jasa vendor.
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Lisensi */}
+              <SectionCard
+                icon={KeyRound}
+                title={`Detail Lisensi (${item.licenses?.length || 0})`}
+                iconColorClass="text-emerald-600"
+                headerBgClass="bg-emerald-50/50"
+              >
+                {hasLicenses ? (
+                  <div className="space-y-3">
+                    {item.licenses.map((license, idx) => (
+                      <div key={idx} className="border rounded-lg p-4 bg-white">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant="outline" className="text-xs">
+                            Lisensi {idx + 1}
+                          </Badge>
+                          <span className="text-xs text-slate-400">
+                            {formatDate(license.completedAt)}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <DetailRow label="Nama Lisensi" value={license.name} />
+                          {license.description && (
+                            <DetailRow 
+                              label="Keterangan" 
+                              value={license.description} 
+                              className="border-0"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-muted-foreground text-sm italic opacity-60">
+                    Tidak ada lisensi terkait.
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Ringkasan */}
+              <SectionCard
+                icon={CheckCircle}
+                title="Ringkasan"
+                iconColorClass="text-green-600"
+                headerBgClass="bg-green-50/50"
+              >
+                <div className="flex flex-col">
+                  <DetailRow label="Status Tiket" value={getStatusLabel(item.ticketStatus)} />
+                  <DetailRow label="Dibuat" value={formatDate(item.createdAt)} />
+                  {item.closedAt && (
+                    <DetailRow label="Selesai" value={formatDate(item.closedAt)} />
+                  )}
+                  {item.totalWorkOrders > 0 && (
+                    <DetailRow 
+                      label="Work Order" 
+                      value={`${item.completedWorkOrders} selesai dari ${item.totalWorkOrders} total`} 
+                    />
+                  )}
+                  {item.pendingWorkOrders?.length > 0 && (
+                    <DetailRow label="WO Pending">
+                      <div className="flex flex-wrap gap-1">
+                        {item.pendingWorkOrders.map((wo) => (
+                          <Badge key={wo.id} variant="outline" className="text-xs">
+                            {wo.type} ({wo.status})
+                          </Badge>
+                        ))}
+                      </div>
+                    </DetailRow>
+                  )}
+                </div>
+              </SectionCard>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

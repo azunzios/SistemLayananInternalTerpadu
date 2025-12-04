@@ -94,8 +94,8 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
             Admin Layanan Dashboard
           </h1>
           <div className="flex flex-row gap-4">
-          <p className="text-gray-500 mt-1">Memuat data dashboard...</p>
-          <Spinner />
+            <p className="text-gray-500 mt-1">Memuat data dashboard...</p>
+            <Spinner />
           </div>
         </div>
       </div>
@@ -186,9 +186,9 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
                 <LineChart data={last7DaysTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
-                  <YAxis 
+                  <YAxis
                     domain={[0, Math.ceil(Math.max(...last7DaysTrend.map(d => Math.max(d.perbaikan, d.zoom))) / 1) || 1]}
-                    ticks={Array.from({length: Math.ceil(Math.max(...last7DaysTrend.map(d => Math.max(d.perbaikan, d.zoom))) / 1) || 2}, (_, i) => i)}
+                    ticks={Array.from({ length: Math.ceil(Math.max(...last7DaysTrend.map(d => Math.max(d.perbaikan, d.zoom))) / 1) || 2 }, (_, i) => i)}
                     type="number"
                   />
                   <Tooltip formatter={(value) => [`${value} tiket`, '']} />
@@ -215,8 +215,32 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
                   {stats && stats.statistics ? stats.statistics.perbaikan.count + stats.statistics.zoom.count : 0} tiket menunggu action
                 </CardDescription>
               </div>
-              <Button variant="link" onClick={() => onNavigate('tickets')} className="p-0">
-                Lihat Semua <ArrowUpRight  />
+              <Button
+                onClick={() => onNavigate('tickets')}
+                className="
+    /* Bentuk & Layout */
+    relative overflow-hidden rounded-full group px-6
+    
+    /* Warna Dasar */
+    bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 
+    text-white font-medium
+    
+    /* Efek Sabun (Soap Effect) */
+    /* 1. Inset putih keliling (tebal 2px) */
+    /* 2. Highlight atas lembut */
+    /* 3. Shadow bawah lembut */
+    /* 4. Glow luar tipis */
+    shadow-[inset_0px_0px_0px_2px_rgba(255,255,255,0.6),inset_0px_4px_8px_rgba(255,255,255,0.2),inset_0px_-4px_8px_rgba(0,0,0,0.1),0px_2px_5px_rgba(59,130,246,0.2)]
+    
+    /* Interaksi */
+    hover:brightness-110 transition-all duration-300
+  "
+              >
+                <span className="relative z-10 flex items-center gap-2 drop-shadow-sm">
+                  Lihat Semua
+                  {/* Animasi panah gerak diagonal saat hover */}
+                  <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                </span>
               </Button>
             </div>
           </CardHeader>

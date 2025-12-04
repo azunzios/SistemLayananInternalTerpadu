@@ -72,31 +72,39 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-8 w-8 text-blue-600" />
                   <div>
-                    <h3 className="text-blue-900">Tiket Menunggu Review</h3>
+                    <h3 className="text-blue-900">
+                      {ticket.type === "zoom_meeting" 
+                        ? "Tiket Zoom Meeting" 
+                        : "Tiket Menunggu Review"}
+                    </h3>
                     <p className="text-sm text-blue-700">
-                      {ticket.type === "perbaikan"
+                      {ticket.type === "zoom_meeting"
+                        ? "Silakan manajemen tiket zoom di menu Kelola Zoom"
+                        : ticket.type === "perbaikan"
                         ? "Review tiket perbaikan ini dan setujui atau tolak"
-                        : "Review permintaan Zoom Meeting ini dan setujui atau tolak"}
+                        : "Review permintaan ini dan setujui atau tolak"}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="border-blue-300"
-                    onClick={onShowRejectDialog}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Tolak
-                  </Button>
-                  <Button
-                    onClick={onShowReviewDialog}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Setujui
-                  </Button>
-                </div>
+                {ticket.type !== "zoom_meeting" && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-blue-300"
+                      onClick={onShowRejectDialog}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Tolak
+                    </Button>
+                    <Button
+                      onClick={onShowReviewDialog}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Setujui
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

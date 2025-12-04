@@ -25,21 +25,14 @@ import type { User } from '@/types';
 import type { ViewType } from '@/components/main-layout';
 
 interface SuperAdminDashboardProps {
-  currentUser: User;
-  onNavigate: (view: ViewType) => void;
+currentUser: User;
+onNavigate: (view: ViewType) => void;
 }
 
-const COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
-  onNavigate,
+onNavigate,
 }) => {
   const { stats, ticketsByType, usersByRole, loading, error } = useSuperAdminDashboard();
 
@@ -88,6 +81,7 @@ return (
         <div className="hidden md:block">
           <Shield className="h-20 w-20 text-blue-100 opacity-50" />
         </div>
+      </div>
 
       {/* Shortcuts Grid - Modified to Indigo Theme (to match Blue) */}
       <div className="flex items-center justify-center gap-6 px-8 md:px-40 mt-10">

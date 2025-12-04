@@ -539,99 +539,85 @@ class WorkOrderController extends Controller
      * Get Kartu Kendali - completed work orders grouped by ticket
      * GET /work-orders/kartu-kendali
      */
+    /**
+     * Kartu Kendali List - 1 entry per TIKET perbaikan
+     * Semua tiket type=perbaikan ditampilkan (tidak harus punya work order)
+     */
     public function kartuKendali(Request $request): JsonResponse
     {
-        $query = WorkOrder::where('status', 'completed')
-            ->with(['ticket.user', 'ticket.diagnosis.technician', 'createdBy']);
+        // Ambil semua tiket perbaikan
+        $query = Ticket::where('type', 'perbaikan')
+            ->with(['user', 'diagnosis.technician', 'assignedTechnician', 'workOrders' => function ($q) {
+                $q->where('status', 'completed')->orderBy('completed_at', 'desc');
+            }]);
 
         // Search
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->whereHas('ticket', function ($ticketQ) use ($search) {
-                    $ticketQ->where('ticket_number', 'like', "%{$search}%")
-                        ->orWhere('title', 'like', "%{$search}%");
-                })
-                ->orWhere('vendor_name', 'like', "%{$search}%")
-                ->orWhere('license_name', 'like', "%{$search}%");
+                $q->where('ticket_number', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
             });
         }
 
-        // Filter by type
-        if ($request->has('type') && $request->type !== 'all') {
-            $query->where('type', $request->type);
+        // Filter by status (optional)
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
         }
 
         $perPage = $request->per_page ?? 15;
-        $workOrders = $query->orderBy('completed_at', 'desc')->paginate($perPage);
+        $tickets = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
-        // Transform data untuk kartu kendali
-        $data = $workOrders->map(function ($wo) {
-            $ticket = $wo->ticket;
-            $formData = is_string($ticket?->form_data) ? json_decode($ticket->form_data, true) : ($ticket?->form_data ?? []);
+        // Transform data - 1 entry per tiket
+        $data = $tickets->map(function ($ticket) {
+            $formData = is_string($ticket->form_data) ? json_decode($ticket->form_data, true) : ($ticket->form_data ?? []);
             
-            // Get asset info dari form_data atau langsung dari ticket
-            $assetCode = $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket?->kode_barang ?? null;
-            $assetNup = $formData['assetNUP'] ?? $formData['nup'] ?? $ticket?->nup ?? null;
+            $assetCode = $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket->kode_barang ?? null;
+            $assetNup = $formData['assetNUP'] ?? $formData['nup'] ?? $ticket->nup ?? null;
             
-            // Hitung berapa kali aset ini sudah dirawat (completed work orders dengan NUP yang sama)
+            // Hitung berapa kali aset ini sudah dirawat (tiket berbeda dengan NUP sama)
             $maintenanceCount = 0;
             if ($assetNup) {
-                $maintenanceCount = WorkOrder::where('status', 'completed')
-                    ->whereHas('ticket', function ($q) use ($assetNup) {
+                $maintenanceCount = Ticket::where('type', 'perbaikan')
+                    ->where(function ($q) use ($assetNup) {
                         $q->where('nup', $assetNup)
                             ->orWhere('form_data->nup', $assetNup)
-                            ->orWhere('form_data->asset_nup', $assetNup);
-                    })
-                    ->count();
+                            ->orWhere('form_data->asset_nup', $assetNup)
+                            ->orWhere('form_data->assetNUP', $assetNup);
+                    })->count();
             }
 
-            // Get diagnosis data
-            $diagnosis = $ticket?->diagnosis;
-            $diagnosisData = null;
-            if ($diagnosis) {
-                $diagnosisData = [
-                    'problemDescription' => $diagnosis->problem_description,
-                    'problemCategory' => $diagnosis->problem_category,
-                    'repairType' => $diagnosis->repair_type,
-                    'isRepairable' => $diagnosis->repair_type !== 'unrepairable',
-                    'repairDescription' => $diagnosis->repair_description,
-                    'unrepairableReason' => $diagnosis->unrepairable_reason,
-                    'alternativeSolution' => $diagnosis->alternative_solution,
-                    'technicianNotes' => $diagnosis->technician_notes,
-                    'diagnosedAt' => $diagnosis->created_at?->toISOString(),
-                    'technicianName' => $diagnosis->technician?->name,
-                ];
-            }
+            // Ambil completed work order terakhir untuk tanggal selesai (jika ada)
+            $latestWo = $ticket->workOrders->first();
+            
+            // Hitung total work orders completed untuk tiket ini
+            $workOrderCount = $ticket->workOrders->count();
+            
+            // Get teknisi dari assignedTo atau diagnosis
+            $technicianName = $ticket->assignedTechnician?->name 
+                ?? $ticket->diagnosis?->technician?->name 
+                ?? $latestWo?->createdBy?->name 
+                ?? null;
 
             return [
-                'id' => $wo->id,
-                'ticketId' => $wo->ticket_id,
-                'ticketNumber' => $ticket?->ticket_number,
-                'ticketTitle' => $ticket?->title,
-                'type' => $wo->type,
-                'completedAt' => $wo->completed_at?->toISOString(),
-                'completionNotes' => $wo->completion_notes,
+                'id' => $ticket->id,
+                'ticketId' => $ticket->id,
+                'ticketNumber' => $ticket->ticket_number,
+                'ticketTitle' => $ticket->title,
+                'ticketStatus' => $ticket->status,
+                'completedAt' => $latestWo?->completed_at?->toISOString(),
+                'closedAt' => $ticket->status === 'closed' ? $ticket->updated_at?->toISOString() : null,
                 // Asset info
                 'assetCode' => $assetCode,
-                'assetName' => $formData['assetName'] ?? $formData['nama_barang'] ?? $ticket?->title,
+                'assetName' => $formData['assetName'] ?? $formData['nama_barang'] ?? $ticket->title,
                 'assetNup' => $assetNup,
-                'maintenanceCount' => $maintenanceCount, // Berapa kali aset ini sudah dirawat
-                // Work order specific data (apa yang diminta)
-                'items' => $wo->items,
-                'vendorName' => $wo->vendor_name,
-                'vendorContact' => $wo->vendor_contact,
-                'vendorDescription' => $wo->vendor_description,
-                'licenseName' => $wo->license_name,
-                'licenseDescription' => $wo->license_description,
-                // Diagnosis data
-                'diagnosis' => $diagnosisData,
+                'maintenanceCount' => $maintenanceCount,
+                'workOrderCount' => $workOrderCount,
                 // Technician info
-                'technicianId' => $wo->created_by,
-                'technicianName' => $wo->createdBy?->name,
+                'technicianName' => $technicianName,
                 // Requester info
-                'requesterId' => $ticket?->user_id,
-                'requesterName' => $ticket?->user?->name,
+                'requesterId' => $ticket->user_id,
+                'requesterName' => $ticket->user?->name,
             ];
         });
 
@@ -640,13 +626,170 @@ class WorkOrderController extends Controller
             'message' => 'Kartu Kendali retrieved successfully',
             'data' => $data,
             'pagination' => [
-                'total' => $workOrders->total(),
-                'per_page' => $workOrders->perPage(),
-                'current_page' => $workOrders->currentPage(),
-                'last_page' => $workOrders->lastPage(),
-                'from' => $workOrders->firstItem(),
-                'to' => $workOrders->lastItem(),
+                'total' => $tickets->total(),
+                'per_page' => $tickets->perPage(),
+                'current_page' => $tickets->currentPage(),
+                'last_page' => $tickets->lastPage(),
+                'from' => $tickets->firstItem(),
+                'to' => $tickets->lastItem(),
             ],
+        ], 200);
+    }
+
+    /**
+     * Kartu Kendali Detail - 1 tiket perbaikan dengan semua info
+     * GET /kartu-kendali/{ticket}
+     * Menampilkan diagnosis, work orders (jika ada), dll
+     */
+    public function kartuKendaliDetail(Ticket $ticket): JsonResponse
+    {
+        // Load relations - termasuk semua work orders (completed atau tidak)
+        $ticket->load(['user', 'diagnosis.technician', 'assignedTechnician', 'workOrders' => function ($q) {
+            $q->with('createdBy')->orderBy('completed_at', 'asc');
+        }]);
+        
+        $formData = is_string($ticket->form_data) ? json_decode($ticket->form_data, true) : ($ticket->form_data ?? []);
+        
+        // Get asset info
+        $assetCode = $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket->kode_barang ?? null;
+        $assetNup = $formData['assetNUP'] ?? $formData['nup'] ?? $ticket->nup ?? null;
+        
+        // Get related tickets (same NUP, different ticket) - semua tiket perbaikan
+        $relatedTickets = [];
+        $maintenanceCount = 0;
+        
+        if ($assetNup) {
+            $relatedTicketQuery = Ticket::where('type', 'perbaikan')
+                ->where('id', '!=', $ticket->id)
+                ->where(function ($q) use ($assetNup) {
+                    $q->where('nup', $assetNup)
+                        ->orWhere('form_data->nup', $assetNup)
+                        ->orWhere('form_data->asset_nup', $assetNup)
+                        ->orWhere('form_data->assetNUP', $assetNup);
+                })
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            // Hitung total tiket dengan aset yang sama (termasuk tiket ini)
+            $maintenanceCount = $relatedTicketQuery->count() + 1;
+            
+            $relatedTickets = $relatedTicketQuery->map(fn($t) => [
+                'id' => $t->id,
+                'ticketNumber' => $t->ticket_number,
+                'title' => $t->title,
+                'status' => $t->status,
+                'createdAt' => $t->created_at?->toISOString(),
+            ])->values()->toArray();
+        }
+
+        // Get diagnosis data
+        $diagnosis = $ticket->diagnosis;
+        $diagnosisData = null;
+        if ($diagnosis) {
+            $diagnosisData = [
+                'problem_category' => $diagnosis->problem_category,
+                'problem_description' => $diagnosis->problem_description,
+                'repair_type' => $diagnosis->repair_type,
+                'is_repairable' => $diagnosis->repair_type !== 'unrepairable',
+                'repair_description' => $diagnosis->repair_description,
+                'unrepairable_reason' => $diagnosis->unrepairable_reason,
+                'alternative_solution' => $diagnosis->alternative_solution,
+                'technician_notes' => $diagnosis->technician_notes,
+                'estimasi_hari' => $diagnosis->estimasi_hari,
+                'diagnosed_at' => $diagnosis->created_at?->toISOString(),
+                'technician_name' => $diagnosis->technician?->name,
+            ];
+        }
+
+        // Ambil semua work orders (completed atau tidak)
+        $allWorkOrders = $ticket->workOrders;
+        $completedWorkOrders = $allWorkOrders->where('status', 'completed');
+        
+        // Spareparts - gabungkan semua items dari WO type=sparepart yang completed
+        $allSpareparts = [];
+        foreach ($completedWorkOrders->where('type', 'sparepart') as $wo) {
+            $items = is_string($wo->items) ? json_decode($wo->items, true) : ($wo->items ?? []);
+            foreach ($items as $item) {
+                $allSpareparts[] = [
+                    'name' => $item['name'] ?? $item['sparepart_name'] ?? '-',
+                    'quantity' => $item['quantity'] ?? $item['qty'] ?? 1,
+                    'completedAt' => $wo->completed_at?->toISOString(),
+                    'technicianName' => $wo->createdBy?->name,
+                ];
+            }
+        }
+        
+        // Vendors - setiap vendor punya catatan penyelesaian masing-masing
+        $allVendors = [];
+        foreach ($completedWorkOrders->where('type', 'vendor') as $wo) {
+            $allVendors[] = [
+                'name' => $wo->vendor_name,
+                'contact' => $wo->vendor_contact,
+                'description' => $wo->vendor_description,
+                'completionNotes' => $wo->completion_notes,
+                'completedAt' => $wo->completed_at?->toISOString(),
+                'technicianName' => $wo->createdBy?->name,
+            ];
+        }
+        
+        // Licenses
+        $allLicenses = [];
+        foreach ($completedWorkOrders->where('type', 'license') as $wo) {
+            $allLicenses[] = [
+                'name' => $wo->license_name,
+                'description' => $wo->license_description,
+                'completedAt' => $wo->completed_at?->toISOString(),
+                'technicianName' => $wo->createdBy?->name,
+            ];
+        }
+        
+        // Pending work orders (belum completed)
+        $pendingWorkOrders = $allWorkOrders->where('status', '!=', 'completed')->map(fn($wo) => [
+            'id' => $wo->id,
+            'type' => $wo->type,
+            'status' => $wo->status,
+            'createdAt' => $wo->created_at?->toISOString(),
+        ])->values()->toArray();
+
+        // Teknisi - dari assigned atau diagnosis
+        $technicianName = $ticket->assignedTechnician?->name ?? $diagnosis?->technician?->name ?? null;
+
+        $data = [
+            'id' => $ticket->id,
+            'ticketId' => $ticket->id,
+            'ticketNumber' => $ticket->ticket_number,
+            'ticketTitle' => $ticket->title,
+            'ticketStatus' => $ticket->status,
+            'createdAt' => $ticket->created_at?->toISOString(),
+            'closedAt' => $ticket->status === 'closed' ? $ticket->updated_at?->toISOString() : null,
+            // Tanggal terakhir work order completed (jika ada)
+            'lastCompletedAt' => $completedWorkOrders->sortByDesc('completed_at')->first()?->completed_at?->toISOString(),
+            // Asset info
+            'assetCode' => $assetCode,
+            'assetName' => $formData['assetName'] ?? $formData['nama_barang'] ?? $ticket->title,
+            'assetNup' => $assetNup,
+            'maintenanceCount' => $maintenanceCount,
+            'relatedTickets' => $relatedTickets,
+            // Gabungan semua work orders completed
+            'spareparts' => $allSpareparts,
+            'vendors' => $allVendors,
+            'licenses' => $allLicenses,
+            'totalWorkOrders' => $allWorkOrders->count(),
+            'completedWorkOrders' => $completedWorkOrders->count(),
+            'pendingWorkOrders' => $pendingWorkOrders,
+            // Diagnosis data
+            'diagnosis' => $diagnosisData,
+            // Requester info
+            'requesterId' => $ticket->user_id,
+            'requesterName' => $ticket->user?->name,
+            // Technician info
+            'technicianName' => $technicianName,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kartu Kendali detail retrieved successfully',
+            'data' => $data,
         ], 200);
     }
 

@@ -404,21 +404,24 @@ export const TicketList: React.FC<TicketListProps> = ({
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-3 items-center">
-            {/* Search - 2x growth */}
-            <div className="relative flex-[2]">
+
+            {/* Search - Wrapper dikunci h-10 */}
+            <div className="relative flex-[2] h-10">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Cari tiket..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 text-sm w-full"
+                // Input h-full agar mengisi wrapper
+                className="pl-9 h-full text-sm w-full !ring-offset-0"
               />
             </div>
 
             {/* Admin Penyedia - Status Filter only (flex-1) */}
             {isAdminPenyedia && (
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-10 text-sm flex-1">
+                {/* SelectTrigger dipaksa !h-10 */}
+                <SelectTrigger className="!h-10 text-sm flex-1">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -437,12 +440,11 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </SelectContent>
               </Select>
             )}
-
             {/* Non-Admin Penyedia - Type (flex-1) + Status (flex-1) */}
             {!isAdminPenyedia && (
               <>
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="h-10 text-sm flex-1">
+                  <SelectTrigger className="!h-10 text-sm flex-1">
                     <SelectValue placeholder="Tipe" />
                   </SelectTrigger>
                   <SelectContent>
@@ -458,7 +460,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                   disabled={filterType === "all"}
                 >
                   <SelectTrigger
-                    className="h-10 text-sm flex-1"
+                    className="!h-10 text-sm flex-1"
                     title={
                       filterType === "all"
                         ? "Pilih tipe tiket terlebih dahulu untuk filter status"
@@ -510,9 +512,8 @@ export const TicketList: React.FC<TicketListProps> = ({
               title="Refresh"
             >
               <RotateCcw
-                className={`h-4 w-4 ${
-                  loading || statsLoading ? "animate-spin" : ""
-                }`}
+                className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
+                  }`}
               />
             </Button>
           </div>

@@ -95,7 +95,7 @@ export const StatusInfoDialog: React.FC<StatusInfoDialogProps> = ({
                     <StatusBadge label="assigned" desc="Ditugaskan" color="bg-blue-50 text-blue-700 border-blue-200" />
                     <StatusBadge label="in_progress" desc="Dikerjakan" color="bg-blue-50 text-blue-700 border-blue-200" />
                     <StatusBadge label="on_hold" desc="Menunggu part" color="bg-yellow-50 text-yellow-700 border-yellow-200" />
-                    <StatusBadge label="waiting..." desc="Tunggu user" color="bg-orange-50 text-orange-700 border-orange-200" />
+                    <StatusBadge label="waiting for submitter..." desc="menunggu submitter untuk mengonfirmasi" color="bg-orange-50 text-orange-700 border-orange-200" />
                 </div>
               </div>
 
@@ -155,7 +155,6 @@ export const StatusInfoDialog: React.FC<StatusInfoDialogProps> = ({
                 <div className="flex flex-wrap gap-2 mt-2">
                      <StatusBadge label="approved" desc="Disetujui" color="bg-green-50 text-green-700 border-green-200" />
                      <StatusBadge label="rejected" desc="Ditolak" color="bg-red-50 text-red-700 border-red-200" />
-                     <StatusBadge label="completed" desc="Selesai" color="bg-slate-100 text-slate-700 border-slate-200" />
                 </div>
               </div>
             </div>

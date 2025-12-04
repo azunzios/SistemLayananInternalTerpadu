@@ -128,7 +128,7 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl mb-2">
-              Admin Penyedia Dashboard 
+              Admin Penyedia Dashboard
             </h1>
             <p className="text-blue-100">
               Kelola work order dan pengadaan dari teknisi
@@ -194,12 +194,12 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-black-500 mb-1">Sparepart</p>
+                  <p className="text-sm text-gray-500 mb-1">Sparepart</p>
                   <p className="text-4xl font-bold">{stats?.byType.sparepart || 0}</p>
-                  <p className="text-xs text-black-400 mt-1">Work order sparepart</p>
+                  <p className="text-xs text-gray-400 mt-1">Work order sparepart</p>
                 </div>
-                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Package className="h-7 w-7" />
+                <div className="h-14 w-14 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-7 w-7 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -211,12 +211,12 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-black-500 mb-1">Vendor</p>
+                  <p className="text-sm text-gray-500 mb-1">Vendor</p>
                   <p className="text-4xl font-bold">{stats?.byType.vendor || 0}</p>
-                  <p className="text-xs text-black-400 mt-1">Work order vendor</p>
+                  <p className="text-xs text-gray-400 mt-1">Work order vendor</p>
                 </div>
-                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Wrench className="h-7 w-7 text-black-600" />
+                <div className="h-14 w-14 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Wrench className="h-7 w-7 text-amber-600" />
                 </div>
               </div>
             </CardContent>
@@ -228,12 +228,12 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-black-500 mb-1">Lisensi</p>
+                  <p className="text-sm text-gray-500 mb-1">Lisensi</p>
                   <p className="text-4xl font-bold">{stats?.byType.license || 0}</p>
-                  <p className="text-xs text-black-400 mt-1">Work order lisensi</p>
+                  <p className="text-xs text-gray-400 mt-1">Work order lisensi</p>
                 </div>
-                <div className="h-14 w-14 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <FolderKanban className="h-7 w-7 text-black-600" />
+                <div className="h-14 w-14 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FolderKanban className="h-7 w-7 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -248,11 +248,31 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
             <div>
               <CardTitle>Work Order Terbaru</CardTitle>
               <CardDescription>
-                {stats?.byStatus.requested || 0} work order menunggu diproses
+                Menampilkan 5 work order terbaru • {stats?.byStatus.requested || 0} work order menunggu diproses
               </CardDescription>
             </div>
-            <Button variant="link" onClick={() => onNavigate('work-orders')} className="p-0">
-              Lihat Semua <ArrowUpRight />
+            <Button
+              onClick={() => onNavigate('work-orders')}
+              className="
+    relative overflow-hidden rounded-full 
+    bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 
+    text-white 
+    border-2 border-blue-300/50
+    shadow-[inset_0px_4px_8px_rgba(255,255,255,0.4),inset_0px_-4px_8px_rgba(0,0,0,0.2),0px_4px_10px_rgba(59,130,246,0.5)]
+    hover:brightness-110 transition-all duration-300
+    group px-6
+  "
+            >
+              {/* Efek Kilau Putih (Soap Shine Overlay) */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/30 via-transparent to-transparent opacity-80 pointer-events-none" />
+
+              {/* Kilau kecil tambahan di pojok */}
+              <div className="absolute top-1 right-4 w-4 h-2 bg-white/40 blur-sm rounded-full pointer-events-none" />
+
+              <span className="relative z-10 flex items-center gap-2 drop-shadow-sm font-semibold">
+                Lihat Semua
+                <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+              </span>
             </Button>
           </div>
         </CardHeader>

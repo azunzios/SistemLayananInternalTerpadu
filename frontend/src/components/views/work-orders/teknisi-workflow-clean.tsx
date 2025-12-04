@@ -59,7 +59,7 @@ export const TeknisiWorkflow: React.FC<TeknisiWorkflowProps> = ({
     (wo: any) => wo.status === "requested" || wo.status === "in_procurement"
   );
   const completedWO = workOrders.filter(
-    (wo: any) => wo.status === "completed" || wo.status === "delivered"
+    (wo: any) => wo.status === "completed" || wo.status === "unsuccessful"
   );
 
   const workOrderStats = {

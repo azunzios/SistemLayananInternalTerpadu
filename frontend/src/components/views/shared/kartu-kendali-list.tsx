@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -10,60 +11,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Eye, RefreshCw } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-// Diagnosis data dari teknisi
-interface DiagnosisData {
-  physicalCondition: string | null;
-  visualInspection: string | null;
-  problemDescription: string | null;
-  problemCategory: string | null;
-  testingResult: string | null;
-  faultyComponents: string[];
-  isRepairable: boolean;
-  repairType: string | null;
-  repairDifficulty: string | null;
-  repairRecommendation: string | null;
-  requiresSparepart: boolean;
-  requiredSpareparts: any[];
-  requiresVendor: boolean;
-  vendorReason: string | null;
-  technicianNotes: string | null;
-  diagnosedAt: string | null;
-  technicianName: string | null;
-}
-
-// Interface sesuai response dari WorkOrderController::kartuKendali
+// Interface untuk list - 1 entry per tiket perbaikan
 export interface KartuKendaliItem {
   id: number;
   ticketId: number;
   ticketNumber: string;
   ticketTitle: string;
-  type: 'sparepart' | 'vendor' | 'license';
-  completedAt: string;
-  completionNotes: string | null;
+  ticketStatus: string;
+  completedAt: string | null;
+  closedAt: string | null;
   assetCode: string | null;
   assetName: string | null;
   assetNup: string | null;
   maintenanceCount: number;
-  items: any[] | null;
-  vendorName: string | null;
-  vendorContact: string | null;
-  vendorDescription: string | null;
-  licenseName: string | null;
-  licenseDescription: string | null;
-  diagnosis: DiagnosisData | null;
-  technicianId: number;
-  technicianName: string;
+  workOrderCount: number;
+  technicianName: string | null;
   requesterId: number;
-  requesterName: string;
+  requesterName: string | null;
 }
 
 interface KartuKendaliListProps {
-  onViewDetail: (item: KartuKendaliItem) => void;
+  onViewDetail: (ticketId: number) => void;
 }
+
+// Helper untuk status badge
+const getStatusBadge = (status: string) => {
+  const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    submitted: { label: "Pending", variant: "secondary" },
+    assigned: { label: "Ditugaskan", variant: "outline" },
+    in_progress: { label: "Diproses", variant: "default" },
+    on_hold: { label: "Ditunda", variant: "secondary" },
+    waiting_for_submitter: { label: "Menunggu", variant: "secondary" },
+    closed: { label: "Selesai", variant: "default" },
+  };
+  const info = statusMap[status] || { label: status, variant: "outline" as const };
+  return <Badge variant={info.variant} className="text-xs">{info.label}</Badge>;
+};
 
 export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
   onViewDetail,
@@ -71,6 +58,7 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
   const [items, setItems] = useState<KartuKendaliItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // Input sementara sebelum search
   const [pagination, setPagination] = useState({
     total: 0,
     perPage: 15,
@@ -108,12 +96,17 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
     fetchKartuKendali();
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchKartuKendali(1, searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  // Handle search saat klik tombol atau tekan Enter
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+    fetchKartuKendali(1, searchInput);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -128,24 +121,40 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
     <Card className="border-none shadow-sm pb-6">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle  >
-            Kartu Kendali Pemeliharaan
-          </CardTitle>
+          <div>
+            <CardTitle>
+              Kartu Kendali Pemeliharaan
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Klik pada salah satu baris untuk melihat detail
+            </p>
+          </div>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari tiket"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-[250px] lg:w-[300px] h-9 text-sm"
-              />
+            <div className="relative flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari NUP / kode aset..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="pl-9 w-[250px] lg:w-[300px] h-9 text-sm"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSearch}
+                className="h-9 px-3"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
             </div>
             <Button 
               variant="outline" 
               size="icon" 
               className="h-9 w-9" 
-              onClick={() => fetchKartuKendali(pagination.currentPage)}
+              onClick={() => fetchKartuKendali(pagination.currentPage, searchTerm)}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -159,13 +168,12 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow className="border-b">
-                {/* Tambahkan border-r (kanan) pada setiap TableHead */}
                 <TableHead className="w-[50px] text-center border-r">No</TableHead>
                 <TableHead className="w-[140px] border-r">No. Tiket</TableHead>
                 <TableHead className="border-r">Judul Tiket</TableHead>
-                <TableHead className="hidden md:table-cell border-r">Teknisi</TableHead>
-                <TableHead className="hidden lg:table-cell w-[120px] border-r">Selesai</TableHead>
-                <TableHead className="w-[80px] text-center">Aksi</TableHead>
+                <TableHead className="hidden md:table-cell w-[100px] border-r">Status</TableHead>
+                <TableHead className="hidden lg:table-cell border-r">Teknisi</TableHead>
+                <TableHead className="hidden xl:table-cell w-[120px]">Terakhir</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,8 +191,11 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
                 </TableRow>
               ) : (
                 items.map((item, index) => (
-                  <TableRow key={item.id} className="hover:bg-muted/30 border-b last:border-0">
-                    {/* Tambahkan border-r pada setiap TableCell */}
+                  <TableRow 
+                    key={item.id} 
+                    className="hover:bg-muted/30 border-b last:border-0 cursor-pointer"
+                    onClick={() => onViewDetail(item.ticketId)}
+                  >
                     <TableCell className="text-center text-muted-foreground font-mono text-xs border-r">
                       {(pagination.currentPage - 1) * pagination.perPage + index + 1}
                     </TableCell>
@@ -203,22 +214,14 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground border-r">
-                      {item.technicianName || "-"}
+                    <TableCell className="hidden md:table-cell border-r">
+                      {getStatusBadge(item.ticketStatus)}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground border-r">
-                      {formatDate(item.completedAt)}
+                      {item.technicianName || "-"}
                     </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => onViewDetail(item)}
-                        title="Lihat Detail"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="hidden xl:table-cell text-sm text-muted-foreground">
+                      {formatDate(item.closedAt || item.completedAt)}
                     </TableCell>
                   </TableRow>
                 ))
