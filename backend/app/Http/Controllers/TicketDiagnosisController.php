@@ -7,6 +7,7 @@ use App\Models\TicketDiagnosis;
 use App\Models\Timeline;
 use App\Models\AuditLog;
 use App\Http\Resources\TicketDiagnosisResource;
+use App\Services\TicketNotificationService;
 use App\Traits\HasRoleHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -120,6 +121,9 @@ class TicketDiagnosisController extends Controller
             'details' => "Diagnosis for ticket {$ticket->ticket_number}",
             'ip_address' => request()->ip(),
         ]);
+
+        // Send notification
+        TicketNotificationService::onDiagnosisCreated($ticket, $validated['repair_type']);
 
         return response()->json([
             'success' => true,

@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\Ticket;
 use App\Http\Resources\CommentResource;
 use App\Models\AuditLog;
+use App\Services\TicketNotificationService;
 use App\Traits\HasRoleHelper;
 use Illuminate\Http\Request;
 
@@ -94,6 +95,14 @@ class CommentController extends Controller
             'details' => "Comment created on ticket #{$ticket->ticket_number}",
             'ip_address' => request()->ip(),
         ]);
+
+        // Send notification
+        $parentCommentUserId = null;
+        if ($validated['parent_comment_id'] ?? null) {
+            $parentComment = Comment::find($validated['parent_comment_id']);
+            $parentCommentUserId = $parentComment?->user_id;
+        }
+        TicketNotificationService::onCommentCreated($ticket, $user->id, $parentCommentUserId);
 
         return response()->json(new CommentResource($comment), 201);
 
