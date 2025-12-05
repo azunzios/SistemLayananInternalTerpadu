@@ -109,9 +109,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sparepart-requests/stats/summary', [SparepartRequestController::class, 'stats']);
     
     // Kartu Kendali - data from completed work orders (grouped by ticket)
+    // Put export BEFORE the {ticket} route so /export is not caught as {ticket}
     Route::get('/kartu-kendali', [WorkOrderController::class, 'kartuKendali']);
-    Route::get('/kartu-kendali/{ticket}', [WorkOrderController::class, 'kartuKendaliDetail']);
     Route::get('/kartu-kendali/export', [WorkOrderController::class, 'exportKartuKendali']);
+    Route::get('/kartu-kendali/{ticket}', [WorkOrderController::class, 'kartuKendaliDetail']);
     
     // Notification Routes
     Route::get('/notifications', [NotificationController::class, 'index']);

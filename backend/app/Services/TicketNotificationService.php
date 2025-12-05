@@ -166,4 +166,135 @@ class TicketNotificationService
             ]);
         }
     }
+
+    /**
+     * Work Order status changed - notif ke teknisi yang buat WO
+     */
+    public static function onWorkOrderStatusChanged(Ticket $ticket, int $technicianId, string $oldStatus, string $newStatus): void
+    {
+        $statusLabels = [
+            'requested' => 'Menunggu Proses',
+            'in_procurement' => 'Dalam Tahap Pengadaan',
+            'completed' => 'Sudah Selesai',
+            'unsuccessful' => 'Tidak Berhasil',
+        ];
+
+        $oldLabel = $statusLabels[$oldStatus] ?? $oldStatus;
+        $newLabel = $statusLabels[$newStatus] ?? $newStatus;
+
+        // Notif ke teknisi yang buat work order
+        Notification::create([
+            'user_id' => $technicianId,
+            'title' => 'Update Work Order',
+            'message' => "#{$ticket->ticket_number}: {$newLabel}",
+            'type' => $newStatus === 'completed' ? 'success' : ($newStatus === 'unsuccessful' ? 'error' : 'info'),
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+        ]);
+
+        // Jika completed, notif juga ke pelapor
+        if ($newStatus === 'completed') {
+            Notification::create([
+                'user_id' => $ticket->user_id,
+                'title' => 'Pengadaan Selesai',
+                'message' => "#{$ticket->ticket_number} pengadaan telah selesai",
+                'type' => 'success',
+                'reference_type' => 'ticket',
+                'reference_id' => $ticket->id,
+            ]);
+        }
+    }
+
+    /**
+     * Semua Work Orders selesai - notif ke teknisi
+     */
+    public static function onAllWorkOrdersCompleted(Ticket $ticket, int $technicianId): void
+    {
+        Notification::create([
+            'user_id' => $technicianId,
+            'title' => 'Semua Pengadaan Selesai',
+            'message' => "#{$ticket->ticket_number} semua pengadaan telah selesai, siap dilanjutkan",
+            'type' => 'success',
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+        ]);
+    }
+
+    /**
+     * Diagnosis created/updated - notif ke admin_layanan & pelapor
+     */
+    public static function onDiagnosisCreated(Ticket $ticket, string $repairType): void
+    {
+        $repairTypeLabels = [
+            'direct_repair' => 'dapat diperbaiki langsung',
+            'need_sparepart' => 'membutuhkan sparepart',
+            'need_vendor' => 'membutuhkan vendor',
+            'need_license' => 'membutuhkan lisensi',
+            'unrepairable' => 'tidak dapat diperbaiki',
+        ];
+        
+        $label = $repairTypeLabels[$repairType] ?? $repairType;
+
+        // Notif ke pelapor
+        Notification::create([
+            'user_id' => $ticket->user_id,
+            'title' => 'Diagnosis Selesai',
+            'message' => "#{$ticket->ticket_number}: {$label}",
+            'type' => $repairType === 'unrepairable' ? 'warning' : 'info',
+            'reference_type' => 'ticket',
+            'reference_id' => $ticket->id,
+        ]);
+
+        // Notif ke admin_layanan jika butuh pengadaan
+        if (in_array($repairType, ['need_sparepart', 'need_vendor', 'need_license'])) {
+            $admins = User::whereJsonContains('roles', 'admin_layanan')->pluck('id');
+            foreach ($admins as $adminId) {
+                Notification::create([
+                    'user_id' => $adminId,
+                    'title' => 'Butuh Pengadaan',
+                    'message' => "#{$ticket->ticket_number}: {$label}",
+                    'type' => 'info',
+                    'reference_type' => 'ticket',
+                    'reference_id' => $ticket->id,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * New comment - notif ke pihak terkait
+     */
+    public static function onCommentCreated(Ticket $ticket, int $commenterId, ?int $parentCommenterId = null): void
+    {
+        $userIdsToNotify = [];
+
+        // Jika reply, notif ke pembuat comment asli
+        if ($parentCommenterId && $parentCommenterId !== $commenterId) {
+            $userIdsToNotify[] = $parentCommenterId;
+        }
+
+        // Notif ke pelapor (jika bukan dia yang comment)
+        if ($ticket->user_id !== $commenterId) {
+            $userIdsToNotify[] = $ticket->user_id;
+        }
+
+        // Notif ke teknisi yang ditugaskan (jika ada dan bukan dia yang comment)
+        if ($ticket->assigned_to && $ticket->assigned_to !== $commenterId) {
+            $userIdsToNotify[] = $ticket->assigned_to;
+        }
+
+        // Deduplicate
+        $userIdsToNotify = array_unique($userIdsToNotify);
+
+        foreach ($userIdsToNotify as $userId) {
+            Notification::create([
+                'user_id' => $userId,
+                'title' => 'Komentar Baru',
+                'message' => "#{$ticket->ticket_number} ada komentar baru",
+                'type' => 'info',
+                'reference_type' => 'ticket',
+                'reference_id' => $ticket->id,
+            ]);
+        }
+    }
 }

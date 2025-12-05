@@ -412,6 +412,17 @@ class WorkOrderController extends Controller
             ],
         ]);
 
+        // Send notification to teknisi yang buat work order
+        $ticket = $workOrder->ticket;
+        if ($ticket && $workOrder->created_by) {
+            TicketNotificationService::onWorkOrderStatusChanged(
+                $ticket,
+                $workOrder->created_by,
+                $oldStatus,
+                $newStatus
+            );
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Work order status updated successfully',
@@ -437,6 +448,11 @@ class WorkOrderController extends Controller
         if ($allWorkOrdersCompleted) {
             $ticket->work_orders_ready = true;
             $ticket->save();
+
+            // Notifikasi ke teknisi bahwa semua work orders sudah selesai
+            if ($ticket->assigned_to) {
+                TicketNotificationService::onAllWorkOrdersCompleted($ticket, $ticket->assigned_to);
+            }
         }
     }
 
