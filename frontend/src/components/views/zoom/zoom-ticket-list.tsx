@@ -277,16 +277,16 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
         <CardContent className="p-4">
           <Tabs value={selectedTab} onValueChange={(val) => setSelectedTab(val as any)} className="w-full">
             <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="all">
+              <TabsTrigger value="all" className="cursor-pointer hover:bg-accent">
                 Semua {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.total})`}
               </TabsTrigger>
-              <TabsTrigger value="pending">
+              <TabsTrigger value="pending" className="cursor-pointer hover:bg-accent">
                 Pending {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.pending})`}
               </TabsTrigger>
-              <TabsTrigger value="approved">
+              <TabsTrigger value="approved" className="cursor-pointer hover:bg-accent">
                 Disetujui {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.approved})`}
               </TabsTrigger>
-              <TabsTrigger value="rejected">
+              <TabsTrigger value="rejected" className="cursor-pointer hover:bg-accent">
                 Ditolak {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.rejected})`}
               </TabsTrigger>
             </TabsList>
@@ -371,6 +371,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                             size="sm"
                             onClick={handlePrevPage}
                             disabled={!pagination || pagination.current_page === 1 || loading}
+                            className="cursor-pointer"
                           >
                             Sebelumnya
                           </Button>
@@ -379,6 +380,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                             size="sm"
                             onClick={handleNextPage}
                             disabled={!pagination || !pagination.has_more || loading}
+                            className="cursor-pointer"
                           >
                             Berikutnya
                           </Button>

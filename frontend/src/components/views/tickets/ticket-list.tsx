@@ -214,8 +214,11 @@ export const TicketList: React.FC<TicketListProps> = ({
       } else if (isAdminPenyedia) {
         query.push("scope=work_order_needed");
         console.log("📦 Sending scope=work_order_needed (Admin Penyedia)");
+      } else if (isAdmin) {
+        query.push("admin_view=true");
+        console.log("🔓 Sending admin_view=true (Admin/Super Admin)");
       } else {
-        console.log("🔓 No scope sent (Admin/Super Admin)");
+        console.log("🔓 No scope sent");
       }
 
       const url = `tickets?${query.join("&")}`;
@@ -455,17 +458,11 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </Select>
 
                 <Select
-                  value={filterType === "all" ? "all" : filterStatus}
+                  value={filterStatus}
                   onValueChange={setFilterStatus}
-                  disabled={filterType === "all"}
                 >
                   <SelectTrigger
                     className="!h-10 text-sm flex-1"
-                    title={
-                      filterType === "all"
-                        ? "Pilih tipe tiket terlebih dahulu untuk filter status"
-                        : undefined
-                    }
                   >
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -631,6 +628,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 disabled={
                   !pagination || pagination.current_page <= 1 || loading
                 }
+                className="cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Sebelumnya
@@ -646,6 +644,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!pagination || !pagination.has_more || loading}
+                className="cursor-pointer"
               >
                 Selanjutnya
                 <ChevronRight className="h-4 w-4 ml-1" />

@@ -831,7 +831,7 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
                 setQuickBookingDate(new Date());
               }}
               variant="outline"
-              className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white"
+              className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white cursor-pointer"
             >
               <Video className="h-4 w-4" />
               Request Slot Booking Zoom
