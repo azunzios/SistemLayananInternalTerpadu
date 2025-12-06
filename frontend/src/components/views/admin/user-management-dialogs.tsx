@@ -99,12 +99,15 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
     <>
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={onCreateDialogChange}>
-        <DialogContent className="max-w-md">
+        {/* MODIFIED: Added max-h-[85vh] and flex flex-col */}
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Tambah User Baru</DialogTitle>
             <DialogDescription>Buat akun user baru untuk sistem</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          
+          {/* MODIFIED: Added flex-1, overflow-y-auto, and padding adjustments */}
+          <div className="space-y-4 flex-1 overflow-y-auto pr-2 py-2">
             <div className="space-y-2">
               <Label>Nama Lengkap</Label>
               <Input
@@ -162,14 +165,14 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
                 {roleOptions.map(opt => {
                   const checked = createFormData.roles.includes(opt.value);
                   return (
-                    <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                    <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer hover:bg-gray-50">
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => onCreateToggleRole(opt.value)}
                         className="h-4 w-4"
                       />
-                      <span>{opt.label}</span>
+                      <span className="text-sm">{opt.label}</span>
                     </label>
                   );
                 })}
@@ -194,7 +197,8 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
               />
             </div>
           </div>
-          <DialogFooter>
+          
+          <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => onCreateDialogChange(false)}>
               Batal
             </Button>
@@ -205,12 +209,15 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={onEditDialogChange}>
-        <DialogContent className="max-w-md">
+        {/* MODIFIED: Added max-h-[85vh] and flex flex-col */}
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>Perbarui informasi user</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          
+          {/* MODIFIED: Added flex-1, overflow-y-auto, and padding adjustments */}
+          <div className="space-y-4 flex-1 overflow-y-auto pr-2 py-2">
             <div className="space-y-2">
               <Label>Nama Lengkap</Label>
               <Input
@@ -256,14 +263,14 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
                   {roleOptions.map(opt => {
                     const checked = editFormData.roles.includes(opt.value);
                     return (
-                      <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                      <label key={opt.value} className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer hover:bg-gray-50">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => onEditToggleRole(opt.value)}
                           className="h-4 w-4"
                         />
-                        <span>{opt.label}</span>
+                        <span className="text-sm">{opt.label}</span>
                       </label>
                     );
                   })}
@@ -287,7 +294,8 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
               />
             </div>
           </div>
-          <DialogFooter>
+          
+          <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => onEditDialogChange(false)}>
               Batal
             </Button>

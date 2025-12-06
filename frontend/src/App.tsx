@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Analytics } from '@vercel/analytics/react'
 import { AppRouter } from "@/routing";
 import { Toaster } from "@/components/ui/sonner";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,6 +14,38 @@ import {
   setActiveRole,
 } from "@/lib/storage";
 import type { User } from "@/types";
+
+// Visitor counter - fetch dari Vercel serverless function + Upstash Redis
+const VisitorCounter: React.FC = () => {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/visitors")
+      .then((r) => r.json())
+      .then((d) => setCount(d.visitors))
+      .catch(() => setCount(null));
+  }, []);
+
+  if (count === null) return null;
+
+  return (
+    <div 
+      style={{ 
+        position: 'fixed', 
+        bottom: '8px', 
+        right: '8px', 
+        zIndex: 9999,
+        background: 'rgba(0,0,0,0.7)',
+        color: '#fff',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '10px',
+      }}
+    >
+      {count.toLocaleString()} views
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -83,6 +116,8 @@ const App: React.FC = () => {
         />
       </div>
       <Toaster position="top-right" />
+      <Analytics />
+      <VisitorCounter />
     </>
   );
 };

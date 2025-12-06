@@ -324,7 +324,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       type="email"
                       value={formData.login}
                       onChange={handleInputChange}
-                      placeholder="nama@bps-ntb.go.id"
+                      placeholder="user@gmail.com"
                       required
                       autoComplete="email"
                       className="rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-11 pr-10"
@@ -380,7 +380,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         htmlFor="remember"
                         className="text-sm cursor-pointer font-normal text-gray-600 select-none hover:text-gray-900 transition-colors"
                       >
-                        Ingat Saya (30 hari)
+                        Ingat Saya
                       </Label>
                     </div>
 
