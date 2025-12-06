@@ -65,27 +65,30 @@ class RoleSwitchTest extends TestCase
         // 1. Create a user with [pegawai, teknisi], active=teknisi
         $user = User::factory()->create([
             'roles' => ['pegawai', 'teknisi'],
-            'role' => 'teknisi'
+            'role' => 'teknisi',
+            'nip' => '123456789012345678',
+            'jabatan' => 'Staff',
+            'unit_kerja' => 'TI',
+            'phone' => '08123456789'
         ]);
         
         $admin = User::factory()->create([
              'roles' => ['super_admin'],
-             'role' => 'super_admin'
+             'role' => 'super_admin',
+             'nip' => '123456789012349999',
+             'jabatan' => 'Admin',
+             'unit_kerja' => 'TI',
+             'phone' => '08123456799'
         ]);
         
         $this->actingAs($admin);
 
-        // 2. Update roles to ONLY [pegawai] (removing teknisi)
-        // Note: route needs to be added or we assume the controller logic is used by existing update endpoints
-        // Assuming we are testing the logic in UserController::update or similar
-        // Let's use the updateRoles endpoint if available or the generic update
-        
-        // Using generic update endpoint for testing logic integration
+        // Using generic update endpoint
         $response = $this->putJson("/api/users/{$user->id}", [
             'roles' => ['pegawai'],
             'name' => 'Test User',
             'email' => $user->email,
-            'nip' => '123456789012345678', // Ensure 18 digits or string
+            'nip' => (string) (123456789012340000 + rand(1, 9999)), 
             'jabatan' => 'Staff',
             'unit_kerja' => 'TI',
             'phone' => '08123456789',
@@ -98,6 +101,52 @@ class RoleSwitchTest extends TestCase
         $this->assertEquals('pegawai', $user->fresh()->role);
         
         // Cleanup
+        $user->delete();
+        $admin->delete();
+    }
+
+    public function test_new_user_gets_correct_initial_active_role()
+    {
+        $admin = User::factory()->create([
+            'roles' => ['super_admin'], 
+            'role' => 'super_admin',
+            'nip' => '123456789012348888',
+             'jabatan' => 'Admin',
+             'unit_kerja' => 'TI',
+             'phone' => '08123456788'
+        ]);
+        $this->actingAs($admin);
+        
+        $email = 'admin.layanan.' . time() . '@test.com';
+        $nip = (string) (123456789012340000 + rand(1, 9999));
+
+        $response = $this->postJson('/api/users', [
+            'name' => 'Admin Layanan Test',
+            'email' => $email,
+            'password' => 'Password123!',
+            'nip' => $nip,
+            'jabatan' => 'Admin',
+            'unit_kerja' => 'Layanan',
+            'phone' => '081234567890',
+            'roles' => ['admin_layanan'], // Should become the active role
+            'is_active' => true
+        ]);
+
+        if ($response->status() !== 201) {
+            $response->dump();
+        }
+        $response->assertStatus(201);
+        
+        $json = $response->json();
+        // dump($json); // Debug output
+        
+        $response->assertJsonPath('role', 'admin_layanan');
+        
+        $userId = $response->json('id');
+        $user = User::find($userId);
+        
+        $this->assertEquals('admin_layanan', $user->role);
+        
         $user->delete();
         $admin->delete();
     }

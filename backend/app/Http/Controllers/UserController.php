@@ -84,6 +84,13 @@ class UserController extends Controller
 
         $validated['password'] = Hash::make($validated['password']);
 
+        // Explicitly set active role to the first assigned role to avoid default 'pegawai'
+        if (isset($validated['roles']) && !empty($validated['roles'])) {
+            $validated['role'] = $validated['roles'][0];
+        }
+
+        \Log::info('User store validated data:', $validated);
+
         $user = User::create($validated);
 
         // Audit log

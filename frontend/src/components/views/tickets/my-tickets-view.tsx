@@ -226,7 +226,8 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       {/* Filter Controls */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-3 w-full">
+          {/* xs: kolom, sm ke atas: baris */}
+          <div className="flex flex-col xs:flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
             {/* 1. Search - flex-1 agar mengisi sisa ruang (paling panjang) */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -337,7 +338,8 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-4">
+              {/* xs: kolom, sm ke atas: grid */}
+              <div className="flex flex-col gap-4 sm:grid sm:grid-cols-1 sm:gap-4">
                 {tickets.map((ticket) => (
                   <Card
                     key={ticket.id}
