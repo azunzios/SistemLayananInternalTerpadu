@@ -28,7 +28,7 @@ export const RoleSwitcherDialog: React.FC<RoleSwitcherDialogProps> = ({
   onRoleSwitch,
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>(activeRole);
-  
+
   // Get available roles from currentUser
   const availableRoles = currentUser?.roles || [currentUser?.role];
 
@@ -94,7 +94,7 @@ export const RoleSwitcherDialog: React.FC<RoleSwitcherDialogProps> = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-2 my-4">
+        <div className="space-y-2 my-4 max-h-[60vh] overflow-y-scroll pr-2">
           {availableRoles.map((role) => {
             const config = getRoleConfig(role);
             const Icon = config.icon;
@@ -105,19 +105,17 @@ export const RoleSwitcherDialog: React.FC<RoleSwitcherDialogProps> = ({
               <button
                 key={role}
                 onClick={() => setSelectedRole(role)}
-                className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                  isActive
-                    ? `border-${config.color}-500 bg-${config.color}-50`
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
+                className={`w-full p-4 rounded-lg border-2 transition-all text-left ${isActive
+                  ? `border-${config.color}-500 bg-${config.color}-50`
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      isActive 
-                        ? config.color === 'gray' ? 'bg-gray-800' : `bg-${config.color}-500`
-                        : `bg-${config.color}-100`
-                    }`}
+                    className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive
+                      ? config.color === 'gray' ? 'bg-gray-800' : `bg-${config.color}-500`
+                      : `bg-${config.color}-100`
+                      }`}
                   >
                     <Icon className={`h-5 w-5 ${isActive ? 'text-white' : `text-${config.color}-600`}`} />
                   </div>

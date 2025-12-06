@@ -59,10 +59,9 @@ interface HeaderProps {
   onNavigate: (view: ViewType) => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
-  onRoleSwitch?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, onToggleSidebar, onRoleSwitch }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigate, onToggleSidebar }) => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showRoleSwitchDialog, setShowRoleSwitchDialog] = useState(false);
@@ -111,11 +110,20 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
     setShowRoleSwitchDialog(true);
   };
 
-  const handleRoleSwitch = (newRole: UserRole) => {
-    setActiveRole(newRole, currentUser.id);
-    toast.success(`Berhasil beralih ke ${newRole}`);
-    if (onRoleSwitch) {
-      onRoleSwitch();
+  const handleRoleSwitch = async (newRole: UserRole) => {
+    try {
+      await setActiveRole(newRole, currentUser.id);
+      toast.success(`Berhasil beralih ke ${newRole}`);
+
+      // Force reload page to ensuring all states are clean
+      window.location.reload();
+
+      // Or if we trust our state management perfect:
+      // if (onRoleSwitch) {
+      //   onRoleSwitch();
+      // }
+    } catch (e: any) {
+      toast.error('Gagal mengganti peran. Silakan coba lagi.');
     }
   };
 

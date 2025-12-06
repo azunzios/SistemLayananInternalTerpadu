@@ -36,13 +36,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   }
 
   const [users, setUsers] = useState<User[]>(getUsersSync());
-    useEffect(() => {
-      getUsers()
-        .then(fetched => setUsers(fetched))
-        .catch(err => {
-          console.warn('⚠️ Failed to fetch users for management view', err);
-        });
-    }, []);
+  useEffect(() => {
+    getUsers()
+      .then(fetched => setUsers(fetched))
+      .catch(err => {
+        console.warn('⚠️ Failed to fetch users for management view', err);
+      });
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -80,7 +80,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       user.unitKerja.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesRole = filterRole === 'all' || primaryRole === filterRole || (user.roles ?? []).includes(filterRole as UserRole);
-    const matchesStatus = filterStatus === 'all' || 
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && user.isActive) ||
       (filterStatus === 'inactive' && !user.isActive);
 
@@ -106,6 +106,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
     if (!selectedUser) return;
 
     try {
+      if (editFormData.roles.length === 0) {
+        toast.error('User harus memiliki minimal satu role');
+        return;
+      }
+
       const payload: any = {
         name: editFormData.name,
         nip: editFormData.nip,
@@ -118,12 +123,12 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       };
 
       const updated = await api.put<User>(`users/${selectedUser.id}`, payload);
-      const normalized: User = { 
-        ...selectedUser, 
-        ...updated, 
-        jabatan: updated.jabatan ?? selectedUser.jabatan, 
-        role: updated.role, 
-        roles: updated.roles 
+      const normalized: User = {
+        ...selectedUser,
+        ...updated,
+        jabatan: updated.jabatan ?? selectedUser.jabatan,
+        role: updated.role,
+        roles: updated.roles
       };
       const updatedUsers = users.map(u => (u.id === selectedUser.id ? normalized : u));
       setUsers(updatedUsers);
@@ -211,6 +216,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   const toggleCreateRole = (role: UserRole) => {
     setCreateFormData(prev => {
       const exists = prev.roles.includes(role);
+      if (exists && prev.roles.length <= 1) {
+        toast.warning('User harus memiliki minimal satu role');
+        return prev;
+      }
       const roles = exists ? prev.roles.filter(r => r !== role) : [...prev.roles, role];
       return { ...prev, roles };
     });
@@ -219,6 +228,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   const toggleEditRole = (role: UserRole) => {
     setEditFormData(prev => {
       const exists = prev.roles.includes(role);
+      if (exists && prev.roles.length <= 1) {
+        toast.warning('User harus memiliki minimal satu role');
+        return prev;
+      }
       const roles = exists ? prev.roles.filter(r => r !== role) : [...prev.roles, role];
       return { ...prev, roles };
     });

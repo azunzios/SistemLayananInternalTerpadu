@@ -94,15 +94,20 @@ class TicketController extends Controller
                 // Admin penyedia: tiket yang punya work order atau butuh work order
                 $query->whereHas('workOrders');
             } else {
-                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                if (!in_array('admin_layanan', $userRoles) && 
-                    !in_array('super_admin', $userRoles) &&
-                    !in_array('teknisi', $userRoles)) {
-                    // Pegawai can only see their own tickets
+                // Role-based filtering via Active Role (HasRoleHelper)
+                $userRole = $this->getUserRole($user);
+                
+                if (!$userRole) {
+                    // Fallback to strict ownership
                     $query->where('user_id', $user->id);
-                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                } elseif ($userRole === 'admin_layanan' || $userRole === 'super_admin') {
+                    // Admin view: can see everything, no filter applied
+                } elseif ($userRole === 'teknisi') {
                     // Teknisi can only see assigned tickets
                     $query->where('assigned_to', $user->id);
+                } else {
+                    // Pegawai/Admin Penyedia (default case)
+                    $query->where('user_id', $user->id);
                 }
             }
         }
@@ -276,15 +281,20 @@ class TicketController extends Controller
                     // Admin penyedia: tiket yang punya work order
                     $query->whereHas('workOrders');
                 } else {
-                    $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                    if (!in_array('admin_layanan', $userRoles) && 
-                        !in_array('super_admin', $userRoles) &&
-                        !in_array('teknisi', $userRoles)) {
-                        // Pegawai can only see their own tickets
+                    // Role-based filtering via Active Role (HasRoleHelper)
+                    $userRole = $this->getUserRole($user);
+                    
+                    if (!$userRole) {
+                        // Fallback to strict ownership
                         $query->where('user_id', $user->id);
-                    } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                    } elseif ($userRole === 'admin_layanan' || $userRole === 'super_admin') {
+                        // Admin view: can see everything, no filter applied
+                    } elseif ($userRole === 'teknisi') {
                         // Teknisi can only see assigned tickets
                         $query->where('assigned_to', $user->id);
+                    } else {
+                        // Pegawai/Admin Penyedia (default case)
+                        $query->where('user_id', $user->id);
                     }
                 }
             }
@@ -335,15 +345,8 @@ class TicketController extends Controller
         // For better compatibility, we'll retrieve and filter if whereJsonContains isn't reliable on all DBs
         // But whereJsonContains is standard in Laravel for JSON columns.
         
-        $technicians = \App\Models\User::whereJsonContains('roles', 'teknisi')->get();
-        
-        // Fallback if roles is not JSON or empty result (e.g. stored as string)
-        if ($technicians->isEmpty()) {
-             $technicians = \App\Models\User::all()->filter(function ($user) {
-                $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
-                return is_array($roles) && in_array('teknisi', $roles);
-             });
-        }
+        // Get technicians by active 'role' column (Strict Active Role)
+        $technicians = \App\Models\User::where('role', 'teknisi')->get();
 
         $stats = $technicians->map(function ($tech) {
             $activeCount = Ticket::where('assigned_to', $tech->id)

@@ -23,17 +23,9 @@ class UserResource extends JsonResource
             $roles = ['pegawai'];
         }
         
-        // Get the primary role dengan prioritas: pegawai > teknisi > admin_penyedia > admin_layanan > super_admin
-        // Untuk multi-role users, default ke role dengan privilege paling rendah (pegawai)
-        $rolePriority = ['pegawai', 'teknisi', 'admin_penyedia', 'admin_layanan', 'super_admin'];
-        $primaryRole = 'pegawai'; // Default fallback
-        
-        foreach ($rolePriority as $role) {
-            if (in_array($role, $roles)) {
-                $primaryRole = $role;
-                break; // Ambil yang pertama match (prioritas tertinggi)
-            }
-        }
+        // Active role is now stored in DB
+        // Fallback to first role if not set (legacy/safety)
+        $activeRole = $this->role ?? ($roles[0] ?? 'pegawai');
 
         return [
             'id' => (string) $this->id,
@@ -41,7 +33,7 @@ class UserResource extends JsonResource
             'name' => (string) ($this->name ?? ''),
             'nip' => (string) ($this->nip ?? ''),
             'jabatan' => (string) ($this->jabatan ?? ''),
-            'role' => $primaryRole, // Primary role for backward compatibility
+            'role' => $activeRole, // Primary role for backward compatibility
             'roles' => $roles, // Full roles array
             'unitKerja' => (string) ($this->unit_kerja ?? ''),
             'phone' => (string) ($this->phone ?? ''),

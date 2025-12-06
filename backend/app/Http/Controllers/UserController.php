@@ -121,7 +121,14 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
-        $user->update($validated);
+        $user->fill($validated);
+        
+        // Ensure active role is valid if roles were changed
+        if (isset($validated['roles'])) {
+            $this->ensureActiveRoleIsValid($user);
+        }
+        
+        $user->save();
 
         // Audit log
         AuditLog::create([
@@ -164,6 +171,10 @@ class UserController extends Controller
         ]);
 
         $user->roles = $validated['roles'];
+        
+        // Ensure active role is valid
+        $this->ensureActiveRoleIsValid($user);
+        
         $user->save();
 
         // Audit log
@@ -175,6 +186,28 @@ class UserController extends Controller
         ]);
 
         return new UserResource($user);
+    }
+
+    /**
+     * Helper to ensure active role is in the roles array
+     */
+    private function ensureActiveRoleIsValid(User $user)
+    {
+        $roles = $user->roles ?? [];
+        if (is_string($roles)) {
+            $roles = json_decode($roles, true) ?? [];
+        }
+        
+        // If roles is empty (shouldn't happen due to validation), default to pegawai
+        if (empty($roles)) {
+            $roles = ['pegawai'];
+            $user->roles = $roles;
+        }
+
+        // If current active role is not in the new roles list, reset to first available
+        if (!in_array($user->role, $roles)) {
+            $user->role = $roles[0];
+        }
     }
 
     /**
@@ -219,6 +252,45 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Profil berhasil diperbarui',
+            'user' => new UserResource($user),
+        ]);
+    }
+
+    /**
+     * Change user active role
+     */
+    public function changeRole(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'role' => 'required|string',
+        ]);
+
+        $requestedRole = $validated['role'];
+        
+        // Ensure the requested role is in the user's available roles
+        $availableRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
+        
+        if (!in_array($requestedRole, $availableRoles)) {
+            throw ValidationException::withMessages([
+                'role' => ['You do not have permission to switch to this role.'],
+            ]);
+        }
+
+        $user->role = $requestedRole;
+        $user->save();
+
+        // Audit log
+        AuditLog::create([
+            'user_id' => $user->id,
+            'action' => 'ROLE_SWITCHED',
+            'details' => "User switched active role to: {$requestedRole}",
+            'ip_address' => request()->ip(),
+        ]);
+
+        return response()->json([
+            'message' => 'Role berhasil diubah',
             'user' => new UserResource($user),
         ]);
     }

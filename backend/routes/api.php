@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/change-password', [UserController::class, 'changePassword']);
     Route::post('/upload-avatar', [UserController::class, 'uploadAvatar']);
+    Route::post('/change-role', [UserController::class, 'changeRole']);
     Route::post('/logout', [AuthController::class, 'logout']);
     
     // User Management Routes (admin only - will add middleware)

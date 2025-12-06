@@ -27,6 +27,7 @@ class User extends Authenticatable
         'unit_kerja',
         'phone',
         'avatar',
+        'role',
         'roles',
         'is_active',
         'failed_login_attempts',

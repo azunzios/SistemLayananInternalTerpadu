@@ -212,26 +212,26 @@ async function loadNotificationsFromApi(
 }
 
 const datasetLoaders: Record<keyof typeof datasetLoaded, () => Promise<void>> =
-  {
-    tickets: async () => {
-      if (!datasetLoaded.tickets) {
-        await loadTicketsPage(1);
-      }
-    },
-    categories: async () => {
-      // Categories API endpoint disabled - not used
-      // await loadCategoriesFromApi();
-    },
-    users: async () => {
-      await loadUsersFromApi();
-    },
-    workOrders: async () => {
-      await loadWorkOrdersFromApi();
-    },
-    notifications: async () => {
-      await loadNotificationsFromApi();
-    },
-  };
+{
+  tickets: async () => {
+    if (!datasetLoaded.tickets) {
+      await loadTicketsPage(1);
+    }
+  },
+  categories: async () => {
+    // Categories API endpoint disabled - not used
+    // await loadCategoriesFromApi();
+  },
+  users: async () => {
+    await loadUsersFromApi();
+  },
+  workOrders: async () => {
+    await loadWorkOrdersFromApi();
+  },
+  notifications: async () => {
+    await loadNotificationsFromApi();
+  },
+};
 
 const roleDatasetMap: Record<string, (keyof typeof datasetLoaded)[]> = {
   default: ["tickets"],
@@ -353,12 +353,18 @@ export const loginUser = async (
     }
 
     // Normalize user shape to match our User type (camelCase, required fields)
+    // Normalize user shape to match our User type (camelCase, required fields)
     const raw = response.user || {};
+
+    // Roles list from backend (array of strings)
     const roles: string[] = Array.isArray(raw.roles)
       ? raw.roles
       : raw.role
-      ? [raw.role]
-      : ["pegawai"];
+        ? [raw.role] // Fallback if roles array missing but role string exists
+        : ['pegawai'];
+
+    // Active role from backend (the single source of truth)
+    const activeRole = raw.role || roles[0] || 'pegawai';
 
     // Validate that role from backend is in VALID_ROLES
     const validRoles = roles.filter((r) => isValidRole(r)) as ValidRole[];
@@ -373,8 +379,8 @@ export const loginUser = async (
       name: String(raw.name ?? ""),
       nip: String(raw.nip ?? ""),
       jabatan: String(raw.jabatan ?? ""),
-      role: (validRoles[0] ?? "pegawai") as any,
-      roles: validRoles as any,
+      role: (isValidRole(activeRole) ? activeRole : 'pegawai') as any, // Active Role from DB
+      roles: validRoles as any, // Available Roles from DB
       unitKerja: String(raw.unitKerja ?? raw.unit_kerja ?? ""),
       phone: String(raw.phone ?? ""),
       avatar: raw.avatar ?? undefined,
@@ -456,30 +462,39 @@ export const setCurrentUser = (user: User | null) => {
   }
 };
 
-// Active Role management for multi-role users
+// Active Role management - Now synced with Backend via API
 export const getActiveRole = (userId?: string): string | null => {
-  const key = userId || "default";
-
-  // Check cache first
-  let activeRole = cache.activeRole.get(key);
-
-  // If not in cache, try to restore from sessionStorage
-  if (!activeRole) {
-    const stored = sessionStorage.getItem(`bps_active_role_${key}`);
-    if (stored) {
-      activeRole = stored;
-      cache.activeRole.set(key, stored);
-    }
+  // Primary source is the User object itself
+  const user = getCurrentUser();
+  if (user && (!userId || user.id === userId)) {
+    return user.role;
   }
 
-  return activeRole || null;
+  // Fallback to cache/session if user validation needs it loosely
+  const key = userId || "default";
+  return cache.activeRole.get(key) || sessionStorage.getItem(`bps_active_role_${key}`) || null;
 };
 
-export const setActiveRole = (role: string, userId?: string) => {
+export const setActiveRole = async (role: string, userId?: string) => {
+  // 1. Call Backend API to update role
+  try {
+    await api.post('change-role', { role });
+  } catch (e) {
+    console.error("Failed to update role on backend", e);
+    throw e; // Propagate error so UI knows it failed
+  }
+
+  // 2. Update Local State (Cache & Session)
   const key = userId || "default";
   cache.activeRole.set(key, role);
-  // Store in session for page refresh
   sessionStorage.setItem(`bps_active_role_${key}`, role);
+
+  // 3. Update Current User Object in Session
+  const currentUser = getCurrentUser();
+  if (currentUser) {
+    const updatedUser = { ...currentUser, role: role as any };
+    setCurrentUser(updatedUser);
+  }
 };
 
 export const clearActiveRole = (userId?: string) => {
