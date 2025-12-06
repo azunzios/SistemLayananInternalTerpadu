@@ -5,9 +5,37 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Mail\NotificationMail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class TicketNotificationService
 {
+    /**
+     * Helper: Create notification and send email
+     */
+    private static function createNotificationWithEmail(array $data): Notification
+    {
+        // Create notification in database
+        $notification = Notification::create($data);
+        
+        // Send email notification
+        try {
+            $user = User::find($data['user_id']);
+            if ($user && $user->email) {
+                Mail::to($user->email)->send(new NotificationMail($user, $notification));
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the notification creation
+            Log::error('Failed to send notification email: ' . $e->getMessage(), [
+                'notification_id' => $notification->id,
+                'user_id' => $data['user_id'],
+            ]);
+        }
+        
+        return $notification;
+    }
+
     // Notifikasi singkat per event
 
     /**
@@ -19,7 +47,7 @@ class TicketNotificationService
         $type = $ticket->type === 'zoom_meeting' ? 'Zoom' : 'Perbaikan';
         
         foreach ($admins as $adminId) {
-            Notification::create([
+            self::createNotificationWithEmail([
                 'user_id' => $adminId,
                 'title' => "Tiket {$type} Baru",
                 'message' => "#{$ticket->ticket_number} - {$ticket->title}",
@@ -37,7 +65,7 @@ class TicketNotificationService
     {
         // Notif ke teknisi
         if ($ticket->assigned_to) {
-            Notification::create([
+            self::createNotificationWithEmail([
                 'user_id' => $ticket->assigned_to,
                 'title' => 'Tugas Baru',
                 'message' => "#{$ticket->ticket_number} ditugaskan kepada Anda",
@@ -48,7 +76,7 @@ class TicketNotificationService
         }
 
         // Notif ke pelapor
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Tiket Ditangani',
             'message' => "#{$ticket->ticket_number} sudah ditugaskan ke teknisi",
@@ -75,7 +103,7 @@ class TicketNotificationService
         $label = $statusLabels[$newStatus] ?? $newStatus;
         
         // Notif ke pelapor
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Update Tiket',
             'message' => "#{$ticket->ticket_number} {$label}",
@@ -88,7 +116,7 @@ class TicketNotificationService
         if ($ticket->type === 'perbaikan' && in_array($newStatus, ['on_hold'])) {
             $admins = User::whereJsonContains('roles', 'admin_penyedia')->pluck('id');
             foreach ($admins as $adminId) {
-                Notification::create([
+                self::createNotificationWithEmail([
                     'user_id' => $adminId,
                     'title' => 'Tiket Menunggu',
                     'message' => "#{$ticket->ticket_number} butuh tindak lanjut",
@@ -105,7 +133,7 @@ class TicketNotificationService
      */
     public static function onZoomApproved(Ticket $ticket): void
     {
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Zoom Disetujui',
             'message' => "#{$ticket->ticket_number} meeting siap digunakan",
@@ -120,7 +148,7 @@ class TicketNotificationService
      */
     public static function onZoomRejected(Ticket $ticket, string $reason): void
     {
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Zoom Ditolak',
             'message' => "#{$ticket->ticket_number}: {$reason}",
@@ -136,7 +164,7 @@ class TicketNotificationService
     public static function onTicketClosed(Ticket $ticket): void
     {
         // Notif pelapor
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Tiket Selesai',
             'message' => "#{$ticket->ticket_number} telah diselesaikan",
@@ -156,7 +184,7 @@ class TicketNotificationService
         $label = $typeLabels[$woType] ?? $woType;
 
         foreach ($admins as $adminId) {
-            Notification::create([
+            self::createNotificationWithEmail([
                 'user_id' => $adminId,
                 'title' => "Work Order {$label}",
                 'message' => "#{$ticket->ticket_number} butuh {$label}",
@@ -183,7 +211,7 @@ class TicketNotificationService
         $newLabel = $statusLabels[$newStatus] ?? $newStatus;
 
         // Notif ke teknisi yang buat work order
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $technicianId,
             'title' => 'Update Work Order',
             'message' => "#{$ticket->ticket_number}: {$newLabel}",
@@ -194,7 +222,7 @@ class TicketNotificationService
 
         // Jika completed, notif juga ke pelapor
         if ($newStatus === 'completed') {
-            Notification::create([
+            self::createNotificationWithEmail([
                 'user_id' => $ticket->user_id,
                 'title' => 'Pengadaan Selesai',
                 'message' => "#{$ticket->ticket_number} pengadaan telah selesai",
@@ -210,7 +238,7 @@ class TicketNotificationService
      */
     public static function onAllWorkOrdersCompleted(Ticket $ticket, int $technicianId): void
     {
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $technicianId,
             'title' => 'Semua Pengadaan Selesai',
             'message' => "#{$ticket->ticket_number} semua pengadaan telah selesai, siap dilanjutkan",
@@ -236,7 +264,7 @@ class TicketNotificationService
         $label = $repairTypeLabels[$repairType] ?? $repairType;
 
         // Notif ke pelapor
-        Notification::create([
+        self::createNotificationWithEmail([
             'user_id' => $ticket->user_id,
             'title' => 'Diagnosis Selesai',
             'message' => "#{$ticket->ticket_number}: {$label}",
@@ -249,7 +277,7 @@ class TicketNotificationService
         if (in_array($repairType, ['need_sparepart', 'need_vendor', 'need_license'])) {
             $admins = User::whereJsonContains('roles', 'admin_layanan')->pluck('id');
             foreach ($admins as $adminId) {
-                Notification::create([
+                self::createNotificationWithEmail([
                     'user_id' => $adminId,
                     'title' => 'Butuh Pengadaan',
                     'message' => "#{$ticket->ticket_number}: {$label}",
@@ -287,7 +315,7 @@ class TicketNotificationService
         $userIdsToNotify = array_unique($userIdsToNotify);
 
         foreach ($userIdsToNotify as $userId) {
-            Notification::create([
+            self::createNotificationWithEmail([
                 'user_id' => $userId,
                 'title' => 'Komentar Baru',
                 'message' => "#{$ticket->ticket_number} ada komentar baru",
