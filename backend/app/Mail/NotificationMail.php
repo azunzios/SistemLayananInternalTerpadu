@@ -9,6 +9,8 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\Ticket;
+use App\Models\Asset;
 
 class NotificationMail extends Mailable
 {
@@ -17,6 +19,8 @@ class NotificationMail extends Mailable
     public $user;
     public $notification;
     public $actionUrl;
+    public $ticket;
+    public $asset;
 
     /**
      * Create a new message instance.
@@ -25,6 +29,18 @@ class NotificationMail extends Mailable
     {
         $this->user = $user;
         $this->notification = $notification;
+        
+        // Load ticket data if available
+        if ($notification->reference_type === 'ticket' && $notification->reference_id) {
+            $this->ticket = Ticket::with(['user', 'category', 'assignedUser'])->find($notification->reference_id);
+            
+            // Load asset data if ticket has kode_barang and nup
+            if ($this->ticket && $this->ticket->kode_barang && $this->ticket->nup) {
+                $this->asset = Asset::where('kode_barang', $this->ticket->kode_barang)
+                    ->where('nup', $this->ticket->nup)
+                    ->first();
+            }
+        }
         
         // Build action URL
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
