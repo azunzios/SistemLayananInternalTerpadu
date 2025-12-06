@@ -628,6 +628,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 disabled={
                   !pagination || pagination.current_page <= 1 || loading
                 }
+                className="cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Sebelumnya
@@ -643,6 +644,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!pagination || !pagination.has_more || loading}
+                className="cursor-pointer"
               >
                 Selanjutnya
                 <ChevronRight className="h-4 w-4 ml-1" />

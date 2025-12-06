@@ -315,6 +315,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           size="sm"
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
+                          className="cursor-pointer"
                         >
                           <ChevronLeft className="h-4 w-4" />
                           Sebelumnya
@@ -324,6 +325,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           size="sm"
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={!pagination.has_more}
+                          className="cursor-pointer"
                         >
                           Selanjutnya
                           <ChevronRight className="h-4 w-4" />

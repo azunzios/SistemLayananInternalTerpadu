@@ -371,6 +371,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                             size="sm"
                             onClick={handlePrevPage}
                             disabled={!pagination || pagination.current_page === 1 || loading}
+                            className="cursor-pointer"
                           >
                             Sebelumnya
                           </Button>
@@ -379,6 +380,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                             size="sm"
                             onClick={handleNextPage}
                             disabled={!pagination || !pagination.has_more || loading}
+                            className="cursor-pointer"
                           >
                             Berikutnya
                           </Button>

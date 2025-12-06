@@ -412,6 +412,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                       disabled={
                         !pagination || pagination.current_page === 1 || loading
                       }
+                      className="cursor-pointer"
                     >
                       Sebelumnya
                     </Button>
@@ -420,6 +421,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                       size="sm"
                       onClick={handleNextPage}
                       disabled={!pagination || !pagination.has_more || loading}
+                      className="cursor-pointer"
                     >
                       Berikutnya
                     </Button>
