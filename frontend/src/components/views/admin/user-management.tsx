@@ -351,7 +351,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
             <Users className="h-4 w-4" />
             {users.length} Total Users
           </Badge>
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2 cursor-pointer">
             <Plus className="h-4 w-4" />
             Tambah User Baru
           </Button>
