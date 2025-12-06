@@ -74,7 +74,7 @@ export const ZoomBookingManagementTabs: React.FC<ZoomBookingManagementTabsProps>
                     <TableHead>Tanggal & Waktu</TableHead>
                     <TableHead>Peserta</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
+                    <TableHead className="text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -106,10 +106,11 @@ export const ZoomBookingManagementTabs: React.FC<ZoomBookingManagementTabsProps>
                         </TableCell>
                         <TableCell className="text-sm">{booking.estimatedParticipants} orang</TableCell>
                         <TableCell>{renderStatusBadge(booking.status)}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-center">
                           <Button
                             variant="link"
                             size="sm"
+                            className="cursor-pointer"
                             onClick={() => onSelectBooking(booking)}
                           >
                             Detail

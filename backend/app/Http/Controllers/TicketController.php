@@ -70,20 +70,25 @@ class TicketController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        // Search by ticket number or title
+        // Search by ticket number, ID, or title
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('ticket_number', 'like', "%$search%")
-                  ->orWhere('title', 'like', "%$search%");
+            // Remove # if present for ticket number search
+            $searchClean = str_replace('#', '', $search);
+            
+            $query->where(function ($q) use ($search, $searchClean) {
+                $q->where('ticket_number', 'like', "%$searchClean%")
+                  ->orWhere('title', 'like', "%$search%")
+                  ->orWhere('id', 'like', "%$searchClean%");
             });
         }
 
         // Role-based filtering
         $user = auth()->user();
         $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
+        $adminView = $request->boolean('admin_view', false); // Check if admin view is requested
         
-        if ($user) {
+        if ($user && !$adminView) {
             if ($scope === 'my') {
                 // Explicit "my tickets": tiket yang dibuat oleh user (bukan yang di-assign)
                 $query->where('user_id', $user->id);

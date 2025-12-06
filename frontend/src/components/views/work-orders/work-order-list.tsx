@@ -646,7 +646,8 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handlePrevPage}
-                  disabled={pagination.current_page <= 1 || loading}
+                  disabled={currentPage <= 1}
+                  className="cursor-pointer"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Sebelumnya

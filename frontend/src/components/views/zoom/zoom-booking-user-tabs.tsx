@@ -159,11 +159,11 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
   return (
     <Tabs defaultValue="check-availability" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="check-availability" className="gap-2">
+        <TabsTrigger value="check-availability" className="gap-2 cursor-pointer hover:bg-white">
           <Search className="h-4 w-4" />
           Cek Ketersediaan
         </TabsTrigger>
-        <TabsTrigger value="my-bookings" className="gap-2">
+        <TabsTrigger value="my-bookings" className="gap-2 cursor-pointer hover:bg-white">
           <CalendarIcon className="h-4 w-4" />
           Booking Saya
         </TabsTrigger>
@@ -260,7 +260,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                         <TableHead>Tanggal & Waktu</TableHead>
                         <TableHead>Peserta</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
+                        <TableHead className="text-center">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -288,11 +288,11 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                             </TableCell>
                             <TableCell className="text-sm">{booking.estimatedParticipants} orang</TableCell>
                             <TableCell> {renderStatusBadge(booking.status)}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
-                                variant="outline"
+                                variant="link"
                                 size="sm"
-                                className="hover:underline hover:text-blue-500"
+                                className="hover:underline hover:text-blue-500 cursor-pointer"
                                 onClick={() => onSelectBooking(booking)}
                               >
                                 Detail
@@ -315,6 +315,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           size="sm"
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
+                          className="cursor-pointer"
                         >
                           <ChevronLeft className="h-4 w-4" />
                           Sebelumnya
@@ -324,6 +325,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           size="sm"
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={!pagination.has_more}
+                          className="cursor-pointer"
                         >
                           Selanjutnya
                           <ChevronRight className="h-4 w-4" />

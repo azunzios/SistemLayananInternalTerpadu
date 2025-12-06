@@ -331,7 +331,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
                   transition={{ delay: index * 0.1 }}
                 >
                   <Card
-                    className="cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-blue-500"
+                    className="!cursor-pointer hover:shadow-lg transition-all duration-200 border-2 hover:border-blue-500"
                     onClick={action.action}
                   >
                     <CardContent className="p-6">
