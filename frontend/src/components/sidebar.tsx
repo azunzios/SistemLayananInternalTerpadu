@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }}
     >
       <ScrollArea className="flex-1 py-3 px-3">
-        <nav className="flex flex-col gap-0">
+        <nav className="flex flex-col gap-2">
           {menuItems.map((item) => (
             <SidebarMenuItem
               key={item.id}

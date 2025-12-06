@@ -852,14 +852,14 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                   variant="outline"
                   onClick={onCancel}
                   disabled={isSubmitting}
-                  className="flex-1"
+                  className="flex-1 cursor-pointer"
                 >
                   Batal
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1"
+                  className="flex-1 cursor-pointer"
                 >
                   {isSubmitting ? "Mengirim..." : "Ajukan Tiket"}
                 </Button>

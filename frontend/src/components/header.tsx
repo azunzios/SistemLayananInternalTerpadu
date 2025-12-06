@@ -188,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative h-auto w-auto p-0 rounded-full hover:bg-transparent"
+                  className="relative h-auto w-auto p-0 rounded-full hover:bg-transparent cursor-pointer"
                 >
                   {/* Wrapper Frame Besi */}
                   <div className="rounded-full p-[2.5px] bg-gradient-to-br from-slate-300 via-white to-slate-400 shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-md transition-all duration-300">
@@ -239,7 +239,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
                         variant="ghost"
                         size="sm"
                         onClick={handleMarkAll}
-                        className="h-7 text-[11px] font-medium rounded-full bg-gradient-to-t from-gray-300 via-gray-200 to-gray-100 text-black-200 hover:text-blue-600 px-2"
+                        className="h-7 text-[11px] font-medium rounded-full bg-gradient-to-t from-gray-300 via-gray-200 to-gray-100 text-black-200 hover:text-blue-600 px-2 cursor-pointer"
                         disabled={loading}
                       >
                         <Check className="mr-1 h-3 w-3" />
@@ -332,7 +332,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
             {/* 2. USER MENU DROPDOWN */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 h-auto pl-0 pr-1 hover:bg-transparent rounded-full">
+                <Button variant="ghost" size="sm" className="gap-2 h-auto pl-0 pr-1 hover:bg-transparent rounded-full cursor-pointer">
                   {/* Wrapper Frame Besi - sama dengan bell */}
                   <div className="rounded-full p-[2.5px] bg-gradient-to-br from-slate-300 via-white to-slate-400 shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:shadow-md transition-all duration-300">
 
