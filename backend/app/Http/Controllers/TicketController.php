@@ -82,8 +82,9 @@ class TicketController extends Controller
         // Role-based filtering
         $user = auth()->user();
         $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
+        $adminView = $request->boolean('admin_view', false); // Check if admin view is requested
         
-        if ($user) {
+        if ($user && !$adminView) {
             if ($scope === 'my') {
                 // Explicit "my tickets": tiket yang dibuat oleh user (bukan yang di-assign)
                 $query->where('user_id', $user->id);
