@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import React, { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -8,14 +8,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle, Clock, Search, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { BookingGroups, ZoomAccountUi } from './zoom-booking-types';
-import type { User } from '@/types';
-import { ZoomDailyGrid } from './zoom-daily-grid';
-import { api } from '@/lib/api';
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertCircle,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  Clock,
+  Search,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import type { BookingGroups, ZoomAccountUi } from "./zoom-booking-types";
+import type { User } from "@/types";
+import { ZoomDailyGrid } from "./zoom-daily-grid";
+import { api } from "@/lib/api";
 
 interface ZoomBookingStats {
   all: number;
@@ -34,6 +43,7 @@ interface ZoomBookingItem {
   endTime: string;
   status: string;
   estimatedParticipants: number;
+  breakoutRooms: number;
   userName: string;
   userId: string;
   zoomAccountId: number;
@@ -70,9 +80,9 @@ interface ZoomBookingUserTabsProps {
 
 const STATUS_FILTER_MAP: Record<string, string | undefined> = {
   all: undefined,
-  pending: 'pending_review',
-  approved: 'approved',
-  rejected: 'rejected',
+  pending: "pending_review",
+  approved: "approved",
+  rejected: "rejected",
 };
 
 export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
@@ -90,7 +100,9 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
   const [stats, setStats] = useState<ZoomBookingStats | null>(null);
   const [bookings, setBookings] = useState<ZoomBookingItem[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [currentStatus, setCurrentStatus] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
 
@@ -106,14 +118,15 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
 
   const loadStats = async () => {
     try {
-      const response = await api.get<{ success: boolean; stats: ZoomBookingStats }>(
-        'tickets/stats/zoom-bookings'
-      );
+      const response = await api.get<{
+        success: boolean;
+        stats: ZoomBookingStats;
+      }>("tickets/stats/zoom-bookings");
       if (response.success && response.stats) {
         setStats(response.stats);
       }
     } catch (err) {
-      console.error('Failed to load zoom booking stats:', err);
+      console.error("Failed to load zoom booking stats:", err);
     }
   };
 
@@ -121,12 +134,12 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
     setIsLoadingBookings(true);
     try {
       const params = new URLSearchParams();
-      params.append('page', page.toString());
-      params.append('per_page', '15');
-      
+      params.append("page", page.toString());
+      params.append("per_page", "15");
+
       const statusFilter = STATUS_FILTER_MAP[status];
       if (statusFilter) {
-        params.append('status', statusFilter);
+        params.append("status", statusFilter);
       }
 
       const response = await api.get<{
@@ -140,30 +153,38 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
         setPagination(response.pagination);
       }
     } catch (err) {
-      console.error('Failed to load zoom bookings:', err);
+      console.error("Failed to load zoom bookings:", err);
     } finally {
       setIsLoadingBookings(false);
     }
   };
 
-  const handleStatusChange = (newStatus: 'all' | 'pending' | 'approved' | 'rejected') => {
+  const handleStatusChange = (
+    newStatus: "all" | "pending" | "approved" | "rejected"
+  ) => {
     setCurrentStatus(newStatus);
     setCurrentPage(1);
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <Tabs defaultValue="check-availability" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="check-availability" className="gap-2 cursor-pointer hover:bg-white">
+        <TabsTrigger
+          value="check-availability"
+          className="gap-2 cursor-pointer hover:bg-white"
+        >
           <Search className="h-4 w-4" />
           Cek Ketersediaan
         </TabsTrigger>
-        <TabsTrigger value="my-bookings" className="gap-2 cursor-pointer hover:bg-white">
+        <TabsTrigger
+          value="my-bookings"
+          className="gap-2 cursor-pointer hover:bg-white"
+        >
           <CalendarIcon className="h-4 w-4" />
           Booking Saya
         </TabsTrigger>
@@ -223,22 +244,23 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
       </TabsContent>
 
       <TabsContent value="my-bookings" className="space-y-4">
-        <Tabs value={currentStatus} onValueChange={(val) => handleStatusChange(val as any)}>
+        <Tabs
+          value={currentStatus}
+          onValueChange={(val) => handleStatusChange(val as any)}
+        >
           <TabsList>
-            <TabsTrigger value="all">
-              Semua ({stats?.all ?? '-'})
-            </TabsTrigger>
+            <TabsTrigger value="all">Semua ({stats?.all ?? "-"})</TabsTrigger>
             <TabsTrigger value="pending" className="gap-2">
               <Clock className="h-4 w-4" />
-              Pending ({stats?.pending ?? '-'})
+              Pending ({stats?.pending ?? "-"})
             </TabsTrigger>
             <TabsTrigger value="approved" className="gap-2">
               <CheckCircle className="h-4 w-4" />
-              Disetujui ({stats?.approved ?? '-'})
+              Disetujui ({stats?.approved ?? "-"})
             </TabsTrigger>
             <TabsTrigger value="rejected" className="gap-2">
               <XCircle className="h-4 w-4" />
-              Ditolak ({stats?.rejected ?? '-'})
+              Ditolak ({stats?.rejected ?? "-"})
             </TabsTrigger>
           </TabsList>
 
@@ -266,28 +288,43 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                     <TableBody>
                       {bookings.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-12 text-gray-500"
+                          >
                             <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                             <p>Tidak ada booking</p>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        bookings.map(booking => (
-                          <TableRow key={booking.id} className="hover:bg-gray-50">
-                            <TableCell className="font-mono text-sm">{booking.ticketNumber}</TableCell>
+                        bookings.map((booking) => (
+                          <TableRow
+                            key={booking.id}
+                            className="hover:bg-gray-50"
+                          >
+                            <TableCell className="font-mono text-sm">
+                              {booking.ticketNumber}
+                            </TableCell>
                             <TableCell>
                               <p>{booking.title}</p>
                             </TableCell>
                             <TableCell>
                               <p className="text-sm">
-                                {new Date(booking.date).toLocaleDateString('id-ID')}
+                                {new Date(booking.date).toLocaleDateString(
+                                  "id-ID"
+                                )}
                               </p>
                               <p className="text-xs text-gray-500">
                                 {booking.startTime} - {booking.endTime}
                               </p>
                             </TableCell>
-                            <TableCell className="text-sm">{booking.estimatedParticipants} orang</TableCell>
-                            <TableCell> {renderStatusBadge(booking.status)}</TableCell>
+                            <TableCell className="text-sm">
+                              {booking.estimatedParticipants} orang
+                            </TableCell>
+                            <TableCell>
+                              {" "}
+                              {renderStatusBadge(booking.status)}
+                            </TableCell>
                             <TableCell className="text-center">
                               <Button
                                 variant="link"
@@ -307,7 +344,8 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                   {pagination && pagination.last_page > 1 && (
                     <div className="flex items-center justify-between p-4 border-t">
                       <p className="text-sm text-gray-600">
-                        Menampilkan {pagination.from} - {pagination.to} dari {pagination.total}
+                        Menampilkan {pagination.from} - {pagination.to} dari{" "}
+                        {pagination.total}
                       </p>
                       <div className="flex gap-2">
                         <Button
