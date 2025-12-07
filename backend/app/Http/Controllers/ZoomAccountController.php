@@ -18,9 +18,9 @@ class ZoomAccountController extends Controller
         // Admin dapat melihat semua, user lain hanya yang aktif
         $query = ZoomAccount::query();
         
-        // Check if user has admin roles
-        $userRoles = $user->roles ?? [];
-        $isAdmin = in_array('admin_layanan', $userRoles) || in_array('super_admin', $userRoles);
+        // Check if user has admin role
+        $activeRole = $user->role ?? 'pegawai';
+        $isAdmin = in_array($activeRole, ['admin_layanan', 'super_admin']);
         
         if (!$isAdmin) {
             $query->where('is_active', true);
@@ -239,9 +239,9 @@ class ZoomAccountController extends Controller
     private function authorizeAdmin()
     {
         $user = auth()->user();
-        $userRoles = $user->roles ?? [];
+        $activeRole = $user->role ?? 'pegawai';
         
-        if (!in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+        if (!in_array($activeRole, ['admin_layanan', 'super_admin'])) {
             abort(403, 'Unauthorized. Admin access required.');
         }
     }

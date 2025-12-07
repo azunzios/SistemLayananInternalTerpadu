@@ -70,25 +70,20 @@ class TicketController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        // Search by ticket number, ID, or title
+        // Search by ticket number or title
         if ($request->has('search')) {
             $search = $request->search;
-            // Remove # if present for ticket number search
-            $searchClean = str_replace('#', '', $search);
-            
-            $query->where(function ($q) use ($search, $searchClean) {
-                $q->where('ticket_number', 'like', "%$searchClean%")
-                  ->orWhere('title', 'like', "%$search%")
-                  ->orWhere('id', 'like', "%$searchClean%");
+            $query->where(function ($q) use ($search) {
+                $q->where('ticket_number', 'like', "%$search%")
+                  ->orWhere('title', 'like', "%$search%");
             });
         }
 
         // Role-based filtering
         $user = auth()->user();
         $scope = $request->get('scope'); // allow forcing limited views even for multi-role users
-        $adminView = $request->boolean('admin_view', false); // Check if admin view is requested
         
-        if ($user && !$adminView) {
+        if ($user) {
             if ($scope === 'my') {
                 // Explicit "my tickets": tiket yang dibuat oleh user (bukan yang di-assign)
                 $query->where('user_id', $user->id);
@@ -99,21 +94,17 @@ class TicketController extends Controller
                 // Admin penyedia: tiket yang punya work order atau butuh work order
                 $query->whereHas('workOrders');
             } else {
-                // Role-based filtering via Active Role (HasRoleHelper)
-                $userRole = $this->getUserRole($user);
+                // Use active role (single column) for filtering, not roles array
+                $activeRole = $user->role ?? 'pegawai';
                 
-                if (!$userRole) {
-                    // Fallback to strict ownership
+                if ($activeRole === 'pegawai') {
+                    // Pegawai can only see their own tickets
                     $query->where('user_id', $user->id);
-                } elseif ($userRole === 'admin_layanan' || $userRole === 'super_admin') {
-                    // Admin view: can see everything, no filter applied
-                } elseif ($userRole === 'teknisi') {
+                } elseif ($activeRole === 'teknisi') {
                     // Teknisi can only see assigned tickets
                     $query->where('assigned_to', $user->id);
-                } else {
-                    // Pegawai/Admin Penyedia (default case)
-                    $query->where('user_id', $user->id);
                 }
+                // admin_layanan, admin_penyedia, super_admin can see all tickets
             }
         }
 
@@ -192,6 +183,117 @@ class TicketController extends Controller
             'completion_rate' => $completionRate,
             'perbaikan' => $perbaikan,
             'zoom' => $zoomMeeting,
+        ]);
+    }
+
+    /**
+     * Get super admin dashboard statistics
+     * Returns: stats, ticketsByType, usersByRole
+     */
+    public function superAdminDashboardStats(Request $request)
+    {
+        // Total users
+        $totalUsers = \App\Models\User::count();
+        // Active users = users who are not soft-deleted (simplified since last_login_at doesn't exist)
+        $activeUsers = $totalUsers;
+
+        // Total tickets
+        $totalTickets = Ticket::count();
+        
+        // Tickets by status
+        $pendingTickets = Ticket::whereIn('status', [
+            'submitted', 'pending_review'
+        ])->count();
+        
+        $completedTickets = Ticket::whereIn('status', [
+            'closed', 'selesai', 'approved'
+        ])->count();
+        
+        $rejectedTickets = Ticket::whereIn('status', [
+            'closed_unrepairable', 'ditolak', 'rejected', 'dibatalkan', 'cancelled'
+        ])->count();
+
+        // Tickets last 7 days
+        $ticketsLast7Days = Ticket::where('created_at', '>=', now()->subDays(7))->count();
+        
+        // Tickets last 30 days
+        $ticketsLast30Days = Ticket::where('created_at', '>=', now()->subDays(30))->count();
+
+        // Average resolution time (in hours) - for closed tickets only
+        $closedTickets = Ticket::whereIn('status', ['closed', 'selesai'])->get();
+        $avgResolutionTime = 0;
+        if ($closedTickets->count() > 0) {
+            $totalHours = 0;
+            foreach ($closedTickets as $ticket) {
+                $createdAt = \Carbon\Carbon::parse($ticket->created_at);
+                $updatedAt = \Carbon\Carbon::parse($ticket->updated_at);
+                $totalHours += $createdAt->diffInHours($updatedAt);
+            }
+            $avgResolutionTime = round($totalHours / $closedTickets->count(), 1);
+        }
+
+        // Tickets by type
+        $ticketsByType = [
+            [
+                'name' => 'Perbaikan',
+                'value' => Ticket::where('type', 'perbaikan')->count()
+            ],
+            [
+                'name' => 'Zoom Meeting',
+                'value' => Ticket::where('type', 'zoom_meeting')->count()
+            ],
+        ];
+
+        // Users by role - count from roles array (JSON column)
+        // Each user can have multiple roles, so we count each role occurrence
+        $usersByRole = [];
+        $roleLabels = [
+            'super_admin' => 'Super Admin',
+            'admin_layanan' => 'Admin Layanan',
+            'admin_penyedia' => 'Admin Penyedia',
+            'teknisi' => 'Teknisi',
+            'pegawai' => 'Pegawai',
+        ];
+        
+        $rolesList = ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'pegawai'];
+        
+        foreach ($rolesList as $role) {
+            // Count users who have this role in their roles array
+            $count = \App\Models\User::whereJsonContains('roles', $role)->count();
+            
+            // Fallback for non-JSON or if whereJsonContains doesn't work
+            if ($count === 0) {
+                $allUsers = \App\Models\User::all();
+                foreach ($allUsers as $user) {
+                    $userRoles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
+                    if (is_array($userRoles) && in_array($role, $userRoles)) {
+                        $count++;
+                    }
+                }
+            }
+            
+            if ($count > 0) {
+                $usersByRole[] = [
+                    'name' => $roleLabels[$role] ?? ucfirst($role),
+                    'value' => $count
+                ];
+            }
+        }
+
+        return response()->json([
+            'stats' => [
+                'totalUsers' => $totalUsers,
+                'activeUsers' => $activeUsers,
+                'totalTickets' => $totalTickets,
+                'pendingTickets' => $pendingTickets,
+                'completedTickets' => $completedTickets,
+                'rejectedTickets' => $rejectedTickets,
+                'ticketsLast7Days' => $ticketsLast7Days,
+                'ticketsLast30Days' => $ticketsLast30Days,
+                'avgResolutionTime' => $avgResolutionTime,
+            ],
+            'ticketsByType' => $ticketsByType,
+            'usersByRole' => $usersByRole,
         ]);
     }
 
@@ -286,21 +388,17 @@ class TicketController extends Controller
                     // Admin penyedia: tiket yang punya work order
                     $query->whereHas('workOrders');
                 } else {
-                    // Role-based filtering via Active Role (HasRoleHelper)
-                    $userRole = $this->getUserRole($user);
+                    // Use active role (single column) for filtering
+                    $activeRole = $user->role ?? 'pegawai';
                     
-                    if (!$userRole) {
-                        // Fallback to strict ownership
+                    if ($activeRole === 'pegawai') {
+                        // Pegawai can only see their own tickets
                         $query->where('user_id', $user->id);
-                    } elseif ($userRole === 'admin_layanan' || $userRole === 'super_admin') {
-                        // Admin view: can see everything, no filter applied
-                    } elseif ($userRole === 'teknisi') {
+                    } elseif ($activeRole === 'teknisi') {
                         // Teknisi can only see assigned tickets
                         $query->where('assigned_to', $user->id);
-                    } else {
-                        // Pegawai/Admin Penyedia (default case)
-                        $query->where('user_id', $user->id);
                     }
+                    // admin_layanan, admin_penyedia, super_admin can see all tickets
                 }
             }
         }
@@ -345,13 +443,17 @@ class TicketController extends Controller
      */
     public function technicianStats()
     {
-        // Get all users with role 'teknisi'
-        // Note: Assuming roles is a JSON column or we filter after retrieval if needed
-        // For better compatibility, we'll retrieve and filter if whereJsonContains isn't reliable on all DBs
-        // But whereJsonContains is standard in Laravel for JSON columns.
+        // Get all users with active role 'teknisi' OR have 'teknisi' in their roles array
+        // We fetch based on roles array since this is for admin to see all potential technicians
+        $technicians = \App\Models\User::whereJsonContains('roles', 'teknisi')->get();
         
-        // Get technicians by active 'role' column (Strict Active Role)
-        $technicians = \App\Models\User::where('role', 'teknisi')->get();
+        // Fallback if roles is not JSON or empty result
+        if ($technicians->isEmpty()) {
+             $technicians = \App\Models\User::all()->filter(function ($user) {
+                $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
+                return is_array($roles) && in_array('teknisi', $roles);
+             });
+        }
 
         $stats = $technicians->map(function ($tech) {
             $activeCount = Ticket::where('assigned_to', $tech->id)
@@ -1040,15 +1142,15 @@ class TicketController extends Controller
     private function authorizeTicketAccess(Ticket $ticket)
     {
         $user = auth()->user();
-        $userRoles = $user->roles ?? [];
+        $activeRole = $user->role ?? 'pegawai';
 
         // Admin can see all
-        if (in_array('admin_layanan', $userRoles) || in_array('super_admin', $userRoles)) {
+        if (in_array($activeRole, ['admin_layanan', 'super_admin'])) {
             return true;
         }
 
         // Admin penyedia can see tickets with work orders
-        if (in_array('admin_penyedia', $userRoles)) {
+        if ($activeRole === 'admin_penyedia') {
             // Check if ticket has work orders
             if ($ticket->workOrders()->exists()) {
                 return true;
@@ -1056,7 +1158,7 @@ class TicketController extends Controller
         }
 
         // Teknisi can see assigned tickets
-        if (in_array('teknisi', $userRoles) && $ticket->assigned_to === $user->id) {
+        if ($activeRole === 'teknisi' && $ticket->assigned_to === $user->id) {
             return true;
         }
 
@@ -1083,8 +1185,8 @@ class TicketController extends Controller
             ->whereIn('status', ['approved', 'pending_review'])
             ->with('user', 'zoomAccount');
 
-        // Role-based filtering - untuk calendarGrid, semua user bisa lihat semua booking
-        // Tapi detail sensitif (meeting link, passcode) akan disembunyikan untuk booking milik orang lain
+        // Calendar grid: SEMUA user bisa lihat SEMUA booking (untuk tahu slot terpakai)
+        // Tapi detail sensitif (meeting link, passcode) hanya untuk owner dan admin
         $user = auth()->user();
 
         // Filter by date/month based on view type
@@ -1107,12 +1209,8 @@ class TicketController extends Controller
         // Transform tickets for calendar display
         $calendarData = $tickets->map(function ($ticket) use ($user) {
             $isOwner = $user && $ticket->user_id == $user->id;
-            $isAdmin = false;
-            
-            if ($user) {
-                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                $isAdmin = in_array('admin_layanan', $userRoles) || in_array('super_admin', $userRoles);
-            }
+            $activeRole = $user->role ?? 'pegawai';
+            $isAdmin = in_array($activeRole, ['admin_layanan', 'super_admin']);
             
             // Detail sensitif hanya untuk owner dan admin
             $canSeeDetails = $isOwner || $isAdmin;
@@ -1171,27 +1269,25 @@ class TicketController extends Controller
             } elseif ($scope === 'assigned') {
                 $query->where('assigned_to', $user->id);
             } else {
-                $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-                if (!in_array('admin_layanan', $userRoles) && 
-                    !in_array('super_admin', $userRoles) &&
-                    !in_array('teknisi', $userRoles)) {
+                // Use active role for filtering
+                $activeRole = $user->role ?? 'pegawai';
+                
+                if ($activeRole === 'pegawai') {
                     // Pegawai can only see their own tickets
                     $query->where('user_id', $user->id);
-                } elseif (in_array('teknisi', $userRoles) && !in_array('admin_layanan', $userRoles) && !in_array('super_admin', $userRoles)) {
+                } elseif ($activeRole === 'teknisi') {
                     // Teknisi can only see assigned tickets
                     $query->where('assigned_to', $user->id);
                 }
+                // admin_layanan, admin_penyedia, super_admin can see all
             }
         }
 
         $total = $query->count();
         
-        // Sedang proses: status != {rejected, cancelled, closed, closed_unrepairable}
-        $inProgress = (clone $query)->whereNotIn('status', [
-            'rejected', 'dibatalkan', 'cancelled', 'closed', 'selesai', 'closed_unrepairable'
-        ])->count();
-        
         // Completed: status IN {closed, selesai, approved}
+        // Untuk zoom meeting: approved = selesai
+        // Untuk perbaikan: closed/selesai = selesai
         $completed = (clone $query)->whereIn('status', [
             'closed', 'selesai', 'approved'
         ])->count();
@@ -1200,6 +1296,9 @@ class TicketController extends Controller
         $rejected = (clone $query)->whereIn('status', [
             'closed_unrepairable', 'ditolak', 'rejected', 'dibatalkan', 'cancelled'
         ])->count();
+        
+        // Sedang proses: total - completed - rejected
+        $inProgress = $total - $completed - $rejected;
         
         // Completion rate
         $completionRate = $total > 0 ? ($completed / $total) * 100 : 0;
@@ -1232,12 +1331,13 @@ class TicketController extends Controller
         
         // Apply role-based filtering
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles)) {
-                // Pegawai can only see their own bookings
+            $activeRole = $user->role ?? 'pegawai';
+            
+            // Pegawai can only see their own bookings
+            if ($activeRole === 'pegawai') {
                 $query->where('user_id', $user->id);
             }
+            // admin_layanan, admin_penyedia, super_admin, teknisi can see all
         }
 
         $all = $query->count();
@@ -1275,12 +1375,13 @@ class TicketController extends Controller
         
         // Apply role-based filtering
         if ($user) {
-            $userRoles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (!in_array('admin_layanan', $userRoles) && 
-                !in_array('super_admin', $userRoles)) {
-                // Pegawai can only see their own bookings
+            $activeRole = $user->role ?? 'pegawai';
+            
+            // Pegawai can only see their own bookings
+            if ($activeRole === 'pegawai') {
                 $query->where('user_id', $user->id);
             }
+            // admin_layanan, admin_penyedia, super_admin, teknisi can see all
         }
 
         // Apply status filter if provided
@@ -1348,8 +1449,8 @@ class TicketController extends Controller
         }
 
         // Check role - hanya admin_layanan dan super_admin
-        $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
-        if (!array_intersect(['super_admin', 'admin_layanan'], $roles ?? [])) {
+        $activeRole = $user->role ?? 'pegawai';
+        if (!in_array($activeRole, ['super_admin', 'admin_layanan'])) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -1584,89 +1685,5 @@ class TicketController extends Controller
         return response()->download($tempFile, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend(true);
-    }
-
-    public function superAdminDashboardStats()
-    {
-        $today = now();
-        $last7Days = now()->subDays(7);
-        $last30Days = now()->subDays(30);
-
-        // Fresh query setiap kali untuk menghindari query yang sudah dimodifikasi
-        $totalUsers = \App\Models\User::count();
-        $activeUsers = \App\Models\User::where('is_active', true)->count();
-        
-        $totalTickets = Ticket::count();
-        $pendingTickets = Ticket::whereIn('status', [
-            'menunggu_review', 'pending_approval', 'pending_review', 'submitted'
-        ])->count();
-        $completedTickets = Ticket::where('status', 'closed')->count();
-        $rejectedTickets = Ticket::whereIn('status', [
-            'ditolak', 'rejected', 'cancelled', 'closed_unrepairable'
-        ])->count();
-
-        $ticketsLast7Days = Ticket::where('created_at', '>=', $last7Days)->count();
-        $ticketsLast30Days = Ticket::where('created_at', '>=', $last30Days)->count();
-
-        $avgResolutionTime = 0;
-        $completedTicketsForAvg = Ticket::where('status', 'closed')->get();
-        if ($completedTicketsForAvg->count() > 0) {
-            $totalHours = $completedTicketsForAvg->reduce(function ($carry, $ticket) {
-                $hours = $ticket->updated_at->diffInHours($ticket->created_at);
-                return $carry + $hours;
-            }, 0);
-            $avgResolutionTime = round($totalHours / $completedTicketsForAvg->count());
-        }
-
-        // Query fresh untuk ticketsByType - tidak menggunakan clone dari query yang sudah dimodifikasi
-        $ticketsByType = [
-            ['name' => 'Perbaikan', 'value' => Ticket::where('type', 'perbaikan')->count()],
-            ['name' => 'Zoom Meeting', 'value' => Ticket::where('type', 'zoom_meeting')->count()],
-        ];
-
-        // Query fresh untuk usersByRole
-        $allUsers = \App\Models\User::all();
-        $roleCount = [
-            'super_admin' => 0,
-            'admin_layanan' => 0,
-            'admin_penyedia' => 0,
-            'teknisi' => 0,
-            'pegawai' => 0,
-        ];
-
-        foreach ($allUsers as $user) {
-            $roles = is_array($user->roles) ? $user->roles : json_decode($user->roles ?? '[]', true);
-            if (is_array($roles)) {
-                foreach ($roles as $role) {
-                    if (isset($roleCount[$role])) {
-                        $roleCount[$role]++;
-                    }
-                }
-            }
-        }
-
-        $usersByRole = [
-            ['name' => 'Super Admin', 'value' => $roleCount['super_admin']],
-            ['name' => 'Admin Layanan', 'value' => $roleCount['admin_layanan']],
-            ['name' => 'Admin Penyedia', 'value' => $roleCount['admin_penyedia']],
-            ['name' => 'Teknisi', 'value' => $roleCount['teknisi']],
-            ['name' => 'Pegawai', 'value' => $roleCount['pegawai']],
-        ];
-
-        return response()->json([
-            'stats' => [
-                'totalUsers' => $totalUsers,
-                'activeUsers' => $activeUsers,
-                'totalTickets' => $totalTickets,
-                'pendingTickets' => $pendingTickets,
-                'completedTickets' => $completedTickets,
-                'rejectedTickets' => $rejectedTickets,
-                'ticketsLast7Days' => $ticketsLast7Days,
-                'ticketsLast30Days' => $ticketsLast30Days,
-                'avgResolutionTime' => $avgResolutionTime,
-            ],
-            'ticketsByType' => $ticketsByType,
-            'usersByRole' => $usersByRole,
-        ]);
     }
 }

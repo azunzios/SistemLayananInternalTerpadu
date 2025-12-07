@@ -1,18 +1,18 @@
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { api } from '@/lib/api';
+import React, { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   AlertCircle,
   CheckCircle,
@@ -26,11 +26,11 @@ import {
   Ban,
   Info,
   Users,
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { toast } from 'sonner';
-import { getCurrentUser } from '@/lib/storage';
-import type { Ticket, ZoomTicket } from '@/types';
+} from "lucide-react";
+import { motion } from "motion/react";
+import { toast } from "sonner";
+import { getCurrentUser } from "@/lib/storage";
+import type { Ticket, ZoomTicket } from "@/types";
 
 interface ZoomAccount {
   id: number;
@@ -57,7 +57,7 @@ const normalizeCoHosts = (value: unknown): CoHost[] => {
   if (!value) return [];
   const material = (() => {
     if (Array.isArray(value)) return value;
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const trimmed = value.trim();
       if (!trimmed) return [];
       try {
@@ -71,7 +71,7 @@ const normalizeCoHosts = (value: unknown): CoHost[] => {
         .map((entry) => entry.trim())
         .filter(Boolean);
     }
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       const record = value as Record<string, unknown>;
       if (Array.isArray(record.data)) return record.data;
       if (Array.isArray(record.coHosts)) return record.coHosts;
@@ -83,17 +83,20 @@ const normalizeCoHosts = (value: unknown): CoHost[] => {
   return material
     .map((item, index) => {
       if (!item) return null;
-      if (typeof item === 'string') {
+      if (typeof item === "string") {
         const entry = item.trim();
         if (!entry) return null;
         const emailMatch = entry.match(/<([^>]+)>/);
-        const email = emailMatch?.[1] || (entry.includes('@') ? entry : '');
+        const email = emailMatch?.[1] || (entry.includes("@") ? entry : "");
         const name = email
-          ? entry.replace(emailMatch ? `<${email}>` : email, '').trim().replace(/[\s,-]+$/, '')
+          ? entry
+              .replace(emailMatch ? `<${email}>` : email, "")
+              .trim()
+              .replace(/[\s,-]+$/, "")
           : entry;
         return {
           name: name || `Co-Host ${index + 1}`,
-          email: email || '',
+          email: email || "",
         };
       }
       const record = item as Record<string, unknown>;
@@ -105,13 +108,15 @@ const normalizeCoHosts = (value: unknown): CoHost[] => {
           (record.username as string) ||
           (record.email as string) ||
           `Co-Host ${index + 1}`,
-        email: (record.email as string) || (record.mail as string) || '',
+        email: (record.email as string) || (record.mail as string) || "",
       };
     })
-    .filter((host): host is CoHost => Boolean(host && (host.name || host.email)));
+    .filter((host): host is CoHost =>
+      Boolean(host && (host.name || host.email))
+    );
 };
 
-const resolveZoomAccountSelection = (zoomAcc : ZoomAccount): string => {
+const resolveZoomAccountSelection = (zoomAcc: ZoomAccount): string => {
   const source = zoomAcc;
   return source.id;
 };
@@ -123,16 +128,19 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 }) => {
   const [zoomAccounts, setZoomAccounts] = useState<ZoomAccount[]>([]);
   const [accountsError, setAccountsError] = useState<string | null>(null);
-  const suggestedAccountId = (booking as any).zoomAccountId || (booking as any).zoom_account_id;
+  const suggestedAccountId =
+    (booking as any).zoomAccountId || (booking as any).zoom_account_id;
   const [selectedAccount, setSelectedAccount] = useState<string>(() => {
     // Use suggested account if available
     if (suggestedAccountId) return String(suggestedAccountId);
     const resolved = resolveZoomAccountSelection(booking as any);
-    return resolved || '';
+    return resolved || "";
   });
-  const [hostkey, setHostkey] = useState<string>('');
-  const [meetingLink, setMeetingLink] = useState<string>(booking.meetingLink || '');
-  const [passcode, setPasscode] = useState<string>(booking.passcode || '');
+  const [hostkey, setHostkey] = useState<string>("");
+  const [meetingLink, setMeetingLink] = useState<string>(
+    booking.meetingLink || ""
+  );
+  const [passcode, setPasscode] = useState<string>(booking.passcode || "");
   const [coHosts, setCoHosts] = useState<CoHost[]>(() =>
     normalizeCoHosts(
       (booking as any).coHosts ??
@@ -140,13 +148,13 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
         (booking as any).zoom_co_hosts
     )
   );
-  const [rejectionReason, setRejectionReason] = useState<string>('');
+  const [rejectionReason, setRejectionReason] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   // When component mounts or booking changes, populate data from booking props
   useEffect(() => {
-    setMeetingLink(booking.meetingLink || '');
-    setPasscode(booking.passcode || '');
+    setMeetingLink(booking.meetingLink || "");
+    setPasscode(booking.passcode || "");
     setSelectedAccount(resolveZoomAccountSelection(booking));
     setCoHosts(
       normalizeCoHosts(
@@ -155,13 +163,15 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
           (booking as any).zoom_co_hosts
       )
     );
-    setRejectionReason('');
+    setRejectionReason("");
   }, [booking]); // Refresh on any booking prop change
 
   // Load zoom accounts only when status is pending
   useEffect(() => {
-    const isPending = booking.status === 'pending_review' || booking.status === 'menunggu_review';
-    
+    const isPending =
+      booking.status === "pending_review" ||
+      booking.status === "menunggu_review";
+
     if (!isPending) {
       return; // Don't load if not pending
     }
@@ -169,15 +179,16 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
     const loadZoomAccounts = async () => {
       try {
         setAccountsError(null);
-        const response = await api.get('zoom/accounts');
+        const response = await api.get("zoom/accounts");
         if (Array.isArray(response)) {
           setZoomAccounts(response);
-          console.log('Loaded zoom accounts from API:', response);
+          console.log("Loaded zoom accounts from API:", response);
         }
       } catch (err: any) {
-        const errorMsg = err?.body?.message || err?.message || 'Gagal memuat data akun Zoom';
+        const errorMsg =
+          err?.body?.message || err?.message || "Gagal memuat data akun Zoom";
         setAccountsError(errorMsg);
-        console.error('Failed to load zoom accounts:', err);
+        console.error("Failed to load zoom accounts:", err);
       }
     };
 
@@ -187,19 +198,21 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
   // Auto-fetch host key when account is selected
   useEffect(() => {
     if (selectedAccount) {
-      const account = zoomAccounts.find(acc => acc.id.toString() === selectedAccount);
+      const account = zoomAccounts.find(
+        (acc) => acc.id.toString() === selectedAccount
+      );
       if (account) {
         setHostkey(account.host_key);
       }
     }
   }, [selectedAccount, zoomAccounts]);
 
-  const [conflictWarning, setConflictWarning] = useState<string>('');
+  const [conflictWarning, setConflictWarning] = useState<string>("");
 
   // Check for conflicts when account is selected
   useEffect(() => {
     if (!selectedAccount) {
-      setConflictWarning('');
+      setConflictWarning("");
       return;
     }
 
@@ -210,14 +223,18 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
         const endTime = booking.endTime;
 
         // Get zoom bookings for the same date from backend
-        const response = await api.get(`tickets?type=zoom_meeting&meeting_date=${dateStr}`);
-        const allTickets = Array.isArray(response) ? response : response?.data || [];
-        
+        const response = await api.get(
+          `tickets?type=zoom_meeting&meeting_date=${dateStr}`
+        );
+        const allTickets = Array.isArray(response)
+          ? response
+          : response?.data || [];
+
         // Find conflicts: same account, same date, overlapping time, approved status
         const conflicts = allTickets.filter((t: any) => {
           if (t.id === booking.id) return false; // Skip current booking
           if (t.zoom_account_id !== selectedAccount) return false;
-          if (t.status !== 'approved') return false; // Only check approved bookings
+          if (t.status !== "approved") return false; // Only check approved bookings
 
           // Check time overlap
           const tStart = t.startTime;
@@ -225,7 +242,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
           // Convert to minutes for easier comparison
           const toMinutes = (time: string) => {
-            const [h, m] = time.split(':').map(Number);
+            const [h, m] = time.split(":").map(Number);
             return h * 60 + m;
           };
 
@@ -235,7 +252,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
           const tEndMin = toMinutes(tEnd);
 
           // Check overlap: (StartA < EndB) and (EndA > StartB)
-          return (bookingStart < tEndMin) && (bookingEnd > tStartMin);
+          return bookingStart < tEndMin && bookingEnd > tStartMin;
         });
 
         if (conflicts.length > 0) {
@@ -243,15 +260,21 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
             `⚠️ Akun ini sudah terpakai pada jam ${conflicts[0].startTime} - ${conflicts[0].endTime} oleh ${conflicts[0].userName}`
           );
         } else {
-          setConflictWarning('');
+          setConflictWarning("");
         }
       } catch (err) {
-        console.error('Failed to check conflicts:', err);
+        console.error("Failed to check conflicts:", err);
       }
     };
 
     checkConflicts();
-  }, [selectedAccount, booking.date, booking.startTime, booking.endTime, booking.id]); // Depend on booking fields directly
+  }, [
+    selectedAccount,
+    booking.date,
+    booking.startTime,
+    booking.endTime,
+    booking.id,
+  ]); // Depend on booking fields directly
 
   // Validate hostkey (must be 6 digits)
   const isHostkeyValid = () => {
@@ -274,40 +297,42 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
   const handleApprove = async () => {
     // Validation
     if (!selectedAccount) {
-      toast.error('Pilih akun Zoom terlebih dahulu');
+      toast.error("Pilih akun Zoom terlebih dahulu");
       return;
     }
 
     if (!isHostkeyValid()) {
-      toast.error('Hostkey harus 6 digit angka');
+      toast.error("Hostkey harus 6 digit angka");
       return;
     }
 
     if (!meetingLink || !passcode) {
-      toast.error('Link Meeting dan Passcode harus diisi');
+      toast.error("Link Meeting dan Passcode harus diisi");
       return;
     }
 
     // Validate URL format: must have https:// and a domain
     try {
       const url = new URL(meetingLink);
-      if (!url.protocol.startsWith('https')) {
-        toast.error('Link Meeting harus menggunakan HTTPS');
+      if (!url.protocol.startsWith("https")) {
+        toast.error("Link Meeting harus menggunakan HTTPS");
         return;
       }
     } catch (err) {
-      toast.error('Format link tidak valid. Pastikan berupa URL lengkap (https://...)');
+      toast.error(
+        "Format link tidak valid. Pastikan berupa URL lengkap (https://...)"
+      );
       return;
     }
 
     const zoomMeetingId = extractZoomMeetingId(meetingLink);
     if (!zoomMeetingId) {
-      toast.error('Gagal memproses link Zoom');
+      toast.error("Gagal memproses link Zoom");
       return;
     }
 
     if (conflictWarning) {
-      toast.error('Tidak dapat approve: terdapat conflict dengan booking lain');
+      toast.error("Tidak dapat approve: terdapat conflict dengan booking lain");
       return;
     }
 
@@ -322,13 +347,14 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
         zoom_account_id: selectedAccount ? parseInt(selectedAccount, 10) : null,
       });
 
-      toast.success('Booking berhasil disetujui');
+      toast.success("Booking berhasil disetujui");
       onUpdate();
       onClose();
     } catch (error: any) {
-      const errorMsg = error?.body?.message || error?.message || 'Gagal menyetujui booking';
+      const errorMsg =
+        error?.body?.message || error?.message || "Gagal menyetujui booking";
       toast.error(errorMsg);
-      console.error('Error approving booking:', error);
+      console.error("Error approving booking:", error);
     } finally {
       setIsProcessing(false);
     }
@@ -337,7 +363,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
   // Handle Reject
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
-      toast.error('Alasan penolakan harus diisi');
+      toast.error("Alasan penolakan harus diisi");
       return;
     }
 
@@ -348,11 +374,11 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
         reason: rejectionReason,
       });
 
-      toast.success('Booking ditolak');
+      toast.success("Booking ditolak");
       onUpdate();
       onClose();
     } catch (error: any) {
-      const errorMsg = error?.body?.message || 'Gagal menolak booking';
+      const errorMsg = error?.body?.message || "Gagal menolak booking";
       toast.error(errorMsg);
       console.error(error);
     } finally {
@@ -362,32 +388,32 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'approved':
+      case "approved":
         return {
-          bg: 'bg-green-500',
-          text: 'text-white',
-          label: 'Disetujui',
+          bg: "bg-green-500",
+          text: "text-white",
+          label: "Disetujui",
           icon: CheckCircle,
         };
-      case 'menunggu_review':
-      case 'pending_approval':
+      case "menunggu_review":
+      case "pending_approval":
         return {
-          bg: 'bg-yellow-400',
-          text: 'text-gray-900',
-          label: 'Pending Review',
+          bg: "bg-yellow-400",
+          text: "text-gray-900",
+          label: "Pending Review",
           icon: Clock,
         };
-      case 'ditolak':
+      case "ditolak":
         return {
-          bg: 'bg-red-500',
-          text: 'text-white',
-          label: 'Ditolak',
+          bg: "bg-red-500",
+          text: "text-white",
+          label: "Ditolak",
           icon: XCircle,
         };
       default:
         return {
-          bg: 'bg-gray-400',
-          text: 'text-white',
+          bg: "bg-gray-400",
+          text: "text-white",
           label: status,
           icon: AlertCircle,
         };
@@ -396,9 +422,10 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
   const statusStyle = getStatusStyle(booking.status);
   const StatusIcon = statusStyle.icon;
-  const isPending = booking.status === 'pending_review' || booking.status === 'menunggu_review';
-  const isApproved = booking.status === 'approved';
-  const isRejected = booking.status === 'rejected';
+  const isPending =
+    booking.status === "pending_review" || booking.status === "menunggu_review";
+  const isApproved = booking.status === "approved";
+  const isRejected = booking.status === "rejected";
 
   return (
     <motion.div
@@ -424,9 +451,16 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
                 Tinjau dan proses permintaan booking Zoom
               </p>
             </div>
-            <Badge variant={
-              isApproved ? 'default' : isRejected ? 'destructive' : 'secondary'
-            } className="gap-1.5">
+            <Badge
+              variant={
+                isApproved
+                  ? "default"
+                  : isRejected
+                  ? "destructive"
+                  : "secondary"
+              }
+              className="gap-1.5"
+            >
               <StatusIcon className="h-3 w-3" />
               {statusStyle.label}
             </Badge>
@@ -435,73 +469,97 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-
           {/* Booking Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
             <h4 className="font-semibold text-blue-900 flex items-center gap-2">
               <Info className="h-4 w-4" />
               Informasi Booking
             </h4>
-            
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-blue-700">Nomor Tiket</p>
-                <p className="font-semibold text-blue-900 font-mono">{booking.ticketNumber}</p>
+                <p className="font-semibold text-blue-900 font-mono">
+                  {booking.ticketNumber}
+                </p>
               </div>
-              
+
               <div>
                 <p className="text-blue-700">Judul</p>
                 <p className="font-semibold text-blue-900">{booking.title}</p>
               </div>
-              
+
               <div>
                 <p className="text-blue-700">Pemohon</p>
-                <p className="font-semibold text-blue-900">{booking.userName}</p>
+                <p className="font-semibold text-blue-900">
+                  {booking.userName}
+                </p>
               </div>
-              
+
               <div>
                 <p className="text-blue-700">Tanggal</p>
                 <p className="font-semibold text-blue-900">
-                  {new Date(booking.date).toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
+                  {new Date(booking.date).toLocaleDateString("id-ID", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </p>
               </div>
-              
+
               <div>
                 <p className="text-blue-700">Waktu</p>
                 <p className="font-semibold text-blue-900">
                   {booking.startTime} - {booking.endTime}
                 </p>
               </div>
-                        {/* Co-Hosts Section */}
+
+              <div>
+                <p className="text-blue-700">Jumlah Peserta</p>
+                <p className="font-semibold text-blue-900">
+                  {booking.estimatedParticipants || 0} peserta
+                </p>
+              </div>
+
+              <div>
+                <p className="text-blue-700">Jumlah Breakout Room</p>
+                <p className="font-semibold text-blue-900">
+                  {booking.breakoutRooms || 0} room
+                </p>
+              </div>
+            </div>
+
+            {booking.description && (
+              <div className="pt-2 border-t border-blue-200">
+                <p className="text-blue-700 text-sm font-medium mb-1">
+                  Deskripsi
+                </p>
+                <p className="text-sm text-blue-900">{booking.description}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Co-Hosts Section */}
           {coHosts.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-              <Label className="flex items-center gap-2 text-blue-900 font-semibold">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-purple-900 flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Co-Hosts
-              </Label>
-              <div className="space-y-2">
+              </h4>
+              <div className="grid gap-2">
                 {coHosts.map((host, idx) => (
-                  <div key={idx} className="text-sm bg-blue-100 rounded p-2">
+                  <div
+                    key={idx}
+                    className="bg-white border border-purple-200 rounded p-3 text-sm"
+                  >
                     <p className="font-medium text-gray-900">{host.name}</p>
-                    <p className="text-gray-600 text-xs">{host.email}</p>
+                    <p className="text-gray-600 text-xs mt-0.5">{host.email}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
-            </div>
-            {booking.description && (
-              <div>
-                <p className="text-blue-700 text-sm">Deskripsi</p>
-                <p className="text-sm text-blue-900">{booking.description}</p>
-              </div>
-            )}
-          </div>
 
           {/* Portal Zoom Helper */}
           {isPending && (
@@ -511,9 +569,12 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
                   <ExternalLink className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h5 className="font-semibold text-purple-900 mb-1">Buat Jadwal di Portal Zoom</h5>
+                  <h5 className="font-semibold text-purple-900 mb-1">
+                    Buat Jadwal di Portal Zoom
+                  </h5>
                   <p className="text-sm text-purple-700 mb-3">
-                    Sebelum approve, buat jadwal meeting di Portal Zoom terlebih dahulu
+                    Sebelum approve, buat jadwal meeting di Portal Zoom terlebih
+                    dahulu
                   </p>
                   <a
                     href="https://zoom.us/meeting/schedule"
@@ -533,124 +594,175 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
           {isPending && (
             <>
               <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900">Assign Akun Zoom</h4>
-                
+                <h4 className="font-semibold text-gray-900">
+                  Assign Akun Zoom
+                </h4>
+
                 {/* Accounts Loading Error */}
                 {accountsError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <p className="font-semibold text-red-900 text-sm">Gagal memuat akun Zoom</p>
-                      <p className="text-red-700 text-sm mt-1">{accountsError}</p>
-                      <p className="text-red-600 text-xs mt-2">Silakan minta admin untuk memeriksa koneksi database atau konfigurasi API.</p>
+                      <p className="font-semibold text-red-900 text-sm">
+                        Gagal memuat akun Zoom
+                      </p>
+                      <p className="text-red-700 text-sm mt-1">
+                        {accountsError}
+                      </p>
+                      <p className="text-red-600 text-xs mt-2">
+                        Silakan minta admin untuk memeriksa koneksi database
+                        atau konfigurasi API.
+                      </p>
                     </div>
                   </div>
                 )}
-                
+
                 {/* Account Selection */}
                 {!accountsError && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="account">Pilih Akun Zoom *</Label>
-                    <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                      <SelectTrigger id="account">
-                        <SelectValue placeholder={zoomAccounts.length === 0 ? "Tidak ada akun tersedia" : "Pilih akun zoom..."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {zoomAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <span>{account.name}</span>
-                              {!account.is_active && (
-                                <Badge variant="secondary" className="text-xs ml-1">Nonaktif</Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    {/* Conflict Warning */}
-                    {conflictWarning && (
-                      <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>{conflictWarning}</span>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="account">Pilih Akun Zoom *</Label>
+                      <Select
+                        value={selectedAccount}
+                        onValueChange={setSelectedAccount}
+                      >
+                        <SelectTrigger id="account">
+                          <SelectValue
+                            placeholder={
+                              zoomAccounts.length === 0
+                                ? "Tidak ada akun tersedia"
+                                : "Pilih akun zoom..."
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {zoomAccounts.map((account) => (
+                            <SelectItem
+                              key={account.id}
+                              value={account.id.toString()}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span>{account.name}</span>
+                                {!account.is_active && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs ml-1"
+                                  >
+                                    Nonaktif
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Conflict Warning */}
+                      {conflictWarning && (
+                        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700 flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <span>{conflictWarning}</span>
+                        </div>
+                      )}
+
+                      {selectedAccount && !conflictWarning && (
+                        <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-700 flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <span>Akun tersedia untuk waktu yang dipilih</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hostkey Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="hostkey">Hostkey (6 Digit) *</Label>
+                      <div
+                        className={`relative rounded-md overflow-hidden ${
+                          hostkey
+                            ? "bg-orange-100 border border-orange-300"
+                            : "bg-gray-50"
+                        }`}
+                      >
+                        <Key
+                          className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${
+                            hostkey ? "text-orange-600" : "text-gray-400"
+                          }`}
+                        />
+                        <Input
+                          id="hostkey"
+                          type="text"
+                          placeholder="123456"
+                          maxLength={6}
+                          value={hostkey}
+                          onChange={(e) =>
+                            setHostkey(e.target.value.replace(/\D/g, ""))
+                          }
+                          className={`pl-10 border-0 ${
+                            hostkey
+                              ? "bg-orange-100 text-orange-900 font-semibold placeholder-orange-500"
+                              : "bg-white"
+                          }`}
+                          readOnly
+                        />
                       </div>
-                    )}
-                    
-                    {selectedAccount && !conflictWarning && (
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-700 flex items-start gap-2">
-                        <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <span>Akun tersedia untuk waktu yang dipilih</span>
+                      <p className="text-xs text-gray-500">
+                        Otomatis terisi dari akun yang dipilih
+                      </p>
+                      {hostkey && !isHostkeyValid() && (
+                        <p className="text-xs text-red-600">
+                          Hostkey harus 6 digit angka
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Meeting Link Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="link">Link Meeting Zoom *</Label>
+                      <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="link"
+                          type="url"
+                          placeholder="https://zoom.us/j/..."
+                          value={meetingLink}
+                          onChange={(e) => setMeetingLink(e.target.value)}
+                          className="pl-10"
+                        />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Hostkey Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="hostkey">Hostkey (6 Digit) *</Label>
-                    <div className={`relative rounded-md overflow-hidden ${hostkey ? 'bg-orange-100 border border-orange-300' : 'bg-gray-50'}`}>
-                      <Key className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${hostkey ? 'text-orange-600' : 'text-gray-400'}`} />
-                      <Input
-                        id="hostkey"
-                        type="text"
-                        placeholder="123456"
-                        maxLength={6}
-                        value={hostkey}
-                        onChange={(e) => setHostkey(e.target.value.replace(/\D/g, ''))}
-                        className={`pl-10 border-0 ${hostkey ? 'bg-orange-100 text-orange-900 font-semibold placeholder-orange-500' : 'bg-white'}`}
-                        readOnly
-                      />
                     </div>
-                    <p className="text-xs text-gray-500">Otomatis terisi dari akun yang dipilih</p>
-                    {hostkey && !isHostkeyValid() && (
-                      <p className="text-xs text-red-600">Hostkey harus 6 digit angka</p>
-                    )}
-                  </div>
 
-                  {/* Meeting Link Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="link">Link Meeting Zoom *</Label>
-                    <div className="relative">
-                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="link"
-                        type="url"
-                        placeholder="https://zoom.us/j/..."
-                        value={meetingLink}
-                        onChange={(e) => setMeetingLink(e.target.value)}
-                        className="pl-10"
-                      />
+                    {/* Passcode Input */}
+                    <div className="space-y-2">
+                      <Label htmlFor="passcode">Passcode *</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="passcode"
+                          type="text"
+                          placeholder="Masukkan passcode..."
+                          value={passcode}
+                          onChange={(e) => setPasscode(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Claim Host Instructions */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
+                      <p className="font-semibold mb-1">
+                        💡 Instruksi Claim Host untuk User:
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Join meeting menggunakan link di atas</li>
+                        <li>Klik "Claim Host" di bagian bawah layar Zoom</li>
+                        <li>
+                          Masukkan Hostkey:{" "}
+                          <strong>{hostkey || "______"}</strong>
+                        </li>
+                        <li>Anda akan menjadi Host meeting</li>
+                      </ol>
                     </div>
                   </div>
-
-                  {/* Passcode Input */}
-                  <div className="space-y-2">
-                    <Label htmlFor="passcode">Passcode *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="passcode"
-                        type="text"
-                        placeholder="Masukkan passcode..."
-                        value={passcode}
-                        onChange={(e) => setPasscode(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Claim Host Instructions */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-800">
-                    <p className="font-semibold mb-1">💡 Instruksi Claim Host untuk User:</p>
-                    <ol className="list-decimal list-inside space-y-1 ml-2">
-                      <li>Join meeting menggunakan link di atas</li>
-                      <li>Klik "Claim Host" di bagian bawah layar Zoom</li>
-                      <li>Masukkan Hostkey: <strong>{hostkey || '______'}</strong></li>
-                      <li>Anda akan menjadi Host meeting</li>
-                    </ol>
-                  </div>
-                </div>
                 )}
               </div>
 
@@ -669,7 +781,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
                   className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
                 >
                   <Send className="h-4 w-4" />
-                  {isProcessing ? 'Memproses...' : 'Approve & Kirim ke User'}
+                  {isProcessing ? "Memproses..." : "Approve & Kirim ke User"}
                 </Button>
                 <Button
                   variant="outline"
@@ -683,8 +795,10 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
               {/* Rejection Form */}
               <div className="border-t pt-6 space-y-4">
-                <h4 className="font-semibold text-gray-900 text-red-600">Atau Tolak Booking</h4>
-                
+                <h4 className="font-semibold text-gray-900 text-red-600">
+                  Atau Tolak Booking
+                </h4>
+
                 <div className="space-y-2">
                   <Label htmlFor="reason">Alasan Penolakan *</Label>
                   <Textarea
@@ -703,7 +817,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
                   className="w-full gap-2"
                 >
                   <Ban className="h-4 w-4" />
-                  {isProcessing ? 'Memproses...' : 'Tolak Booking'}
+                  {isProcessing ? "Memproses..." : "Tolak Booking"}
                 </Button>
               </div>
             </>
@@ -711,38 +825,48 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
           {/* Approved/Rejected Info */}
           {(isApproved || isRejected) && (
-            <div className={`border-2 rounded-lg p-4 ${
-              isApproved ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-            }`}>
-              <h4 className={`font-semibold mb-3 ${
-                isApproved ? 'text-green-900' : 'text-red-900'
-              }`}>
-                {isApproved ? 'Detail Persetujuan' : 'Detail Penolakan'}
+            <div
+              className={`border-2 rounded-lg p-4 ${
+                isApproved
+                  ? "bg-green-50 border-green-200"
+                  : "bg-red-50 border-red-200"
+              }`}
+            >
+              <h4
+                className={`font-semibold mb-3 ${
+                  isApproved ? "text-green-900" : "text-red-900"
+                }`}
+              >
+                {isApproved ? "Detail Persetujuan" : "Detail Penolakan"}
               </h4>
-              
+
               {isApproved && (
                 <div className="space-y-2 text-sm">
                   <div>
                     <p className="text-green-700">Akun Zoom</p>
                     <p className="font-semibold text-green-900">
-                      {booking.zoomAccount?.name || '-'}
+                      {booking.zoomAccount?.name || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-green-700">Link Meeting</p>
-                    <a 
-                      href={booking.meetingLink || ''} 
-                      target="_blank" 
+                    <a
+                      href={booking.meetingLink || ""}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="font-semibold text-blue-600 hover:underline flex items-center gap-1"
                     >
-                      {booking.meetingLink || '-'}
-                      {booking.meetingLink && <ExternalLink className="h-3 w-3" />}
+                      {booking.meetingLink || "-"}
+                      {booking.meetingLink && (
+                        <ExternalLink className="h-3 w-3" />
+                      )}
                     </a>
                   </div>
                   <div>
                     <p className="text-green-700">Passcode</p>
-                    <p className="font-semibold text-green-900">{booking.passcode || '-'}</p>
+                    <p className="font-semibold text-green-900">
+                      {booking.passcode || "-"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -750,7 +874,9 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
               {isRejected && (
                 <div className="text-sm">
                   <p className="text-red-700">Alasan Penolakan</p>
-                  <p className="text-red-900">{booking.rejectionReason || 'Tidak ada alasan'}</p>
+                  <p className="text-red-900">
+                    {booking.rejectionReason || "Tidak ada alasan"}
+                  </p>
                 </div>
               )}
             </div>
@@ -759,11 +885,7 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full"
-          >
+          <Button variant="outline" onClick={onClose} className="w-full">
             Tutup
           </Button>
         </div>

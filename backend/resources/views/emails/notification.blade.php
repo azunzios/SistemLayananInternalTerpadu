@@ -183,7 +183,7 @@
     <div class="container">
         <div class="header">
             <h1>SIGAP-TI BPS NTB</h1>
-            <p>Sistem Informasi Gangguan & Layanan Internal Terpadu</p>
+            <p>Sistem Layanan Internal Terpadu BPS Provinsi Nusa Tenggara Barat</p>
         </div>
         
         <div class="content">

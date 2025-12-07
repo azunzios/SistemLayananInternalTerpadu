@@ -76,14 +76,6 @@ class Ticket extends Model
     }
 
     /**
-     * Alias for assignedUser - get the technician assigned to this ticket
-     */
-    public function assignedTechnician(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_to');
-    }
-
-    /**
      * Get the category
      */
     public function category(): BelongsTo

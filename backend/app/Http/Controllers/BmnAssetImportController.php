@@ -28,12 +28,12 @@ class BmnAssetImportController extends Controller
             ], 401);
         }
         
-        // Check if user has super_admin role (roles is JSON array)
-        $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
-        if (!in_array('super_admin', $roles ?? [])) {
+        // Check if user has super_admin role
+        $activeRole = $user->role ?? 'pegawai';
+        if ($activeRole !== 'super_admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized. Only super admin can import assets.',
+                'message' => 'Unauthorized. Only super admin can check import status.',
             ], 403);
         }
 
@@ -200,9 +200,9 @@ class BmnAssetImportController extends Controller
             ], 401);
         }
         
-        // Check if user has super_admin role (roles is JSON array)
-        $roles = is_string($user->roles) ? json_decode($user->roles, true) : $user->roles;
-        if (!in_array('super_admin', $roles ?? [])) {
+        // Check if user has super_admin role
+        $activeRole = $user->role ?? 'pegawai';
+        if ($activeRole !== 'super_admin') {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized. Only super admin can download template.',

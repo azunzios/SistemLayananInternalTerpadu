@@ -87,6 +87,20 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $userData) {
+            // Set role (single) dari roles dengan priority logic
+            // Untuk multi-role, ambil role pertama yang paling tinggi prioritasnya
+            // Priority: super_admin > admin_layanan > admin_penyedia > teknisi > pegawai
+            $rolePriority = ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'pegawai'];
+            $primaryRole = 'pegawai'; // default fallback
+            
+            foreach ($rolePriority as $role) {
+                if (in_array($role, $userData['roles'])) {
+                    $primaryRole = $role;
+                    break; // Ambil yang pertama ketemu (prioritas tertinggi)
+                }
+            }
+            $userData['role'] = $primaryRole;
+
             User::updateOrCreate(
                 ['email' => $userData['email']],
                 $userData

@@ -84,6 +84,20 @@ class UserController extends Controller
 
         $validated['password'] = Hash::make($validated['password']);
 
+        // Set role (single) dari roles dengan priority logic
+        // Untuk multi-role, ambil role pertama yang paling tinggi prioritasnya
+        // Priority: super_admin > admin_layanan > admin_penyedia > teknisi > pegawai
+        $rolePriority = ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'pegawai'];
+        $primaryRole = 'pegawai'; // default fallback
+        
+        foreach ($rolePriority as $role) {
+            if (in_array($role, $validated['roles'])) {
+                $primaryRole = $role;
+                break; // Ambil yang pertama ketemu (prioritas tertinggi)
+            }
+        }
+        $validated['role'] = $primaryRole;
+
         $user = User::create($validated);
 
         // Audit log
@@ -121,13 +135,22 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
-        $user->fill($validated);
-        
-        // Ensure active role is valid if roles were changed
+        // Set role (single) dari roles dengan priority logic jika roles diupdate
         if (isset($validated['roles'])) {
-            $this->ensureActiveRoleIsValid($user);
+            // Priority: super_admin > admin_layanan > admin_penyedia > teknisi > pegawai
+            $rolePriority = ['super_admin', 'admin_layanan', 'admin_penyedia', 'teknisi', 'pegawai'];
+            $primaryRole = 'pegawai'; // default fallback
+            
+            foreach ($rolePriority as $role) {
+                if (in_array($role, $validated['roles'])) {
+                    $primaryRole = $role;
+                    break; // Ambil yang pertama ketemu (prioritas tertinggi)
+                }
+            }
+            $validated['role'] = $primaryRole;
         }
-        
+
+        $user->fill($validated);
         $user->save();
 
         // Audit log
@@ -191,25 +214,6 @@ class UserController extends Controller
     /**
      * Helper to ensure active role is in the roles array
      */
-    private function ensureActiveRoleIsValid(User $user)
-    {
-        $roles = $user->roles ?? [];
-        if (is_string($roles)) {
-            $roles = json_decode($roles, true) ?? [];
-        }
-        
-        // If roles is empty (shouldn't happen due to validation), default to pegawai
-        if (empty($roles)) {
-            $roles = ['pegawai'];
-            $user->roles = $roles;
-        }
-
-        // If current active role is not in the new roles list, reset to first available
-        if (!in_array($user->role, $roles)) {
-            $user->role = $roles[0];
-        }
-    }
-
     /**
      * Get current authenticated user
      */

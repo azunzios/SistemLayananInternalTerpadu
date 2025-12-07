@@ -59,8 +59,8 @@ class CommentController extends Controller
 
         $user = auth()->user();
 
-        // Get user's primary role
-        $userRole = $user->roles && count($user->roles) > 0 ? $user->roles[0] : ($user->role ?? 'pegawai');
+        // Get user's active role
+        $userRole = $user->role ?? 'pegawai';
 
         // Jika ini reply, check parent comment berada di ticket yang sama
         // dan max 2 level (parent tidak boleh punya parent sendiri)

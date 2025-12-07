@@ -563,7 +563,7 @@ class WorkOrderController extends Controller
     {
         // Ambil semua tiket perbaikan
         $query = Ticket::where('type', 'perbaikan')
-            ->with(['user', 'diagnosis.technician', 'assignedTechnician', 'workOrders' => function ($q) {
+            ->with(['user', 'diagnosis.technician', 'assignedUser', 'workOrders' => function ($q) {
                 $q->where('status', 'completed')->orderBy('completed_at', 'desc');
             }]);
 
@@ -610,7 +610,7 @@ class WorkOrderController extends Controller
             $workOrderCount = $ticket->workOrders->count();
             
             // Get teknisi dari assignedTo atau diagnosis
-            $technicianName = $ticket->assignedTechnician?->name 
+            $technicianName = $ticket->assignedUser?->name 
                 ?? $ticket->diagnosis?->technician?->name 
                 ?? $latestWo?->createdBy?->name 
                 ?? null;
@@ -660,7 +660,7 @@ class WorkOrderController extends Controller
     public function kartuKendaliDetail(Ticket $ticket): JsonResponse
     {
         // Load relations - termasuk semua work orders (completed atau tidak)
-        $ticket->load(['user', 'diagnosis.technician', 'assignedTechnician', 'workOrders' => function ($q) {
+        $ticket->load(['user', 'diagnosis.technician', 'assignedUser', 'workOrders' => function ($q) {
             $q->with('createdBy')->orderBy('completed_at', 'asc');
         }]);
         
@@ -768,7 +768,7 @@ class WorkOrderController extends Controller
         ])->values()->toArray();
 
         // Teknisi - dari assigned atau diagnosis
-        $technicianName = $ticket->assignedTechnician?->name ?? $diagnosis?->technician?->name ?? null;
+        $technicianName = $ticket->assignedUser?->name ?? $diagnosis?->technician?->name ?? null;
 
         $data = [
             'id' => $ticket->id,
