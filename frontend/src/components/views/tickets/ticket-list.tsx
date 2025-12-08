@@ -15,7 +15,7 @@ import {
   Wrench,
   Video,
   AlertCircle,
-  RotateCcw,
+  RotateCw,
   User as UserIcon,
   Calendar,
   ChevronLeft,
@@ -508,9 +508,9 @@ export const TicketList: React.FC<TicketListProps> = ({
               size="icon"
               title="Refresh"
             >
-              <RotateCcw
+              <RotateCw
                 className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
-                  }`}
+                }`}
               />
             </Button>
           </div>
@@ -522,7 +522,7 @@ export const TicketList: React.FC<TicketListProps> = ({
         <CardContent className="p-4">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <RotateCcw className="h-8 w-8 animate-spin text-muted-foreground" />
+              <RotateCw className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : tickets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">

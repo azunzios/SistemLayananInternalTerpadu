@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ZoomAdminReviewModal } from './zoom-admin-review-modal';
-import { AlertCircle, Search, RotateCcw, Eye, Calendar, Clock, Video, Loader, Loader2, Download } from 'lucide-react';
+import { AlertCircle, Search, RotateCw, Eye, Calendar, Clock, Video, Loader, Loader2, Download } from 'lucide-react';
 import type { Ticket, ZoomTicket } from '@/types';
 import { api } from '@/lib/api';
 
@@ -255,7 +255,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
               disabled={loading || statsLoading}
               className="h-8"
             >
-              <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+              <RotateCw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
 

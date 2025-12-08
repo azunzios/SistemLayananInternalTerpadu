@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Video, RotateCcw, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Video, RotateCw, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   getTickets,
@@ -822,7 +822,7 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
             variant="outline"
             className="gap-25"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCw className="h-4 w-4" />
           </Button>
           {!isManagement && (
             <Button

@@ -54,7 +54,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Ban,
-  RotateCcw,
+  RotateCw,
   Search,
   BadgeCheck
 } from "lucide-react";
@@ -533,7 +533,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
               size="icon"
               title="Refresh"
             >
-              <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <RotateCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
 
           </div>
@@ -578,7 +578,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                     colSpan={5}
                     className="text-center py-8 text-gray-500"
                   >
-                    <RotateCcw className="h-6 w-6 animate-spin mx-auto" />
+                    <RotateCw className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
               ) : workOrders.length === 0 ? (
