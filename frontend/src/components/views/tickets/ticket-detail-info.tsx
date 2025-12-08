@@ -23,6 +23,7 @@ import {
   Package,
   Truck,
   FileText,
+  Loader2,
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
 import { TicketDiagnosisDisplay } from "@/components/views/tickets/ticket-diagnosis-display";
@@ -81,6 +82,7 @@ interface TicketDetailInfoProps {
   comment: string;
   onCommentChange: (value: string) => void;
   onAddComment: () => void;
+  isSubmittingComment: boolean;
   getWorkOrdersByTicket: (ticketId: string) => any[];
   comments: any[];
   commentsLoading: boolean;
@@ -95,6 +97,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
   comment,
   onCommentChange,
   onAddComment,
+  isSubmittingComment,
   getWorkOrdersByTicket,
   comments,
   commentsLoading,
@@ -556,12 +559,21 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
               />
               <Button
                 onClick={onAddComment}
-                disabled={!comment.trim()}
+                disabled={!comment.trim() || isSubmittingComment}
                 size="sm"
                 className="w-full"
               >
-                <Send className="h-3 w-3 mr-2" />
-                Kirim Komentar
+                {isSubmittingComment ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                    Mengirim...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3 w-3 mr-2" />
+                    Kirim Komentar
+                  </>
+                )}
               </Button>
             </div>
           </div>

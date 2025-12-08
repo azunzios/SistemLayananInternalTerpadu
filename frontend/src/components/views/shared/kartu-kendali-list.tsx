@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -156,7 +156,7 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
               className="h-9 w-9" 
               onClick={() => fetchKartuKendali(pagination.currentPage, searchTerm)}
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>

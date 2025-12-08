@@ -13,7 +13,7 @@ import {
 import {
   AlertCircle,
   Search,
-  RotateCcw,
+  RotateCw,
   Calendar,
   Wrench,
   Video,
@@ -308,7 +308,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                 className="h-10 w-10"
                 title="Refresh"
               >
-                <RotateCcw
+                <RotateCw
                   className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
                 />
               </Button>
