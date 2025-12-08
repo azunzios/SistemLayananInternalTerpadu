@@ -835,7 +835,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
             >
               Tutup
             </Button>
-            <Button onClick={handleUpdateWorkOrder} className="min-w-[120px]">
+            <Button onClick={handleUpdateWorkOrder} className="min-w-[120px] cursor-pointer">
               Simpan Update
             </Button>
           </DialogFooter>
