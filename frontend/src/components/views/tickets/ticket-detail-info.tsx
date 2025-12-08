@@ -144,7 +144,9 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
     try {
       setLoadingDiagnosis(true);
-      const response = await api.get<{ success: boolean; data: any }>(`/tickets/${ticket.id}/diagnosis`);
+      const response = await api.get<{ success: boolean; data: any }>(
+        `/tickets/${ticket.id}/diagnosis`
+      );
       if ((response as any).success && (response as any).data) {
         setDiagnosisData((response as any).data);
       }
@@ -262,7 +264,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
             </div>
 
             {/* Tampilkan alasan penolakan jika tiket ditolak */}
-            {ticket.status === "rejected" && ticket.rejectionReason && (
+            {ticket.rejectionReason && (
               <>
                 <Separator />
                 <div className="border border-red-200 bg-red-50 p-3 rounded-lg">
@@ -312,13 +314,17 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                     {(ticket as any).assetCode && (
                       <div className="flex gap-2">
                         <span className="text-gray-500 w-32">Kode Barang:</span>
-                        <span className="font-mono">{(ticket as any).assetCode}</span>
+                        <span className="font-mono">
+                          {(ticket as any).assetCode}
+                        </span>
                       </div>
                     )}
                     {(ticket as any).assetNUP && (
                       <div className="flex gap-2">
                         <span className="text-gray-500 w-32">NUP:</span>
-                        <span className="font-mono">{(ticket as any).assetNUP}</span>
+                        <span className="font-mono">
+                          {(ticket as any).assetNUP}
+                        </span>
                       </div>
                     )}
                     {loadingAsset ? (

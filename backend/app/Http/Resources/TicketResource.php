@@ -121,6 +121,9 @@ class TicketResource extends JsonResource
 
     private function getButtonStatus()
     {
+        // Tiket yang sudah rejected atau closed tidak bisa diubah
+        $isClosed = in_array($this->status, ['rejected', 'closed']);
+        
         $diagnosis = $this->diagnosis;
         
         $hasDiagnosis = $diagnosis !== null;
@@ -139,16 +142,16 @@ class TicketResource extends JsonResource
         
         return [
             'ubahDiagnosis' => [
-                'enabled' => true,
-                'reason' => null,
+                'enabled' => !$isClosed,
+                'reason' => $isClosed ? 'Tiket sudah ditutup' : null,
             ],
             'workOrder' => [
-                'enabled' => $hasDiagnosis && $needsWorkOrder,
-                'reason' => !$hasDiagnosis ? 'Diagnosis belum diisi' : (!$needsWorkOrder ? 'Diagnosis tidak memerlukan work order' : null),
+                'enabled' => !$isClosed && $hasDiagnosis && $needsWorkOrder,
+                'reason' => $isClosed ? 'Tiket sudah ditutup' : (!$hasDiagnosis ? 'Diagnosis belum diisi' : (!$needsWorkOrder ? 'Diagnosis tidak memerlukan work order' : null)),
             ],
             'selesaikan' => [
-                'enabled' => $hasDiagnosis && (!$needsWorkOrder || $workOrdersReady),
-                'reason' => !$hasDiagnosis ? 'Diagnosis belum diisi' : ($needsWorkOrder && !$workOrdersReady ? 'Klik "Lanjutkan Perbaikan" setelah work order selesai' : null),
+                'enabled' => !$isClosed && $hasDiagnosis && (!$needsWorkOrder || $workOrdersReady),
+                'reason' => $isClosed ? 'Tiket sudah ditutup' : (!$hasDiagnosis ? 'Diagnosis belum diisi' : ($needsWorkOrder && !$workOrdersReady ? 'Klik "Lanjutkan Perbaikan" setelah work order selesai' : null)),
             ],
         ];
     }

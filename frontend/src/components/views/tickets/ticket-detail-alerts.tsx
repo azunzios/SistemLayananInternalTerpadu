@@ -73,8 +73,8 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                   <AlertCircle className="h-8 w-8 text-blue-600" />
                   <div>
                     <h3 className="text-blue-900">
-                      {ticket.type === "zoom_meeting" 
-                        ? "Tiket Zoom Meeting" 
+                      {ticket.type === "zoom_meeting"
+                        ? "Tiket Zoom Meeting"
                         : "Tiket Menunggu Review"}
                     </h3>
                     <p className="text-sm text-blue-700">
@@ -113,7 +113,8 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
       {/* Alert: Admin Layanan Close Ticket - Only for perbaikan type */}
       {effectiveRole === "admin_layanan" &&
         ticket.type === "perbaikan" &&
-        ticket.status !== "closed" && (
+        ticket.status !== "closed" &&
+        ticket.status !== "rejected" && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">

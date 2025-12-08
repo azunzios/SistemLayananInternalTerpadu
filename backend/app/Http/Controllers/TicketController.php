@@ -152,12 +152,25 @@ class TicketController extends Controller
         
         $approved = (clone $allTickets)->where('status', 'approved')->count();
         
-        $completed = (clone $allTickets)->whereIn('status', [
-            'closed', 'completed'
-        ])->count();
+        // Completed: tiket closed, completed, rejected (perbaikan & zoom), dan approved (zoom)
+        $completed = (clone $allTickets)->where(function ($q) {
+            $q->whereIn('status', ['closed', 'completed'])
+              ->orWhere(function ($q2) {
+                  // Tiket perbaikan yang rejected dianggap completed
+                  $q2->where('type', 'perbaikan')->where('status', 'rejected');
+              })
+              ->orWhere(function ($q3) {
+                  // Tiket zoom yang approved dianggap completed
+                  $q3->where('type', 'zoom_meeting')->where('status', 'approved');
+              })
+              ->orWhere(function ($q4) {
+                  // Tiket zoom yang rejected dianggap completed
+                  $q4->where('type', 'zoom_meeting')->where('status', 'rejected');
+              });
+        })->count();
         
         $rejected = (clone $allTickets)->whereIn('status', [
-            'closed_unrepairable', 'rejected', 'cancelled'
+            'closed_unrepairable', 'cancelled'
         ])->count();
 
         // Breakdown by type
@@ -316,8 +329,22 @@ class TicketController extends Controller
             ->where('status', 'pending_review')
             ->count();
         
-        // Closed tiket
-        $closedCount = Ticket::where('status', 'closed')->count();
+        // Closed tiket: status closed + perbaikan rejected + zoom approved + zoom rejected
+        $closedCount = Ticket::where(function ($q) {
+            $q->where('status', 'closed')
+              ->orWhere(function ($q2) {
+                  // Tiket perbaikan yang rejected dianggap closed
+                  $q2->where('type', 'perbaikan')->where('status', 'rejected');
+              })
+              ->orWhere(function ($q3) {
+                  // Tiket zoom yang approved dianggap closed
+                  $q3->where('type', 'zoom_meeting')->where('status', 'approved');
+              })
+              ->orWhere(function ($q4) {
+                  // Tiket zoom yang rejected dianggap closed
+                  $q4->where('type', 'zoom_meeting')->where('status', 'rejected');
+              });
+        })->count();
         $closureRate = $total > 0 ? round(($closedCount / $total) * 100, 2) : 0;
         
         // Last 7 days trend data
@@ -1068,6 +1095,7 @@ class TicketController extends Controller
         $oldStatus = $ticket->status;
         
         // Simpan alasan penolakan di rejection_reason untuk semua tipe tiket
+        // Status tetap rejected agar jelas, tapi diperlakukan sebagai closed (tidak bisa diubah)
         $ticket->rejection_reason = $validated['reason'];
         $ticket->status = 'rejected';
         $ticket->save();
