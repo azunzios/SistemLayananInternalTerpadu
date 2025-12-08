@@ -561,8 +561,9 @@ class WorkOrderController extends Controller
      */
     public function kartuKendali(Request $request): JsonResponse
     {
-        // Ambil semua tiket perbaikan
+        // Ambil semua tiket perbaikan kecuali yang rejected
         $query = Ticket::where('type', 'perbaikan')
+            ->where('status', '!=', 'rejected')
             ->with(['user', 'diagnosis.technician', 'assignedUser', 'workOrders' => function ($q) {
                 $q->where('status', 'completed')->orderBy('completed_at', 'desc');
             }]);
@@ -735,6 +736,7 @@ class WorkOrderController extends Controller
                 $allSpareparts[] = [
                     'name' => $item['name'] ?? $item['sparepart_name'] ?? '-',
                     'quantity' => $item['quantity'] ?? $item['qty'] ?? 1,
+                    'unit' => $item['unit'] ?? '-',
                     'completedAt' => $wo->completed_at?->toISOString(),
                     'technicianName' => $wo->createdBy?->name,
                 ];
@@ -839,7 +841,7 @@ class WorkOrderController extends Controller
             if (is_string($items)) {
                 $items = json_decode($items, true) ?? [];
             }
-            $itemsText = collect($items)->map(fn($i) => ($i['name'] ?? $i['item_name'] ?? '') . ' x' . ($i['quantity'] ?? 1))->implode(', ');
+            $itemsText = collect($items)->map(fn($i) => ($i['name'] ?? $i['item_name'] ?? '') . ' ' . ($i['quantity'] ?? 1) . ' ' . ($i['unit'] ?? ''))->implode(', ');
 
             $rows[] = [
                 'no' => $no++,

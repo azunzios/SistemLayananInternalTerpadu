@@ -53,6 +53,7 @@ interface DiagnosisData {
 interface SparepartItem {
   name: string;
   quantity: number;
+  unit: string;
   completedAt: string | null;
   technicianName: string | null;
 }
@@ -319,9 +320,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
         <div class="section">
           <div class="section-title">Suku Cadang</div>
           <table>
-            <thead><tr><th>Item</th><th style="width:60px;text-align:right">Qty</th></tr></thead>
+            <thead><tr><th>Item</th><th style="width:60px;text-align:right">Qty</th><th style="width:80px">Unit</th></tr></thead>
             <tbody>
-              ${item.spareparts.map((p) => `<tr><td>${p.name}</td><td style="text-align:right">${p.quantity}</td></tr>`).join('')}
+              ${item.spareparts.map((p) => `<tr><td>${p.name}</td><td style="text-align:right">${p.quantity}</td><td>${p.unit || '-'}</td></tr>`).join('')}
             </tbody>
           </table>
         </div>
@@ -655,7 +656,8 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                       <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         <tr>
                           <th className="px-4 py-3 border-b">Item</th>
-                          <th className="px-4 py-3 border-b text-right w-24">Qty</th>
+                          <th className="px-4 py-3 border-b text-right w-20">Qty</th>
+                          <th className="px-4 py-3 border-b w-24">Unit</th>
                           <th className="px-4 py-3 border-b text-right w-32 hidden sm:table-cell">Selesai</th>
                         </tr>
                       </thead>
@@ -665,6 +667,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                             <td className="px-4 py-3 text-slate-700">{part.name}</td>
                             <td className="px-4 py-3 text-right font-medium text-slate-900">
                               {part.quantity}
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">
+                              {part.unit || '-'}
                             </td>
                             <td className="px-4 py-3 text-right text-xs text-slate-500 hidden sm:table-cell">
                               {formatDate(part.completedAt)}

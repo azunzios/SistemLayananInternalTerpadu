@@ -832,6 +832,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
             <Button
               variant="outline"
               onClick={() => setShowDetailDialog(false)}
+              className="cursor-pointer"
             >
               Tutup
             </Button>
@@ -888,10 +889,10 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelStatusChange}>
+            <AlertDialogCancel onClick={handleCancelStatusChange} className="cursor-pointer">
               Batal
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmStatusChange}>
+            <AlertDialogAction onClick={handleConfirmStatusChange} className="cursor-pointer">
               Ya, Ubah Status
             </AlertDialogAction>
           </AlertDialogFooter>
