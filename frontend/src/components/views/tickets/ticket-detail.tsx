@@ -465,10 +465,11 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             <Button
               variant="outline"
               onClick={() => adminDialogs.setShowAssignDialog(false)}
+              className="cursor-pointer"
             >
               Batal
             </Button>
-            <Button onClick={handleAssign}>Assign</Button>
+            <Button onClick={handleAssign} className="cursor-pointer">Assign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -488,10 +489,10 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
             Lanjutkan?
           </p>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleStatusChangeOnDiagnosisSubmit}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
             >
               Lanjutkan
             </AlertDialogAction>
@@ -516,12 +517,13 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
               : "Mulai dengan mengisi form diagnosis untuk menentukan kondisi barang dan opsi perbaikan."}
           </p>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setShowDiagnosisConfirm(false);
                 diagnosaDialog.setShowDiagnosaDialog(true);
               }}
+              className="cursor-pointer"
             >
               Lanjutkan
             </AlertDialogAction>

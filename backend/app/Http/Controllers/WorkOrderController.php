@@ -561,11 +561,15 @@ class WorkOrderController extends Controller
      */
     public function kartuKendali(Request $request): JsonResponse
     {
-        // Ambil semua tiket perbaikan kecuali yang rejected
+        // Ambil semua tiket perbaikan kecuali yang rejected dan direct_repair
         $query = Ticket::where('type', 'perbaikan')
             ->where('status', '!=', 'rejected')
+            ->whereHas('diagnosis', function ($q) {
+                $q->where('repair_type', '!=', 'direct_repair');
+            })
             ->with(['user', 'diagnosis.technician', 'assignedUser', 'workOrders' => function ($q) {
-                $q->where('status', 'completed')->orderBy('completed_at', 'desc');
+                $q->where('status', 'completed')
+                  ->orderBy('completed_at', 'desc');
             }]);
 
         // Search
@@ -592,7 +596,13 @@ class WorkOrderController extends Controller
         $tickets = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
         // Transform data - 1 entry per tiket
+        // Filter hanya tiket yang punya work order completed (bukan unsuccessful)
         $data = $tickets->map(function ($ticket) {
+            // Skip tiket yang tidak punya work order completed
+            if ($ticket->workOrders->isEmpty()) {
+                return null;
+            }
+            
             $formData = is_string($ticket->form_data) ? json_decode($ticket->form_data, true) : ($ticket->form_data ?? []);
             
             $assetCode = $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket->kode_barang ?? null;
@@ -642,7 +652,7 @@ class WorkOrderController extends Controller
                 'requesterId' => $ticket->user_id,
                 'requesterName' => $ticket->user?->name,
             ];
-        });
+        })->filter()->values();
 
         return response()->json([
             'success' => true,
@@ -823,6 +833,7 @@ class WorkOrderController extends Controller
      */
     public function exportKartuKendali(Request $request)
     {
+        // Hanya ambil work order yang benar-benar completed (bukan unsuccessful)
         $workOrders = WorkOrder::where('status', 'completed')
             ->with(['ticket.user', 'ticket.diagnosis.technician', 'createdBy'])
             ->orderBy('completed_at', 'desc')

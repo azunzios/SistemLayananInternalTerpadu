@@ -487,7 +487,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
 
         <DialogFooter className="border-t px-6 py-4 flex-shrink-0">
           <div className="flex gap-2 w-full justify-end">
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="cursor-pointer">
               <Send className="h-4 w-4 mr-2" />
               Simpan Diagnosis
             </Button>
@@ -510,8 +510,8 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubmit}>
+            <AlertDialogCancel className="cursor-pointer">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSubmit} className="cursor-pointer">
               {confirmationType === "change" ? "Ya, Ubah Diagnosis" : "Ya, Simpan Diagnosis"}
             </AlertDialogAction>
           </AlertDialogFooter>

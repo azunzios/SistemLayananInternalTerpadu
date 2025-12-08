@@ -276,10 +276,8 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       return;
     }
 
-    if (updateForm.status === "completed" && selectedWO.type === "vendor" && !updateForm.vendorCompletionNotes.trim()) {
-      toast.error("Catatan penyelesaian wajib diisi untuk vendor");
-      return;
-    }
+    // Catatan penyelesaian vendor tidak wajib diisi
+    // Validasi dihapus untuk vendor completion notes
 
     try {
       const updates: any = {

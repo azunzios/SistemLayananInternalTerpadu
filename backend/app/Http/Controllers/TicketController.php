@@ -1316,11 +1316,11 @@ class TicketController extends Controller
 
         $total = $query->count();
         
-        // Completed: status IN {closed, selesai, approved}
-        // Untuk zoom meeting: approved = selesai
-        // Untuk perbaikan: closed/selesai = selesai
+        // Completed: status IN {closed, selesai, approved, rejected, closed_unrepairable, ditolak, dibatalkan, cancelled}
+        // Untuk zoom meeting: approved/rejected = selesai
+        // Untuk perbaikan: closed/selesai/rejected = selesai
         $completed = (clone $query)->whereIn('status', [
-            'closed', 'selesai', 'approved'
+            'closed', 'selesai', 'approved', 'rejected', 'closed_unrepairable', 'ditolak', 'dibatalkan', 'cancelled'
         ])->count();
         
         // Rejected: status IN {closed_unrepairable, ditolak, rejected, dibatalkan, cancelled}
@@ -1328,8 +1328,8 @@ class TicketController extends Controller
             'closed_unrepairable', 'ditolak', 'rejected', 'dibatalkan', 'cancelled'
         ])->count();
         
-        // Sedang proses: total - completed - rejected
-        $inProgress = $total - $completed - $rejected;
+        // Sedang proses: total - completed
+        $inProgress = $total - $completed;
         
         // Completion rate
         $completionRate = $total > 0 ? ($completed / $total) * 100 : 0;

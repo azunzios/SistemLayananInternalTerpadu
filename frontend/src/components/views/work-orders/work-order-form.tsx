@@ -568,7 +568,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
 
         {/* Action Buttons - Sticky Footer */}
         <div className="flex flex-col gap-3 px-6 py-4 border-t bg-white flex-shrink-0">
-          <Button type="submit" form="work-order-form" disabled={isSubmitting} className="w-full">
+          <Button type="submit" form="work-order-form" disabled={isSubmitting} className="w-full cursor-pointer">
             {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
             {isSubmitting ? "Menyimpan..." : "Simpan Work Order"}
           </Button>
@@ -577,7 +577,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
           {workOrders.length > 0 && (
             <Button
               type="button"
-              className="bg-green-600 hover:bg-green-700 text-white w-full"
+              className="bg-green-600 hover:bg-green-700 text-white w-full cursor-pointer"
               onClick={() => setShowContinueConfirm(true)}
               disabled={isSubmitting || !workOrders.every(wo => ['completed', 'unsuccessful'].includes(wo.status))}
             >
@@ -600,11 +600,12 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                     variant="outline"
                     onClick={() => setShowContinueConfirm(false)}
                     disabled={isSubmitting}
+                    className="cursor-pointer"
                   >
                     Batal
                   </Button>
                   <Button
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                     onClick={handleContinueRepair}
                     disabled={isSubmitting}
                   >
@@ -641,11 +642,11 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
               )}
             </div>
             <div className="flex gap-3 justify-end mt-6">
-              <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+              <AlertDialogCancel disabled={isSubmitting} className="cursor-pointer">Batal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmedSubmit}
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
               >
                 {isSubmitting && <Spinner className="h-4 w-4 mr-2" />}
                 Ya, Simpan Work Order
