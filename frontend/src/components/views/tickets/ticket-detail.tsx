@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TicketProgressTracker } from "./ticket-progress-tracker";
@@ -84,6 +84,9 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
   const workOrderDialog = useWorkOrderDialogs();
   const { comment, setComment } = useCommentState();
   const { showZoomReviewModal, setShowZoomReviewModal } = useZoomReviewModal();
+  
+  // State untuk prevent double submit komentar
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const {
     comments,
     loading: commentsLoading,
@@ -267,6 +270,13 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
       toast.error("Komentar tidak boleh kosong");
       return;
     }
+    
+    // Prevent double submission
+    if (isSubmittingComment) {
+      return;
+    }
+    
+    setIsSubmittingComment(true);
     try {
       await addComment(ticketId, comment);
       toast.success("Komentar berhasil dikirim");
@@ -274,6 +284,8 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     } catch (error) {
       console.error("Error adding comment:", error);
       toast.error("Gagal mengirim komentar");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -359,6 +371,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         comment={comment}
         onCommentChange={setComment}
         onAddComment={handleAddComment}
+        isSubmittingComment={isSubmittingComment}
         getWorkOrdersByTicket={getWorkOrdersByTicket}
         comments={comments}
         commentsLoading={commentsLoading}
