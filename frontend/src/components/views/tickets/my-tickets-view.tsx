@@ -99,24 +99,12 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       // Add status filter based on filterStatus dan tipe tiket
       if (filterStatus !== "all") {
         if (effectiveType === "perbaikan" || effectiveType === "all") {
-          // Perbaikan: pending=submitted, diproses=assigned/in_progress/on_hold/waiting_for_submitter, selesai=closed
-          if (filterStatus === "pending") {
-            query.push(`status=submitted`);
-          } else if (filterStatus === "inProgress") {
-            query.push(
-              `status=assigned,in_progress,on_hold,waiting_for_submitter`
-            );
-          } else if (filterStatus === "completed") {
-            query.push(`status=closed`);
-          }
+          // Perbaikan: submitted, assigned, in_progress, on_hold, closed
+          query.push(`status=${filterStatus}`);
         }
         if (effectiveType === "zoom_meeting") {
-          // Zoom: pending=pending_review, selesai=approved/rejected/cancelled
-          if (filterStatus === "pending") {
-            query.push(`status=pending_review`);
-          } else if (filterStatus === "completed") {
-            query.push(`status=approved,rejected,cancelled`);
-          }
+          // Zoom: pending_review, approved, rejected (no closed)
+          query.push(`status=${filterStatus}`);
         }
       }
 
@@ -254,33 +242,48 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
 
             {/* 3. Filter Status - Fixed width & tidak menyusut */}
             <Select
-              value={filterType === "all" ? "all" : filterStatus}
+              value={filterStatus}
               onValueChange={setFilterStatus}
-              disabled={filterType === "all"}
+              disabled={!isTeknisi && filterType === "all"}
             >
               <SelectTrigger
                 className="h-10 text-sm w-36 flex-shrink-0"
                 title={
-                  filterType === "all"
+                  !isTeknisi && filterType === "all"
                     ? "Pilih tipe tiket terlebih dahulu"
                     : undefined
                 }
               >
-                <SelectValue />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 {filterType === "perbaikan" ? (
                   <>
                     <SelectItem value="all">Semua</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="inProgress">Diproses</SelectItem>
-                    <SelectItem value="completed">Selesai</SelectItem>
+                    <SelectItem value="submitted">Submitted</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="waiting_for_submitter">
+                      Waiting for Submitter
+                    </SelectItem>
+                    <SelectItem value="closed">Closed</SelectItem>
                   </>
                 ) : filterType === "zoom_meeting" ? (
                   <>
                     <SelectItem value="all">Semua</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="completed">Selesai</SelectItem>
+                    <SelectItem value="pending_review">
+                      Pending Review
+                    </SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </>
+                ) : isTeknisi ? (
+                  <>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="inProgress">In Progress</SelectItem>
+                    <SelectItem value="onHold">On Hold</SelectItem>
+                    <SelectItem value="completed">Closed</SelectItem>
                   </>
                 ) : (
                   <SelectItem value="all">Semua</SelectItem>

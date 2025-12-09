@@ -176,29 +176,17 @@ export const TicketList: React.FC<TicketListProps> = ({
           // Admin penyedia: perbaikan only
           if (filterStatus === "submitted") {
             query.push(`status=submitted`);
-          } else if (filterStatus === "processing") {
-            query.push(
-              `statuses=assigned,in_progress,on_hold,waiting_for_submitter`
-            );
+          } else if (filterStatus === "on_hold") {
+            query.push(`status=on_hold`);
           } else if (filterStatus === "closed") {
             query.push(`status=closed`);
           }
         } else if (filterType === "perbaikan") {
-          // Perbaikan: submitted, in_progress (maps to multiple), closed
-          if (filterStatus === "in_progress") {
-            query.push(
-              `statuses=assigned,in_progress,on_hold,waiting_for_submitter`
-            );
-          } else {
-            query.push(`status=${filterStatus}`);
-          }
+          // Perbaikan: submitted, assigned, in_progress, on_hold, closed
+          query.push(`status=${filterStatus}`);
         } else if (filterType === "zoom_meeting") {
-          // Zoom: pending_review, completed (maps to approved,rejected,cancelled)
-          if (filterStatus === "completed") {
-            query.push(`statuses=approved,rejected,cancelled`);
-          } else {
-            query.push(`status=${filterStatus}`);
-          }
+          // Zoom: pending_review, approved, rejected, closed
+          query.push(`status=${filterStatus}`);
         } else {
           query.push(`status=${filterStatus}`);
         }
@@ -407,7 +395,6 @@ export const TicketList: React.FC<TicketListProps> = ({
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-3 items-center">
-
             {/* Search - Wrapper dikunci h-10 */}
             <div className="relative flex-[2] h-10">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -434,11 +421,11 @@ export const TicketList: React.FC<TicketListProps> = ({
                   <SelectItem value="submitted">
                     Pending ({statsLoading ? "..." : stats.pending})
                   </SelectItem>
-                  <SelectItem value="processing">
-                    Diproses ({statsLoading ? "..." : stats.in_progress})
+                  <SelectItem value="on_hold">
+                    On Hold ({statsLoading ? "..." : stats.in_progress})
                   </SelectItem>
                   <SelectItem value="closed">
-                    Selesai ({statsLoading ? "..." : stats.completed})
+                    Closed ({statsLoading ? "..." : stats.completed})
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -457,31 +444,41 @@ export const TicketList: React.FC<TicketListProps> = ({
                   </SelectContent>
                 </Select>
 
-                <Select
-                  value={filterStatus}
-                  onValueChange={setFilterStatus}
-                >
-                  <SelectTrigger
-                    className="!h-10 text-sm flex-1"
-                  >
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="!h-10 text-sm flex-1">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     {filterType === "perbaikan" ? (
                       <>
                         <SelectItem value="all">Semua</SelectItem>
-                        <SelectItem value="submitted">Pending</SelectItem>
-                        <SelectItem value="in_progress">Diproses</SelectItem>
-                        <SelectItem value="closed">Selesai</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="assigned">Assigned</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="on_hold">On Hold</SelectItem>
+                        <SelectItem value="waiting_for_submitter">
+                          Waiting for Submitter
+                        </SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
                       </>
                     ) : filterType === "zoom_meeting" ? (
                       <>
                         <SelectItem value="all">Semua</SelectItem>
-                        <SelectItem value="pending_review">Pending</SelectItem>
-                        <SelectItem value="completed">Selesai</SelectItem>
+                        <SelectItem value="pending_review">
+                          Pending Review
+                        </SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
                       </>
                     ) : (
-                      <SelectItem value="all">Semua</SelectItem>
+                      <>
+                        <SelectItem value="all">Semua</SelectItem>
+                        <SelectItem value="submitted">Pending</SelectItem>
+                        <SelectItem value="in_progress">Diproses</SelectItem>
+                        <SelectItem value="approved">Disetujui</SelectItem>
+                        <SelectItem value="closed">Selesai</SelectItem>
+                        <SelectItem value="rejected">Ditolak</SelectItem>
+                      </>
                     )}
                   </SelectContent>
                 </Select>
@@ -509,7 +506,8 @@ export const TicketList: React.FC<TicketListProps> = ({
               title="Refresh"
             >
               <RotateCw
-                className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
+                className={`h-4 w-4 ${
+                  loading || statsLoading ? "animate-spin" : ""
                 }`}
               />
             </Button>
@@ -628,7 +626,6 @@ export const TicketList: React.FC<TicketListProps> = ({
                 disabled={
                   !pagination || pagination.current_page <= 1 || loading
                 }
-                className="cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Sebelumnya
@@ -644,7 +641,6 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!pagination || !pagination.has_more || loading}
-                className="cursor-pointer"
               >
                 Selanjutnya
                 <ChevronRight className="h-4 w-4 ml-1" />
