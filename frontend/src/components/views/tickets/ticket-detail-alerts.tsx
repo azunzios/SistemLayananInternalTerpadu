@@ -22,6 +22,7 @@ import {
 import type { User, Ticket } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { FeedbackModal } from "./feedback-modal";
 
 interface TicketDetailAlertsProps {
   ticket: Ticket;
@@ -59,6 +60,8 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
   const [showPegawaiCloseDialog, setShowPegawaiCloseDialog] = useState(false);
   const [pegawaiCloseUnderstand, setPegawaiCloseUnderstand] = useState(false);
   const [isClosingPegawaiTicket, setIsClosingPegawaiTicket] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  
   return (
     <>
       {/* ============== ALERTS & NOTIFICATIONS FOR ADMIN LAYANAN ============== */}
@@ -113,8 +116,7 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
       {/* Alert: Admin Layanan Close Ticket - Only for perbaikan type */}
       {effectiveRole === "admin_layanan" &&
         ticket.type === "perbaikan" &&
-        ticket.status !== "closed" &&
-        ticket.status !== "rejected" && (
+        ticket.status === "waiting_for_submitter" && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -254,7 +256,7 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                   <div className="flex gap-2 pt-2">
                     <Button
                       onClick={onShowDiagnosaDialog}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex-1 cursor-pointer"
                       disabled={!diagnosaEnabled}
                       title={
                         !diagnosaEnabled ? "Isi diagnosis terlebih dahulu" : ""
@@ -429,6 +431,36 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
             </Card>
           );
         })()}
+
+      {/* Alert: Pegawai - Closed tiket belum ada feedback */}
+      {effectiveRole === "pegawai" &&
+        ticket.type === "perbaikan" &&
+        ticket.status === "closed" &&
+        !((ticket as any).feedback) && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-8 w-8 text-amber-600" />
+                  <div>
+                    <h3 className="font-semibold text-amber-900">
+                      Tiket Telah Selesai
+                    </h3>
+                    <p className="text-sm text-amber-700">
+                      Berikan feedback Anda untuk membantu kami meningkatkan layanan
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowFeedbackModal(true)}
+                  className="bg-amber-600 hover:bg-amber-700 cursor-pointer"
+                >
+                  Isi Feedback
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Alert: Teknisi - On Hold removed - now handled by TeknisiWorkflow component */}
 
@@ -635,7 +667,13 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                   toast.success("Tiket berhasil ditutup");
                   setShowPegawaiCloseDialog(false);
                   setPegawaiCloseUnderstand(false);
-                  onUpdate?.();
+                  
+                  // Refresh ticket data first, then show feedback modal
+                  await onUpdate?.();
+                  
+                  // Show feedback modal after closing ticket
+                  console.log("🔔 Opening feedback modal for ticket:", ticket.id);
+                  setShowFeedbackModal(true);
                 } catch (error: any) {
                   console.error("Failed to close ticket:", error);
                   toast.error(
@@ -653,6 +691,17 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        ticketId={ticket.id}
+        ticketNumber={ticket.ticketNumber}
+        onSuccess={() => {
+          onUpdate?.();
+        }}
+      />
     </>
   );
 };

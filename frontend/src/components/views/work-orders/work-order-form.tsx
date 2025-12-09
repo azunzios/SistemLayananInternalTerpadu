@@ -424,7 +424,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                           <div className="flex-1 space-y-3">
                             <div className="grid grid-cols-12 gap-3">
                               <div className="col-span-12">
-                                <Label htmlFor={`name-${sparepart.id}`}>
+                                <Label htmlFor={`name-${sparepart.id}`} className="mb-2 block">
                                   Nama Sparepart {index + 1}
                                 </Label>
                                 <Input
@@ -442,7 +442,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                                 />
                               </div>
                               <div className="col-span-6">
-                                <Label htmlFor={`quantity-${sparepart.id}`}>
+                                <Label htmlFor={`quantity-${sparepart.id}`} className="mb-2 block">
                                   Jumlah
                                 </Label>
                                 <Input
@@ -462,7 +462,7 @@ export const WorkOrderForm: React.FC<WorkOrderFormProps> = ({
                                 />
                               </div>
                               <div className="col-span-6">
-                                <Label htmlFor={`unit-${sparepart.id}`}>
+                                <Label htmlFor={`unit-${sparepart.id}`} className="mb-2 block">
                                   Unit
                                 </Label>
                                 <Input

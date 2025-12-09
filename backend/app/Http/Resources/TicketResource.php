@@ -67,6 +67,18 @@ class TicketResource extends JsonResource
             // Work Orders
             'workOrders' => WorkOrderResource::collection($this->whenLoaded('workOrders')),
             
+            // Feedback
+            'feedback' => $this->whenLoaded('feedback', function () {
+                return $this->feedback ? [
+                    'id' => $this->feedback->id,
+                    'userId' => $this->feedback->user_id,
+                    'userName' => $this->feedback->user?->name,
+                    'rating' => $this->feedback->rating,
+                    'feedbackText' => $this->feedback->feedback_text,
+                    'createdAt' => $this->feedback->created_at?->toIso8601String(),
+                ] : null;
+            }),
+            
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
         ];

@@ -124,7 +124,7 @@ class TicketController extends Controller
         // Check authorization
         $this->authorizeTicketAccess($ticket);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user', 'diagnosis.technician', 'workOrders'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user', 'diagnosis.technician', 'workOrders', 'feedback.user'));
     }
 
     /**
@@ -1718,5 +1718,93 @@ class TicketController extends Controller
         return response()->download($tempFile, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Store feedback for a ticket
+     * POST /tickets/{ticket}/feedback
+     */
+    public function storeFeedback(Request $request, Ticket $ticket)
+    {
+        // Validate request
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'feedback_text' => 'nullable|string|max:1000',
+        ]);
+
+        // Check if user is the ticket creator
+        if ($ticket->user_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses untuk memberikan feedback pada tiket ini',
+            ], 403);
+        }
+
+        // Check if ticket is closed
+        if (!in_array($ticket->status, ['closed', 'selesai', 'completed'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Feedback hanya dapat diberikan untuk tiket yang sudah selesai',
+            ], 400);
+        }
+
+        // Check if feedback already exists
+        if ($ticket->feedback) {
+            // Update existing feedback
+            $ticket->feedback->update([
+                'rating' => $validated['rating'],
+                'feedback_text' => $validated['feedback_text'],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Feedback berhasil diperbarui',
+                'data' => $ticket->feedback,
+            ], 200);
+        }
+
+        // Create new feedback
+        $feedback = $ticket->feedback()->create([
+            'user_id' => auth()->id(),
+            'rating' => $validated['rating'],
+            'feedback_text' => $validated['feedback_text'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Terima kasih atas feedback Anda',
+            'data' => $feedback,
+        ], 201);
+    }
+
+    /**
+     * Get feedback for a ticket
+     * GET /tickets/{ticket}/feedback
+     */
+    public function getFeedback(Ticket $ticket)
+    {
+        $feedback = $ticket->feedback()->with('user')->first();
+
+        if (!$feedback) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Feedback tidak ditemukan',
+                'data' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $feedback->id,
+                'ticket_id' => $feedback->ticket_id,
+                'user_id' => $feedback->user_id,
+                'user_name' => $feedback->user->name,
+                'rating' => $feedback->rating,
+                'feedback_text' => $feedback->feedback_text,
+                'created_at' => $feedback->created_at?->toISOString(),
+                'updated_at' => $feedback->updated_at?->toISOString(),
+            ],
+        ], 200);
     }
 }

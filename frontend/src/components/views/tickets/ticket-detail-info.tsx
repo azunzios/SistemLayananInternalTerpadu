@@ -24,6 +24,7 @@ import {
   Truck,
   FileText,
   Loader2,
+  Star,
 } from "lucide-react";
 import type { User, Ticket } from "@/types";
 import { TicketDiagnosisDisplay } from "@/components/views/tickets/ticket-diagnosis-display";
@@ -450,6 +451,68 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
                   </div>
                 );
               })()}
+
+            {/* Feedback Section */}
+            {ticket.type === "perbaikan" &&
+              ["closed", "selesai", "completed"].includes(ticket.status) &&
+              (ticket as any).feedback && (
+                <div>
+                  <h4 className="text-sm mb-3 flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Feedback Pelanggan
+                  </h4>
+                  <div className="border rounded-lg p-4 bg-gradient-to-br from-amber-50 to-yellow-50">
+                    <div className="space-y-3">
+                      {/* Rating Stars */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Rating:
+                        </span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-5 w-5 ${
+                                star <= ((ticket as any).feedback?.rating || 0)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {(ticket as any).feedback?.rating}/5
+                        </span>
+                      </div>
+
+                      {/* Feedback Text */}
+                      {(ticket as any).feedback?.feedbackText && (
+                        <div className="bg-white rounded-lg p-3 border border-amber-200">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {(ticket as any).feedback.feedbackText}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Feedback Info */}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>
+                          oleh {(ticket as any).feedback?.userName || "User"}
+                        </span>
+                        <span>
+                          {new Date(
+                            (ticket as any).feedback?.createdAt
+                          ).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             <div>
               <h4 className="text-sm mb-3">Diskusi</h4>

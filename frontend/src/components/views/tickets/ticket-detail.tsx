@@ -107,6 +107,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         console.log("📝 Ticket Detail fetched:", ticketData);
       } catch (error) {
         console.error("Failed to fetch ticket detail:", error);
+        toast.error("Gagal memuat detail tiket");
       } finally {
         setLoadingDetail(false);
       }
@@ -119,7 +120,7 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
     fetchComments(ticketId);
   }, [ticketId, fetchComments]);
 
-  const ticket = ticketDetail || tickets.find((t) => t.id === ticketId);
+  const ticket = ticketDetail || tickets.find((t) => t.id === Number(ticketId));
 
   // === COMPUTED VALUES (useMemo must be before conditional returns) ===
   const [technicianStats, setTechnicianStats] = React.useState<

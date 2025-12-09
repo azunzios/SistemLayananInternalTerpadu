@@ -89,6 +89,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tickets/{ticket}/comments', [CommentController::class, 'index']);
     Route::post('/tickets/{ticket}/comments', [CommentController::class, 'store']);
 
+    // Ticket Feedback Routes
+    Route::post('/tickets/{ticket}/feedback', [TicketController::class, 'storeFeedback']);
+    Route::get('/tickets/{ticket}/feedback', [TicketController::class, 'getFeedback']);
+
     // Ticket Diagnosis Routes
     Route::get('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'show']);
     Route::post('/tickets/{ticket}/diagnosis', [TicketDiagnosisController::class, 'store']);
