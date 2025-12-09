@@ -777,12 +777,22 @@ class WorkOrderController extends Controller
             ];
         }
         
-        // Pending work orders (belum completed)
-        $pendingWorkOrders = $allWorkOrders->where('status', '!=', 'completed')->map(fn($wo) => [
+        // Pending work orders (belum completed, kecualikan unsuccessful)
+        $pendingWorkOrders = $allWorkOrders->whereNotIn('status', ['completed', 'unsuccessful'])->map(fn($wo) => [
             'id' => $wo->id,
             'type' => $wo->type,
             'status' => $wo->status,
             'createdAt' => $wo->created_at?->toISOString(),
+        ])->values()->toArray();
+
+        // Unsuccessful work orders
+        $unsuccessfulWorkOrders = $allWorkOrders->where('status', 'unsuccessful');
+        $unsuccessfulWorkOrdersData = $unsuccessfulWorkOrders->map(fn($wo) => [
+            'id' => $wo->id,
+            'type' => $wo->type,
+            'status' => $wo->status,
+            'createdAt' => $wo->created_at?->toISOString(),
+            'updatedAt' => $wo->updated_at?->toISOString(),
         ])->values()->toArray();
 
         // Teknisi - dari assigned atau diagnosis
@@ -810,7 +820,9 @@ class WorkOrderController extends Controller
             'licenses' => $allLicenses,
             'totalWorkOrders' => $allWorkOrders->count(),
             'completedWorkOrders' => $completedWorkOrders->count(),
+            'unsuccessfulWorkOrders' => $unsuccessfulWorkOrders->count(),
             'pendingWorkOrders' => $pendingWorkOrders,
+            'unsuccessfulWorkOrdersList' => $unsuccessfulWorkOrdersData,
             // Diagnosis data
             'diagnosis' => $diagnosisData,
             // Requester info
@@ -873,7 +885,7 @@ class WorkOrderController extends Controller
                 'license_name' => $wo->license_name ?? '-',
                 'license_description' => $wo->license_description ?? '-',
                 'completion_notes' => $wo->completion_notes ?? '-',
-                'completed_at' => $wo->completed_at?->format('d/m/Y H:i') ?? '-',
+                'completed_at' => $wo->completed_at?->timezone('Asia/Jakarta')->format('d/m/Y H:i') ?? '-',
             ];
         }
 

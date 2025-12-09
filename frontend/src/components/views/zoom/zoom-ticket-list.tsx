@@ -59,7 +59,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
 
       // Zoom hanya punya 3 status: pending_review, approved, rejected
       const pending = statsData.pending || 0;
-      const approved = (statsData.completed || 0); // approved termasuk dalam completed di backend
+      const approved = (statsData.approved || 0);
       const rejected = statsData.rejected || 0;
 
       setStats({

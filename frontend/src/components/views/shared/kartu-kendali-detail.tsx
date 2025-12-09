@@ -84,6 +84,15 @@ interface PendingWorkOrder {
   createdAt: string | null;
 }
 
+// Unsuccessful work order
+interface UnsuccessfulWorkOrder {
+  id: number;
+  type: string;
+  status: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 // Data detail kartu kendali - info tiket perbaikan
 interface KartuKendaliDetailData {
   id: number;
@@ -105,7 +114,9 @@ interface KartuKendaliDetailData {
   licenses: LicenseItem[];
   totalWorkOrders: number;
   completedWorkOrders: number;
+  unsuccessfulWorkOrders: number;
   pendingWorkOrders: PendingWorkOrder[];
+  unsuccessfulWorkOrdersList: UnsuccessfulWorkOrder[];
   // Diagnosis
   diagnosis: DiagnosisData | null;
   // Info
@@ -220,13 +231,13 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
   const getCategoryLabel = (category: string | null) => {
@@ -788,6 +799,20 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                       label="Work Order" 
                       value={`${item.completedWorkOrders} selesai dari ${item.totalWorkOrders} total`} 
                     />
+                  )}
+                  {item.unsuccessfulWorkOrders > 0 && (
+                    <DetailRow label="WO Gagal">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs text-red-600 font-medium">
+                          {item.unsuccessfulWorkOrders} work order gagal diselesaikan
+                        </span>
+                        {item.unsuccessfulWorkOrdersList?.map((wo) => (
+                          <Badge key={wo.id} variant="outline" className="text-xs border-red-200 text-red-700">
+                            {wo.type} (unsuccessful)
+                          </Badge>
+                        ))}
+                      </div>
+                    </DetailRow>
                   )}
                   {item.pendingWorkOrders?.length > 0 && (
                     <DetailRow label="WO Pending">
