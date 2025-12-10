@@ -412,9 +412,9 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     return (
       <div className="py-4 w-full">
         {/* Main Flow: 1 -----> 2 -----> 3 */}
-        <div className="flex items-center justify-center gap-0 mb-6">
+        <div className="flex items-center justify-center gap-0 mb-6 max-md:overflow-x-auto max-md:justify-start max-md:pb-4 max-md:px-4">
           {steps.map((step, index) => (
-            <div key={step.status} className="flex items-center">
+            <div key={step.status} className="flex items-center shrink-0">
               {/* Step Circle + Labels */}
               <div className="flex flex-col items-center">
                 <div
@@ -476,25 +476,21 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          {/* Parent: items-stretch (bukan items-center) untuk memaksa semua child mengisi tinggi baris yang sama, 
-        tapi kita akan kunci height-nya manual jadi items-center lebih aman untuk alignment text */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 max-md:flex-col max-md:items-stretch">
 
-            {/* 1. WRAPPER SEARCH: Kunci height di sini juga */}
-            <div className="relative flex-[2] h-10">
+            {/* 1. WRAPPER SEARCH */}
+            <div className="relative flex-[2] md:h-10 max-md:w-full max-md:h-auto">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
               <Input
                 placeholder="Cari work order..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                // KUNCI: h-full agar mengisi wrapper h-10, dan !h-full untuk override style bawaan shadcn
                 className="h-full w-full pl-9 text-sm !ring-offset-0"
               />
             </div>
 
             {/* 2. FILTER STATUS */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              {/* KUNCI: Tambahkan !h-10 untuk override */}
               <SelectTrigger className="!h-10 flex-1 text-sm bg-background border-input">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -509,7 +505,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
             {/* 3. FILTER TIPE */}
             <Select value={filterType} onValueChange={setFilterType}>
-              {/* KUNCI: Tambahkan !h-10 untuk override */}
               <SelectTrigger className="!h-10 flex-1 text-sm bg-background border-input">
                 <SelectValue placeholder="Tipe" />
               </SelectTrigger>
@@ -526,8 +521,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
               variant="outline"
               onClick={handleRefreshData}
               disabled={loading}
-              // KUNCI: !h-10 dan !w-10
-              className="!h-10 !w-10 flex-shrink-0 p-0 bg-background"
+              className="!h-10 !w-10 flex-shrink-0 p-0 bg-background max-md:w-full"
               size="icon"
               title="Refresh"
             >
@@ -540,7 +534,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
       {/* Work Order List */}
       <Card className="pb-6">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4 max-md:flex-col max-md:items-start max-md:gap-4">
 
           {/* BAGIAN KIRI: Judul & Sub-judul */}
           <div className="flex flex-col gap-1">
@@ -551,7 +545,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
           </div>
 
           {/* BAGIAN KANAN: Hanya Total */}
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col items-end max-md:items-start">
             <span className="text-sm font-medium text-slate-700">
               Total: {pagination?.total || 0}
             </span>
@@ -559,6 +553,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
         </CardHeader>
         <CardContent>
+<<<<<<< HEAD
           <Table className="border border-gray-200">
             <TableHeader className="bg-muted/50">
               <TableRow className="border-b">
@@ -578,65 +573,88 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                   >
                     <RotateCw className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
+=======
+          <div className="overflow-x-auto">
+            <Table className="border border-gray-200 min-w-[800px]">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="border-b">
+                  <TableHead className="border-r">ID</TableHead>
+                  <TableHead className="border-r">Tipe</TableHead>
+                  <TableHead className="border-r">Status</TableHead>
+                  <TableHead className="border-r">Tiket</TableHead>
+                  <TableHead>Dibuat</TableHead>
+>>>>>>> main
                 </TableRow>
-              ) : workOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    Tidak ada work order
-                  </TableCell>
-                </TableRow>
-              ) : (
-                workOrders.map((wo) => {
-                  const ticket = wo.ticket;
-
-                  return (
-                    <TableRow
-                      key={wo.id}
-                      className="hover:bg-gray-50 cursor-pointer border-b"
-                      onClick={() => handleViewDetail(wo)}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-8 text-gray-500"
                     >
-                      <TableCell className="font-mono text-sm border-r">
-                        WO-{wo.id}
-                      </TableCell>
-                      <TableCell className="border-r">
-                        {getTypeBadge(wo.type)}
-                      </TableCell>
-                      <TableCell className="border-r">
-                        {getStatusBadge(wo.status)}
-                      </TableCell>
-                      <TableCell className="border-r">
-                        <div>
-                          <div className="font-mono text-sm">
-                            {ticket?.ticketNumber}
+                      <RotateCcw className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : workOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="text-center py-8 text-gray-500"
+                    >
+                      Tidak ada work order
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  workOrders.map((wo) => {
+                    const ticket = wo.ticket;
+
+                    return (
+                      <TableRow
+                        key={wo.id}
+                        className="hover:bg-gray-50 cursor-pointer border-b"
+                        onClick={() => handleViewDetail(wo)}
+                      >
+                        <TableCell className="font-mono text-sm border-r">
+                          WO-{wo.id}
+                        </TableCell>
+                        <TableCell className="border-r">
+                          {getTypeBadge(wo.type)}
+                        </TableCell>
+                        <TableCell className="border-r">
+                          {getStatusBadge(wo.status)}
+                        </TableCell>
+                        <TableCell className="border-r">
+                          <div>
+                            <div className="font-mono text-sm">
+                              {ticket?.ticketNumber}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {ticket?.title}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {ticket?.title}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {new Date(wo.createdAt).toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {new Date(wo.createdAt).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {pagination && pagination.last_page > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t mt-4">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between pt-4 border-t mt-4 max-md:flex-col max-md:gap-4">
+              <div className="text-sm text-muted-foreground text-center">
                 Menampilkan {pagination.from || 0} - {pagination.to || 0} dari {pagination.total} work order
               </div>
               <div className="flex items-center gap-2">
@@ -644,7 +662,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handlePrevPage}
-                  disabled={currentPage <= 1}
+                  disabled={pagination?.current_page <= 1}
                   className="cursor-pointer"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
@@ -670,7 +688,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
       {/* Detail & Update Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detail & Status Work Order</DialogTitle>
             <DialogDescription>

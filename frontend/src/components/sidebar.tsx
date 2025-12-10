@@ -11,7 +11,7 @@ import {
   FolderKanban,
   Package,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import type { User } from "@/types";
 import type { ViewType } from "./main-layout";
 import { getActiveRole } from "@/lib/storage";
@@ -35,9 +35,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
   onNavigate,
   collapsed,
+  onToggleCollapse,
 }) => {
   const location = useLocation();
   const [isHovered, setIsHovered] = useState(false);
+
+  /* Responsive Logic with max-md preference */
+  const [isMobile, setIsMobile] = useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768); // 768px matches Tailwind 'md'
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const getViewFromPath = (): ViewType => {
     const pathParts = location.pathname.split("/").filter(Boolean);
@@ -55,40 +66,88 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const showExpanded = !collapsed || isHovered;
 
+  // On mobile (max-md), if collapsed, width is 0. If expanded, width is '230px'.
+  // On desktop (md+), if collapsed, width is 72. If expanded, 260.
+  const targetWidth = isMobile
+    ? (collapsed ? 0 : "90vw")
+    : (showExpanded ? 260 : 72);
+
   return (
-    <motion.aside
-      initial={false}
-      animate={{
-        width: showExpanded ? 260 : 72,
-      }}
-      transition={{
-        type: "tween",
-        duration: 0.15,
-        ease: "easeOut",
-      }}
-      className={`flex flex-col overflow-hidden bg-white ${
-        collapsed ? "absolute left-0 top-0 bottom-0 z-40" : ""
-      }`}
-      onMouseEnter={() => collapsed && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={{
-        boxShadow: collapsed && isHovered ? "4px 0 12px rgba(0,0,0,0.08)" : "none"
-      }}
-    >
-      <ScrollArea className="flex-1 py-3 px-3">
-        <nav className="flex flex-col gap-2">
-          {menuItems.map((item) => (
-            <SidebarMenuItem
-              key={item.id}
-              item={item}
-              currentView={currentView}
-              showExpanded={showExpanded}
-              onClick={() => onNavigate(item.id)}
+    <>
+      {/* Mobile Overlay Backdrop */}
+      <AnimatePresence>
+        {
+          isMobile && !collapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={onToggleCollapse}
+              className="fixed inset-0 z-[99] bg-black/60 backdrop-blur-sm md:hidden"
             />
-          ))}
-        </nav>
-      </ScrollArea>
-    </motion.aside>
+          )
+        }
+      </AnimatePresence >
+
+      <motion.aside
+        initial={false}
+        animate={{
+          width: targetWidth,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 40,
+        }}
+        className={`
+          flex flex-col overflow-hidden bg-white
+          
+          // Base (Desktop) Styles
+          ${!collapsed ? "md:relative md:h-full" : "md:absolute md:left-0 md:top-0 md:bottom-0 md:z-40"}
+          
+          // Mobile Override Styles (max-md)
+          max-md:fixed max-md:top-0 max-md:bottom-0 max-md:left-0 max-md:z-[100] max-md:h-screen
+          max-md:shadow-2xl
+        `}
+        onMouseEnter={() => !isMobile && collapsed && setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        style={{
+          boxShadow: !isMobile && collapsed && isHovered ? "4px 0 12px rgba(0,0,0,0.08)" : undefined
+        }}
+      >
+        {/* Mobile Close Button */}
+        {isMobile && !collapsed && (
+          <div className="flex justify-between items-center p-4 h-[72px] bg-blue-50 md:hidden border-b border-gray-100">
+            <span className="font-bold text-xl">SIGAP-TI</span>
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="p-2 rounded-full hover:bg-gray-100/80 text-gray-500 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
+        )}
+
+        <ScrollArea className="flex-1 py-3 px-3">
+          <nav className={`flex flex-col gap-2 ${isMobile ? "max-md:pt-2" : ""}`}>
+            {menuItems.map((item) => (
+              <SidebarMenuItem
+                key={item.id}
+                item={item}
+                currentView={currentView}
+                showExpanded={showExpanded || (isMobile && !collapsed)}
+                onClick={() => {
+                  onNavigate(item.id);
+                  if (isMobile) onToggleCollapse();
+                }}
+              />
+            ))}
+          </nav>
+        </ScrollArea>
+      </motion.aside>
+    </>
   );
 };
 
@@ -172,25 +231,25 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="w-full h-12 flex items-center m-0 p-0 relative"
+      className="w-full h-12 flex items-center m-0 p-0 relative max-md:justify-center"
     >
-      {/* Icon container - absolutely positioned, never moves */}
-      <div className="absolute left-3 flex items-center justify-center w-6 h-6 z-10">
+      {/* Icon container - absolute on desktop, relative flex on mobile to center with text */}
+      <div className="absolute left-3 flex items-center justify-center w-6 h-6 z-10 max-md:static max-md:mr-3">
         <Icon
-          className={`h-5 w-5 transition-colors duration-150 ${
-            isActive ? "text-[#001D35]" : isHovered ? "text-[#3c4043]" : "text-[#5F6368]"
-          }`}
+          className={`h-5 w-5 transition-colors duration-150 ${isActive ? "text-[#001D35]" : isHovered ? "text-[#3c4043]" : "text-[#5F6368]"
+            }`}
           strokeWidth={isActive ? 2.5 : 2}
           fill="none"
         />
       </div>
-      
+
       {/* Pill background - 3D button effect with uniform light from all sides */}
       <div
         className={`
           rounded-full cursor-pointer overflow-hidden
           transition-all duration-150 ease-out
           ${showExpanded ? "w-full h-full" : "w-12 h-8"}
+          max-md:absolute max-md:inset-0 max-md:z-0
         `}
         style={{
           background: getBackground(),
@@ -198,13 +257,12 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
           border: getBorder(),
         }}
       />
-      
+
       {/* Label - positioned after icon, only when expanded */}
       {showExpanded && (
         <span
-          className={`absolute left-12 text-[14px] whitespace-nowrap font-medium z-10 transition-colors duration-150 ${
-            isActive ? "text-[#001D35]" : isHovered ? "text-[#1a1a1a]" : "text-[#1F1F1F]"
-          }`}
+          className={`absolute left-12 text-[14px] whitespace-nowrap font-medium z-10 transition-colors duration-150 max-md:static max-md:text-lg max-md:text-center ${isActive ? "text-[#001D35]" : isHovered ? "text-[#1a1a1a]" : "text-[#1F1F1F]"
+            }`}
         >
           {item.label}
         </span>

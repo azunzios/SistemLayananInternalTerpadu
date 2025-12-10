@@ -299,19 +299,19 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between max-md:flex-col max-md:items-start max-md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold  text-gray-900 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2 max-md:text-2xl">
             Asset BMN
           </h1>
-          <p className="text-gray-600 mt-1">Kelola data Barang Milik Negara</p>
+          <p className="text-gray-600 mt-1 max-md:text-sm">Kelola data Barang Milik Negara</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadTemplate} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2" >
+        <div className="flex gap-2 max-md:flex-col max-md:w-full">
+          <Button variant="outline" onClick={handleDownloadTemplate} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2 max-md:w-full" >
             <Download className="h-4 w-4" />
             Template
           </Button>
-          <Button variant="outline" onClick={handleDownloadAll} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2">
+          <Button variant="outline" onClick={handleDownloadAll} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2 max-md:w-full">
             <Download className="h-4 w-4" />
             Export Data
           </Button>
@@ -319,7 +319,7 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             size="lg"
-            className="rounded-full w-30 !outline !outline-black !outline-2"
+            className="rounded-full w-30 !outline !outline-black !outline-2 max-md:w-full"
             disabled={importing}
           >
             <Upload className="h-4 w-4" />
@@ -332,7 +332,7 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
             onChange={handleImportExcel}
             className="hidden"
           />
-          <Button onClick={() => handleOpenDialog()} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2">
+          <Button onClick={() => handleOpenDialog()} size="lg" className="rounded-full w-30 !outline !outline-black !outline-2 max-md:w-full">
             <Plus className="h-4 w-4" />
             Tambah Asset
           </Button>
@@ -341,7 +341,7 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 max-md:flex-col">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -376,7 +376,7 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
               setKondisiFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-[200px] h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-[200px] max-md:w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Semua Kondisi</option>
             <option value="Baik">Baik</option>
@@ -386,9 +386,9 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
         </div>
       </div>
 
-{/* Table Section */}
-      <div className="bg-white rounded-md border shadow-sm overflow-hidden">
-        <Table>
+      {/* Table Section */}
+      <div className="bg-white rounded-md border shadow-sm overflow-x-auto">
+        <Table className="min-w-[900px]">
           <TableHeader className="bg-gray-100/80">
             <TableRow>
               <TableHead className="w-[140px] border-r border-b font-semibold text-gray-900 whitespace-nowrap pl-4">
@@ -438,55 +438,54 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
               </TableRow>
             ) : (
               assets.map((asset) => (
-                <TableRow 
-                  key={asset.id} 
+                <TableRow
+                  key={asset.id}
                   className="group hover:bg-blue-50/40 transition-colors"
                 >
                   {/* Kode Barang */}
                   <TableCell className="border-r border-b font-mono text-sm pl-4 align-middle bg-gray-50/50 group-hover:bg-blue-50/40">
                     {asset.kodeBarang}
                   </TableCell>
-                  
+
                   {/* NUP */}
                   <TableCell className="border-r border-b font-mono text-sm text-center align-middle">
                     {asset.nup}
                   </TableCell>
-                  
+
                   {/* Nama Barang */}
                   <TableCell className="border-r border-b font-medium align-middle">
                     {asset.namaBarang}
                   </TableCell>
-                  
+
                   {/* Merek */}
                   <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
                     {asset.merek || "-"}
                   </TableCell>
-                  
+
                   {/* Kondisi */}
                   <TableCell className="border-r border-b text-center align-middle p-2">
                     <span
-                      className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        asset.kondisi === "Baik"
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : asset.kondisi === "Rusak Ringan"
+                      className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${asset.kondisi === "Baik"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : asset.kondisi === "Rusak Ringan"
                           ? "bg-yellow-50 text-yellow-700 border-yellow-200"
                           : "bg-red-50 text-red-700 border-red-200"
-                      }`}
+                        }`}
                     >
                       {asset.kondisi}
                     </span>
                   </TableCell>
-                  
+
                   {/* Ruangan */}
                   <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
                     {asset.ruangan || "-"}
                   </TableCell>
-                  
+
                   {/* Pengguna */}
                   <TableCell className="border-r border-b text-sm text-gray-600 align-middle">
                     {asset.pengguna || "-"}
                   </TableCell>
-                  
+
                   {/* Aksi - Compact Width */}
                   <TableCell className="border-b px-2 py-1 align-middle text-center whitespace-nowrap bg-white/50 group-hover:bg-blue-50/40">
                     <div className="flex items-center justify-center gap-1">

@@ -121,7 +121,11 @@ export const DetailDialog: React.FC<DetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* PERUBAHAN DISINI:
+        max-md:w-[calc(100%-2rem)] -> Memberikan jarak (margin) kiri kanan di mobile
+        max-md:rounded-lg -> Memastikan sudut tetap melengkung di mobile
+      */}
+      <DialogContent className="md:max-w-2xl max-h-[90vh] overflow-y-auto max-md:w-[calc(100%-2rem)] max-md:rounded-lg max-md:mx-auto">
         <DialogHeader>
           <div className="flex-col items-start justify-between">
             <DialogTitle>{booking?.title}</DialogTitle>
@@ -292,8 +296,8 @@ export const DetailDialog: React.FC<DetailDialogProps> = ({
                     <p className="font-semibold mb-1">Informasi Terbatas</p>
                     <p className="text-xs">
                       {currentUser &&
-                      booking &&
-                      booking.userId !== currentUser.id
+                        booking &&
+                        booking.userId !== currentUser.id
                         ? "Anda hanya dapat melihat detail lengkap untuk booking Zoom milik Anda sendiri. Booking ini dibuat oleh pengguna lain."
                         : "Kredensial meeting belum tersedia."}
                     </p>
@@ -334,8 +338,8 @@ export const DetailDialog: React.FC<DetailDialogProps> = ({
             {/* action buttons */}
             <div className="flex gap-2 ml-auto">
               {isManagement &&
-              booking?.status !== "approved" &&
-              booking?.status !== "rejected" ? (
+                booking?.status !== "approved" &&
+                booking?.status !== "rejected" ? (
                 <>
                   <Button variant="outline" onClick={onRequestReject}>
                     <XCircle className="h-4 w-4 mr-2" />

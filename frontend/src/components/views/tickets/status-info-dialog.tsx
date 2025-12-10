@@ -21,34 +21,42 @@ export const StatusInfoDialog: React.FC<StatusInfoDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden outline-none">
-        
+      <DialogContent className="max-sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden outline-none">
+
         {/* === STICKY HEADER === */}
-        <DialogHeader className="p-4 sm:p-6 border-b bg-background z-10 flex flex-row items-start justify-between space-y-0">
-          <div className="space-y-1 pr-8">
+        <DialogHeader
+          className="
+            p-4 sm:p-6 border-b bg-background z-10 relative
+            flex flex-row items-start justify-between space-y-0
+            gap-2 text-left
+          "
+        >
+          {/* Container Teks: Gunakan flex-1 agar mengambil sisa ruang sebelah kiri */}
+          <div className="space-y-1 flex-1">
             <div className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-primary" />
-              <DialogTitle>Penjelasan Status Tiket</DialogTitle>
+              <Info className="h-5 w-5 text-primary shrink-0" />
+              <DialogTitle className="leading-tight">Penjelasan Status Tiket</DialogTitle>
             </div>
             <DialogDescription>
               Panduan lengkap mengenai alur status tiket.
             </DialogDescription>
           </div>
-          
-          {/* Tombol X Close */}
+
+          {/* Tombol X Close: Hapus absolute, gunakan flex normal agar rapi */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 -mt-2 -mr-2 text-muted-foreground hover:text-foreground"
             onClick={() => onOpenChange(false)}
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </Button>
         </DialogHeader>
 
+
         {/* === SCROLLABLE CONTENT === */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8">
-          
+
           {/* BAGIAN 1: PERBAIKAN */}
           <section>
             {/* Header Section Icon */}
@@ -62,54 +70,52 @@ export const StatusInfoDialog: React.FC<StatusInfoDialogProps> = ({
             </div>
 
             {/* Content dengan Garis Vertikal */}
-            {/* ml-[1.1rem] menempatkan garis tepat di tengah bawah icon (w-9 / 2) */}
             <div className="ml-[1.125rem] pl-8 border-l-2 border-orange-100 pt-6 pb-2 grid gap-6">
-              
+
               {/* Item: Pending */}
               <div className="relative">
-                 {/* Bullet point visual pada garis */}
                 <div className="absolute -left-[37px] top-1 h-2.5 w-2.5 rounded-full bg-orange-200 border border-white"></div>
-                
+
                 <div className="flex items-center gap-2 mb-1">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground text-sm">Pending</span>
-                    <Badge variant="outline" className="text-[10px] bg-slate-50">submitted</Badge>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground text-sm">Pending</span>
+                  <Badge variant="outline" className="text-[10px] bg-slate-50">submitted</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    Tiket baru menunggu antrean teknisi.
+                  Tiket baru menunggu antrean teknisi.
                 </p>
               </div>
 
               {/* Item: Diproses */}
               <div className="relative">
                 <div className="absolute -left-[37px] top-1 h-2.5 w-2.5 rounded-full bg-orange-200 border border-white"></div>
-                
+
                 <div className="flex items-center gap-2 mb-1">
-                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin-slow" />
-                    <span className="font-medium text-foreground text-sm">Diproses</span>
+                  <Loader2 className="h-4 w-4 text-blue-500 animate-spin-slow" />
+                  <span className="font-medium text-foreground text-sm">Diproses</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3">
-                    Sedang ditangani teknisi dengan status:
+                  Sedang ditangani teknisi dengan status:
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <StatusBadge label="assigned" desc="Ditugaskan" color="bg-blue-50 text-blue-700 border-blue-200" />
-                    <StatusBadge label="in_progress" desc="Dikerjakan" color="bg-blue-50 text-blue-700 border-blue-200" />
-                    <StatusBadge label="on_hold" desc="Menunggu part" color="bg-yellow-50 text-yellow-700 border-yellow-200" />
-                    <StatusBadge label="waiting for submitter..." desc="menunggu submitter untuk mengonfirmasi" color="bg-orange-50 text-orange-700 border-orange-200" />
+                  <StatusBadge label="assigned" desc="Ditugaskan" color="bg-blue-50 text-blue-700 border-blue-200" />
+                  <StatusBadge label="in_progress" desc="Dikerjakan" color="bg-blue-50 text-blue-700 border-blue-200" />
+                  <StatusBadge label="on_hold" desc="Menunggu part" color="bg-yellow-50 text-yellow-700 border-yellow-200" />
+                  <StatusBadge label="waiting for submitter..." desc="menunggu submitter untuk mengonfirmasi" color="bg-orange-50 text-orange-700 border-orange-200" />
                 </div>
               </div>
 
               {/* Item: Selesai */}
               <div className="relative">
                 <div className="absolute -left-[37px] top-1 h-2.5 w-2.5 rounded-full bg-orange-400 border border-white"></div>
-                
+
                 <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-foreground text-sm">Selesai</span>
-                    <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">closed</Badge>
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="font-medium text-foreground text-sm">Selesai</span>
+                  <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">closed</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    Perbaikan selesai dan tiket ditutup.
+                  Perbaikan selesai dan tiket ditutup.
                 </p>
               </div>
             </div>
@@ -129,32 +135,32 @@ export const StatusInfoDialog: React.FC<StatusInfoDialogProps> = ({
 
             {/* Content dengan Garis Vertikal */}
             <div className="ml-[1.125rem] pl-8 border-l-2 border-purple-100 pt-6 pb-2 grid gap-6">
-              
+
               {/* Item: Review */}
               <div className="relative">
                 <div className="absolute -left-[37px] top-1 h-2.5 w-2.5 rounded-full bg-purple-200 border border-white"></div>
-                
+
                 <div className="flex items-center gap-2 mb-1">
-                    <Circle className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground text-sm">Review</span>
-                    <Badge variant="outline" className="text-[10px] bg-slate-50">pending_review</Badge>
+                  <Circle className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium text-foreground text-sm">Review</span>
+                  <Badge variant="outline" className="text-[10px] bg-slate-50">pending_review</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    Menunggu pengecekan jadwal oleh admin.
+                  Menunggu pengecekan jadwal oleh admin.
                 </p>
               </div>
 
               {/* Item: Keputusan */}
               <div className="relative">
                 <div className="absolute -left-[37px] top-1 h-2.5 w-2.5 rounded-full bg-purple-400 border border-white"></div>
-                
+
                 <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="h-4 w-4 text-foreground" />
-                    <span className="font-medium text-foreground text-sm">Keputusan</span>
+                  <CheckCircle2 className="h-4 w-4 text-foreground" />
+                  <span className="font-medium text-foreground text-sm">Keputusan</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
-                     <StatusBadge label="approved" desc="Disetujui" color="bg-green-50 text-green-700 border-green-200" />
-                     <StatusBadge label="rejected" desc="Ditolak" color="bg-red-50 text-red-700 border-red-200" />
+                  <StatusBadge label="approved" desc="Disetujui" color="bg-green-50 text-green-700 border-green-200" />
+                  <StatusBadge label="rejected" desc="Ditolak" color="bg-red-50 text-red-700 border-red-200" />
                 </div>
               </div>
             </div>

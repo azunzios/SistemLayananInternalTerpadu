@@ -154,9 +154,9 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
 
   const getStatusBadge = (status: string) => {
     return (
-      <div className="text-sm">
+      <div className="text-sm max-md:text-[10px] flex items-center gap-1">
         <span className="text-muted-foreground font-medium">status:</span>{" "}
-        <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+        <span className="font-mono text-xs max-md:text-[10px] bg-gray-100 px-2 max-md:px-1.5 py-1 max-md:py-0.5 rounded">
           {status}
         </span>
       </div>
@@ -202,9 +202,9 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-md:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between max-md:flex-col max-md:items-start max-md:gap-2">
         <div>
           <h1 className="text-3xl font-bold">Tiket Saya</h1>
           <p className="text-muted-foreground">Pantau semua tiket Anda</p>
@@ -214,9 +214,10 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
       {/* Filter Controls */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-3 w-full">
+          {/* xs: kolom, sm ke atas: baris */}
+          <div className="flex flex-col gap-3 w-full max-md:flex-col sm:flex-row items-stretch max-md:gap-4">
             {/* 1. Search - flex-1 agar mengisi sisa ruang (paling panjang) */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 max-md:w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Cari tiket..."
@@ -229,7 +230,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
             {/* 2. Filter Tipe - Fixed width & tidak menyusut */}
             {!isTeknisi && (
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="h-10 text-sm w-36 flex-shrink-0">
+                <SelectTrigger className="h-10 text-sm w-36 flex-shrink-0 max-md:w-full">
                   <SelectValue placeholder="Tipe" />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,7 +248,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
               disabled={!isTeknisi && filterType === "all"}
             >
               <SelectTrigger
-                className="h-10 text-sm w-36 flex-shrink-0"
+                className="h-10 text-sm w-36 flex-shrink-0 max-md:w-full"
                 title={
                   !isTeknisi && filterType === "all"
                     ? "Pilih tipe tiket terlebih dahulu"
@@ -292,12 +293,12 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
             </Select>
 
             {/* 4. Action Buttons - Fixed size & tidak menyusut */}
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0 max-md:w-full max-md:justify-between">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setShowStatusInfo(true)}
-                className="h-10 w-10"
+                className="h-10 w-10 max-md:w-full"
                 title="Informasi Status"
               >
                 <Info className="h-4 w-4" />
@@ -308,7 +309,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                 size="icon"
                 onClick={handleRefreshData}
                 disabled={loading}
-                className="h-10 w-10"
+                className="h-10 w-10 max-md:w-full"
                 title="Refresh"
               >
                 <RotateCw
@@ -340,47 +341,46 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="grid gap-4">
+              <div className="flex flex-col gap-4 max-md:gap-3">
                 {tickets.map((ticket) => (
                   <Card
                     key={ticket.id}
-                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    className="hover:shadow-md transition-shadow cursor-pointer max-md:w-full"
                     onClick={() => onViewTicket(ticket.id)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
+                    <CardContent className="p-4 max-md:p-3">
+                      <div className="flex justify-between max-md:flex-col max-md:items-start max-md:gap-2">
+                        <div className="flex-1 space-y-2 max-md:space-y-1">
+                          <div className="flex items-center gap-3 max-md:gap-2">
+                            <div className="flex items-center gap-2 max-md:gap-1.5">
                               {React.createElement(getTypeIcon(ticket.type), {
-                                className: `h-5 w-5 ${
-                                  ticket.type === "perbaikan"
-                                    ? "text-orange-600"
-                                    : "text-purple-600"
-                                }`,
+                                className: `h-5 w-5 max-md:h-4 max-md:w-4 ${ticket.type === "perbaikan"
+                                  ? "text-orange-600"
+                                  : "text-purple-600"
+                                  }`,
                               })}
-                              <h3 className="font-semibold text-lg">
+                              <h3 className="font-semibold text-lg max-md:text-sm max-md:line-clamp-1">
                                 {ticket.title}
                               </h3>
                             </div>
-                            <Badge className={getTypeColor(ticket.type)}>
+                            <Badge className={`${getTypeColor(ticket.type)} max-md:text-[10px] max-md:px-1.5 max-md:h-5`}>
                               {getTypeLabel(ticket.type)}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="font-mono">
+                          <div className="flex items-start gap-4 text-sm text-muted-foreground max-md:flex-col max-md:items-start max-md:justify-start max-md:w-full max-md:gap-0.5 max-md:text-[10px]">
+                            <span className="font-mono text-left">
                               {ticket.ticketNumber}
                             </span>
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
+                              <Calendar className="h-4 w-4 max-md:h-3 max-md:w-3" />
                               <span>{formatDate(ticket.createdAt)}</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center justify-start gap-1">
                               {getStatusBadge(ticket.status)}
                             </div>
                           </div>
                         </div>
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0 max-md:hidden">
                           <Button
                             variant="link"
                             size="sm"
@@ -395,8 +395,8 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
 
               {/* Pagination - selalu tampilkan */}
               <Card>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div className="text-sm text-muted-foreground">
+                <CardContent className="flex items-center justify-between py-4 max-md:flex-col max-md:gap-4">
+                  <div className="text-sm text-muted-foreground max-md:text-center max-md:text-xs">
                     {pagination ? (
                       <>
                         Halaman {pagination.current_page} dari{" "}
@@ -407,7 +407,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                       "Memuat..."
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 max-md:w-full">
                     <Button
                       variant="outline"
                       size="sm"
@@ -415,7 +415,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                       disabled={
                         !pagination || pagination.current_page === 1 || loading
                       }
-                      className="cursor-pointer"
+                      className="cursor-pointer max-md:flex-1"
                     >
                       Sebelumnya
                     </Button>
@@ -424,7 +424,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                       size="sm"
                       onClick={handleNextPage}
                       disabled={!pagination || !pagination.has_more || loading}
-                      className="cursor-pointer"
+                      className="cursor-pointer max-md:flex-1"
                     >
                       Berikutnya
                     </Button>

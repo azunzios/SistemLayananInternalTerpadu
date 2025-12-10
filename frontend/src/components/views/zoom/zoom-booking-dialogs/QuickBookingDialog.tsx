@@ -68,7 +68,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
+
     const newFiles = Array.from(files);
     const validFiles = newFiles.filter(file => {
       // Validate file size (10MB max)
@@ -79,10 +79,10 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
       }
       return true;
     });
-    
+
     // Gabungkan dengan file yang sudah ada
     const combined = [...attachments, ...validFiles];
-    
+
     // Limit to 5 files
     if (combined.length > 5) {
       alert('Maksimal 5 file yang dapat diupload.');
@@ -90,7 +90,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
     } else {
       onAttachmentsChange(combined);
     }
-    
+
     // Reset input
     e.target.value = '';
   };
@@ -110,8 +110,8 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] md:max-w-2xl overflow-y-auto">
+        <DialogHeader className="text-left">
           <div className="flex items-center gap-3">
             <div className="bg-cyan-100 p-2 rounded-lg">
               <Video className="h-6 w-6 text-cyan-600" />
@@ -172,7 +172,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="quickStartTime">Waktu Mulai *</Label>
                   <Input
@@ -270,7 +270,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="quickBreakoutRooms">Jumlah Breakout Room *</Label>
                   <Input
@@ -313,7 +313,7 @@ export const QuickBookingDialog: React.FC<QuickBookingDialogProps> = ({
                 <p className="text-xs text-gray-500">
                   Format: PDF, DOC, XLS, PPT, JPG, PNG (MAX: 2MB/file)
                 </p>
-                
+
                 {attachments && attachments.length > 0 && (
                   <div className="mt-2 space-y-2">
                     {attachments.map((file, index) => (

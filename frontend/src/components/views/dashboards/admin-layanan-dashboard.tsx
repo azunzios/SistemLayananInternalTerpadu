@@ -123,9 +123,11 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
           p-8 
           text-white
           border border-white/30
-          shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
+          shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]
+          max-md:p-6
+          max-md:space-y-6"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between max-md:flex-col max-md:gap-6">
             <div>
               <h1 className="text-3xl mb-2">
                 Admin Layanan Dashboard
@@ -141,30 +143,29 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
 
           <Separator className="my-6 bg-blue-300" />
 
-          {/* Statistics Grid - matching user dashboard style */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-4 max-md:flex-col">
             {loading ? (
               <div className="w-full flex items-center justify-center py-8">
                 <Loader className="h-6 w-6 animate-spin text-blue-100" />
               </div>
             ) : stats && stats.statistics ? (
               <>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                <div className="flex-1 px-4 py-4 text-center max-md:border-b border-blue-300 md:border-r last:border-r-0 max-md:text-left max-md:border-none">
                   <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.total}</p>
                   <p className="text-xs text-blue-100 mt-1">semua status</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                <div className="flex-1 px-4 py-4 text-center max-md:border-b border-blue-300 md:border-r last:border-r-0 max-md:text-left max-md:border-none">
                   <p className="text-blue-100 text-sm">Tiket Perbaikan</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.perbaikan.count}</p>
                   <p className="text-xs text-blue-100 mt-1">{stats.statistics.perbaikan.status}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                <div className="flex-1 px-4 py-4 text-center max-md:border-b max-md:border-1 border-blue-300 md:border-r last:border-r-0 max-md:text-left max-md:border-none">
                   <p className="text-blue-100 text-sm">Tiket Zoom</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.zoom.count}</p>
                   <p className="text-xs text-blue-100 mt-1">{stats.statistics.zoom.status}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center">
+                <div className="flex-1 px-4 py-4 text-center max-md:text-left max-md:border-none">
                   <p className="text-blue-100 text-sm">Closed</p>
                   <p className="text-3xl mt-1 font-bold">{stats.statistics.closed.count}</p>
                   <p className="text-xs text-blue-100 mt-1">{stats.statistics.closed.description}</p>
@@ -208,7 +209,7 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
         {/* Pending Tickets Queue */}
         <Card className="pb-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between max-md:flex-col max-md:items-stretch max-md:gap-3">
               <div>
                 <CardTitle>Tiket Terbaru Pending</CardTitle>
                 <CardDescription>
@@ -234,6 +235,7 @@ export const AdminLayananDashboard: React.FC<AdminLayananDashboardProps> = ({
     
     /* Interaksi */
     hover:brightness-110 transition-all duration-300
+    max-md:w-full
   "
               >
                 <span className="relative z-10 flex items-center gap-2 drop-shadow-sm">

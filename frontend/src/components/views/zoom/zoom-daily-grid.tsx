@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import DatePicker from '@/components/ui/date-picker';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User as UserIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User as UserIcon, ChevronDown, ChevronLeft, ChevronRight, Clock10 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Ticket, ZoomTicket, User } from '@/types';
 
@@ -196,22 +195,22 @@ export const ZoomDailyGrid: React.FC<ZoomDailyGridProps> = ({
 
   const totalGridHeight = TIME_HOURS.length * PIXELS_PER_HOUR;
   const activeAccounts = accounts.filter((a: ZoomAccountColumn) => a.isActive);
-  const totalCols = activeAccounts.length + 1; // +1 untuk Booking Pending
+
 
   return (
     <div className="space-y-4">
       {/* Date Picker Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center justify-between gap-4 mb-4 max-md:flex-col max-md:items-start">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Pilih Tanggal
               </CardTitle>
-              <CardDescription>Masukkan tanggal untuk melihat ketersediaan slot Zoom</CardDescription>
+              <CardDescription></CardDescription>
             </div>
-            <div className="min-w-[260px]">
+            <div className="min-w-[260px] max-md:w-full">
               <DatePicker
                 value={(selectedDate || undefined)}
                 onChange={(d) => d && handleCalendarDateChange(d)}
@@ -238,15 +237,15 @@ export const ZoomDailyGrid: React.FC<ZoomDailyGridProps> = ({
       {selectedDate && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between max-md:flex-col max-md:items-start max-md:gap-4">
               <div className="flex-1">
                 <CardTitle>Ketersediaan Zoom</CardTitle>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 max-md:w-full max-md:justify-between">
                 <Button variant="outline" size="sm" onClick={handlePreviousDay}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleToday}>
+                <Button variant="outline" size="sm" onClick={handleToday} className="max-md:flex-1">
                   Hari Ini
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleNextDay}>
@@ -266,139 +265,141 @@ export const ZoomDailyGrid: React.FC<ZoomDailyGridProps> = ({
                 {errorMessage}
               </div>
             )}
-            <ScrollArea className="w-full">
-              <div className="w-full">
-                {/* Grid Container */}
-                <div className="flex overflow-hidden bg-white">
-                  {/* Time Column */}
-                  <div className="flex-shrink-0 w-24">
-                    {/* Header Cell - Empty for mathematical axis look */}
-                    <div className="h-12 border-b border-gray-300 flex items-center justify-center">
+            <div className="w-full overflow-x-auto pb-2">
+              {/* Grid Container - Use min-w-max to allow horizontal scroll */}
+              <div className="flex min-w-max bg-white">
+                
+                {/* Time Column - UPDATED: w-14 on mobile, w-24 on md */}
+                <div className="flex-shrink-0 w-14 md:w-24 sticky left-0 z-30 bg-white border-r border-gray-300 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                  
+                  {/* Header Cell - UPDATED: Added AlertCircle visible on mobile */}
+                  <div className="h-12 border-b border-gray-300 flex items-center justify-center bg-gray-50">
+                     <Clock10 className="h-6 w-6 text-gray-400 md:hidden" />
+                  </div>
+                  
+                  {/* Time Labels */}
+                  {TIME_HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="border-b border-gray-300 relative bg-white"
+                      style={{ height: `${PIXELS_PER_HOUR}px` }}
+                    >
+                      {hour !== 6 && (
+                        <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-gray-700 bg-white px-2 font-medium">
+                          {hour.toString().padStart(2, '0')}:00
+                        </span>
+                      )}
                     </div>
-                    {/* Time Labels */}
-                    {TIME_HOURS.map((hour) => (
-                      <div
-                        key={hour}
-                        className="border-b border-gray-300 relative"
-                        style={{ height: `${PIXELS_PER_HOUR}px` }}
-                      >
-                        {hour !== 6 && (
-                          <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-gray-700 bg-white px-2">
-                            {hour.toString().padStart(2, '0')}:00
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Account Columns */}
-                  <div className="flex-1 flex border-l border-gray-300">
-                    {accounts.map((account: ZoomAccountColumn, accountIndex: number) => {
-                      const accountBookings = getAccountBookings(account, accountIndex);
-
-                      return (
-                        <div
-                          key={String(account.id)}
-                          className={`flex-1 border-r last:border-r-0 border-gray-300 ${accountIndex % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}`}
-                        >
-                          <div className={`h-12 ${account.isActive ? 'bg-gray-100' : 'bg-gray-200'} border-b border-gray-300 flex items-center justify-between px-3`}>
-                            <span className="text-sm font-medium truncate">{account.name}</span>
-                            <Badge variant="secondary" className={`text-xs ${account.isActive ? 'text-green-600' : 'text-gray-500'}`}>
-                              {account.isActive ? 'Aktif' : 'Nonaktif'}
-                            </Badge>
-                          </div>
-
-                          <div className="relative" style={{ height: `${totalGridHeight}px` }}>
-                            {!account.isActive && (
-                              <div className="absolute inset-0 bg-gray-100/60 z-20 flex items-center justify-center pointer-events-none">
-                                <div className="text-center text-gray-500 text-xs font-medium">
-                                  Akun Nonaktif
-                                </div>
-                              </div>
-                            )}
-                            {/* Hour Grid Lines */}
-                            {TIME_HOURS.map((hour, index) => (
-                              <div
-                                key={hour}
-                                className="absolute left-0 right-0 border-b border-gray-200"
-                                style={{
-                                  top: `${index * PIXELS_PER_HOUR}px`,
-                                  height: `${PIXELS_PER_HOUR}px`
-                                }}
-                              />
-                            ))}
-
-                            {/* Booking Blocks */}
-                            {accountBookings.map((booking, index) => {
-                              const style = getBookingStyle((booking as any).startTime, (booking as any).endTime);
-                              const isPending = booking.status === 'pending_review';
-
-                              return (
-                                <motion.div
-                                  key={booking.id}
-                                  initial={{ scale: 0.95, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ delay: index * 0.05 }}
-                                  className={`absolute left-2 right-2 ${isPending
-                                    ? 'bg-yellow-400 border border-yellow-600 text-gray-900'
-                                    : `${account.color} border ${account.borderColor} text-white`
-                                    } p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow z-10`}
-                                  style={{
-                                    top: `${style.top}px`,
-                                    height: `${style.height}px`,
-                                    minHeight: '40px'
-                                  }}
-                                  onClick={() => onViewTicket?.(booking.id)}
-                                >
-                                  <div className="text-xs font-semibold truncate flex items-center gap-1">
-                                    <span className="flex-1 truncate">{filterSensitiveInfo(booking.title)}</span>
-                                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                                  </div>
-                                  <div className="text-xs opacity-90 flex items-center gap-1 mt-0.5">
-                                    <Clock className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">
-                                      {(booking as any).startTime} - {(booking as any).endTime}
-                                    </span>
-                                  </div>
-                                  {style.height > 60 && (
-                                    <div className="text-xs opacity-90 flex items-center gap-1 mt-0.5">
-                                      <UserIcon className="h-3 w-3 flex-shrink-0" />
-                                      <span className="truncate">{filterSensitiveInfo(booking.userName || '')}</span>
-                                    </div>
-                                  )}
-                                </motion.div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  ))}
                 </div>
 
-                {/* Legend */}
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg mb-4">
-                  <p className="text-sm font-semibold mb-2">Keterangan:</p>
+                {/* Account Columns */}
+                <div className="flex-1 flex">
+                  {accounts.map((account: ZoomAccountColumn, accountIndex: number) => {
+                    const accountBookings = getAccountBookings(account, accountIndex);
 
-                  <div
-                    className="grid gap-3"
-                    style={{ gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))` }}
-                  >
-                    {activeAccounts.map((account: ZoomAccountColumn) => (
-                      <div key={String(account.id)} className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded-full ${account.color}`} />
-                        <span className="text-sm">{account.name}</span>
+                    return (
+                      <div
+                        key={String(account.id)}
+                        className={`flex-1 min-w-[180px] border-r last:border-r-0 border-gray-300 ${accountIndex % 2 === 0 ? 'bg-gray-50/30' : 'bg-white'}`}
+                      >
+                        <div className={`h-12 ${account.isActive ? 'bg-gray-100' : 'bg-gray-200'} border-b border-gray-300 flex items-center justify-between px-3 sticky top-0 z-20`}>
+                          <span className="text-sm font-medium truncate">{account.name}</span>
+                          <Badge variant="secondary" className={`text-xs ${account.isActive ? 'text-green-600' : 'text-gray-500'}`}>
+                            {account.isActive ? 'Aktif' : 'Nonaktif'}
+                          </Badge>
+                        </div>
+
+                        <div className="relative" style={{ height: `${totalGridHeight}px` }}>
+                          {!account.isActive && (
+                            <div className="absolute inset-0 bg-gray-100/60 z-20 flex items-center justify-center pointer-events-none">
+                              <div className="text-center text-gray-500 text-xs font-medium">
+                                Akun Nonaktif
+                              </div>
+                            </div>
+                          )}
+                          {/* Hour Grid Lines */}
+                          {TIME_HOURS.map((hour, index) => (
+                            <div
+                              key={hour}
+                              className="absolute left-0 right-0 border-b border-gray-200"
+                              style={{
+                                top: `${index * PIXELS_PER_HOUR}px`,
+                                height: `${PIXELS_PER_HOUR}px`
+                              }}
+                            />
+                          ))}
+
+                          {/* Booking Blocks */}
+                          {accountBookings.map((booking, index) => {
+                            // Safe type assertion for booking properties
+                            const b = booking as any;
+                            const style = getBookingStyle(b.startTime, b.endTime);
+                            const isPending = b.status === 'pending_review';
+
+                            return (
+                              <motion.div
+                                key={b.id}
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: index * 0.05 }}
+                                // UPDATED: Added max-md:rounded-none
+                                className={`absolute left-2 right-2 ${isPending
+                                  ? 'bg-yellow-400 border border-yellow-600 text-gray-900'
+                                  : `${account.color} border ${account.borderColor} text-white`
+                                  } p-2 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:z-50 transition-all z-10`}
+                                style={{
+                                  top: `${style.top}px`,
+                                  height: `${style.height}px`,
+                                  minHeight: '40px'
+                                }}
+                                onClick={() => onViewTicket?.(b.id)}
+                              >
+                                <div className="text-xs font-semibold truncate flex items-center gap-1">
+                                  <span className="flex-1 truncate">{filterSensitiveInfo(b.title)}</span>
+                                  <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                </div>
+                                <div className="text-xs opacity-90 flex items-center gap-1 mt-0.5">
+                                  <Clock className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {b.startTime} - {b.endTime}
+                                  </span>
+                                </div>
+                                {style.height > 60 && (
+                                  <div className="text-xs opacity-90 flex items-center gap-1 mt-0.5">
+                                    <UserIcon className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{filterSensitiveInfo(b.userName || '')}</span>
+                                  </div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-yellow-400" />
-                      <span className="text-sm">Booking Pending</span>
+              {/* Legend */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg mb-4 sticky left-0">
+                <p className="text-sm font-semibold mb-2">Keterangan:</p>
+
+                <div className="flex flex-wrap gap-4">
+                  {activeAccounts.map((account: ZoomAccountColumn) => (
+                    <div key={String(account.id)} className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-full ${account.color}`} />
+                      <span className="text-sm">{account.name}</span>
                     </div>
+                  ))}
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-yellow-400" />
+                    <span className="text-sm">Booking Pending</span>
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       )}

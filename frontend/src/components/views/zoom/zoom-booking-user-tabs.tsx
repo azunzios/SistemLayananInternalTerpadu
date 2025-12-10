@@ -134,8 +134,13 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
     setIsLoadingBookings(true);
     try {
       const params = new URLSearchParams();
+<<<<<<< HEAD
       params.append("page", page.toString());
       params.append("per_page", "15");
+=======
+      params.append('page', page.toString());
+      params.append('per_page', '15');
+>>>>>>> main
 
       const statusFilter = STATUS_FILTER_MAP[status];
       if (statusFilter) {
@@ -173,20 +178,34 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
 
   return (
     <Tabs defaultValue="check-availability" className="space-y-4">
+<<<<<<< HEAD
       <TabsList>
         <TabsTrigger
           value="check-availability"
           className="gap-2 cursor-pointer hover:bg-white"
         >
+=======
+      {/* MODIFIKASI 1: Main Tabs 
+        - TabsList diberi w-full agar memenuhi lebar
+        - TabsTrigger diberi flex-1 agar ukuran tombol sama rata
+        - Teks dibungkus span dengan className="max-md:hidden" (sembunyi di mobile)
+      */}
+      <TabsList className="w-full">
+        <TabsTrigger value="check-availability" className="gap-2 cursor-pointer hover:bg-white flex-1">
+>>>>>>> main
           <Search className="h-4 w-4" />
-          Cek Ketersediaan
+          <span className="max-md:hidden">Cek Ketersediaan</span>
         </TabsTrigger>
+<<<<<<< HEAD
         <TabsTrigger
           value="my-bookings"
           className="gap-2 cursor-pointer hover:bg-white"
         >
+=======
+        <TabsTrigger value="my-bookings" className="gap-2 cursor-pointer hover:bg-white flex-1">
+>>>>>>> main
           <CalendarIcon className="h-4 w-4" />
-          Booking Saya
+          <span>Booking Saya</span>
         </TabsTrigger>
       </TabsList>
 
@@ -244,6 +263,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
       </TabsContent>
 
       <TabsContent value="my-bookings" className="space-y-4">
+<<<<<<< HEAD
         <Tabs
           value={currentStatus}
           onValueChange={(val) => handleStatusChange(val as any)}
@@ -253,14 +273,43 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
             <TabsTrigger value="pending" className="gap-2">
               <Clock className="h-4 w-4" />
               Pending ({stats?.pending ?? "-"})
+=======
+        <Tabs value={currentStatus} onValueChange={(val) => handleStatusChange(val as any)}>
+
+          {/* MODIFIKASI 2: Status Tabs (Filter)
+            - TabsList diberi w-full dan h-auto agar fleksibel
+            - TabsTrigger diberi flex-1
+            - Label teks ("Pending", "Disetujui", dll) di-hide di mobile (max-md:hidden)
+            - Angka statistik tetap dimunculkan
+          */}
+          <TabsList className="w-full h-auto flex-wrap sm:flex-nowrap">
+            <TabsTrigger value="all" className="flex-1">
+              <span>Semua</span>
+              <span className="max-md:hidden">({stats?.all ?? '-'})</span>
             </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2">
+            <TabsTrigger value="pending" className="gap-[2px] flex-1">
+              <Clock className="h-4 w-4" />
+              <span className="">Pending</span>
+              <span className="max-md:hidden">({stats?.pending ?? '-'})</span>
+>>>>>>> main
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-[2px] flex-1">
               <CheckCircle className="h-4 w-4" />
+<<<<<<< HEAD
               Disetujui ({stats?.approved ?? "-"})
+=======
+              <span className="">Disetujui</span>
+              <span className="max-md:hidden">({stats?.approved ?? '-'})</span>
+>>>>>>> main
             </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2">
+            <TabsTrigger value="rejected" className="gap-[2px] flex-1">
               <XCircle className="h-4 w-4" />
+<<<<<<< HEAD
               Ditolak ({stats?.rejected ?? "-"})
+=======
+              <span className="">Ditolak</span>
+              <span className="max-md:hidden">({stats?.rejected ?? '-'})</span>
+>>>>>>> main
             </TabsTrigger>
           </TabsList>
 
@@ -356,7 +405,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           className="cursor-pointer"
                         >
                           <ChevronLeft className="h-4 w-4" />
-                          Sebelumnya
+                          <span className="max-md:hidden">Sebelumnya</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -365,7 +414,7 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
                           disabled={!pagination.has_more}
                           className="cursor-pointer"
                         >
-                          Selanjutnya
+                          <span className="max-md:hidden">Selanjutnya</span>
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>

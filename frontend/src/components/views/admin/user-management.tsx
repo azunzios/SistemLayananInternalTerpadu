@@ -341,17 +341,17 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between max-md:flex-col max-md:items-start max-md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-gray-500 mt-1">Kelola pengguna dan permission</p>
+          <h1 className="text-3xl font-bold max-md:text-2xl">User Management</h1>
+          <p className="text-gray-500 mt-1 max-md:text-sm">Kelola pengguna dan permission</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="gap-2">
+        <div className="flex items-center gap-3 max-md:flex-col max-md:items-stretch max-md:w-full">
+          <Badge variant="outline" className="gap-2 justify-center py-2 md:py-1">
             <Users className="h-4 w-4" />
             {users.length} Total Users
           </Badge>
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2 max-md:w-full">
             <Plus className="h-4 w-4" />
             Tambah User Baru
           </Button>

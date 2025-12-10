@@ -468,7 +468,7 @@ export const TeknisiWorkOrderList: React.FC<TeknisiWorkOrderListProps> = ({
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detail Work Order</DialogTitle>
             <DialogDescription>
