@@ -217,22 +217,22 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header - Responsive: Flex-col on mobile */}
+      <div className="flex items-start justify-between max-md:flex-col max-md:items-start max-md:gap-4">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-3">
+          <h1 className="text-xl font-semibold flex items-start gap-3">
             Daftar Tiket Zoom Meeting
           </h1>
           <p className="text-muted-foreground text-sm">Kelola semua permintaan booking Zoom meeting</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 max-md:w-full">
           {/* Button Clean Outline Full Rounded */}
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportExcel}
             disabled={exporting}
-            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all"
+            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all max-md:w-full"
           >
             {exporting ? (
               <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -244,21 +244,10 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
         </div>
       </div>
 
-      {/* Filter Controls */}
+      {/* Filter Controls - Responsive: Flex-col and stretch on mobile */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshData}
-              disabled={loading || statsLoading}
-              className="h-8"
-            >
-              <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-
+          <div className="flex justify-between gap-4 max-md:items-stretch">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -268,6 +257,15 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                 className="pl-9 h-8 text-xs"
               />
             </div>
+                        <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              disabled={loading || statsLoading}
+              className="h-8"
+            >
+              <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -276,7 +274,8 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
       <Card>
         <CardContent className="p-4">
           <Tabs value={selectedTab} onValueChange={(val) => setSelectedTab(val as any)} className="w-full">
-            <TabsList className="grid grid-cols-4 w-full">
+            {/* Tabs List - Responsive: 2 cols on mobile, auto height */}
+            <TabsList className="grid grid-cols-4 w-full max-md:grid-cols-2 max-md:h-auto">
               <TabsTrigger value="all" className="cursor-pointer hover:bg-accent">
                 Semua {statsLoading ? <Loader className="h-3 w-3 animate-spin ml-1" /> : `(${stats.total})`}
               </TabsTrigger>
@@ -318,18 +317,21 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                       {zoomTickets.map((ticket) => (
                         <Card key={ticket.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewDetail(ticket.id)}>
                           <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1 space-y-2">
+                            {/* Card Item - Responsive: Flex-col on mobile */}
+                            <div className="flex items-center justify-between max-md:flex-col max-md:items-start max-md:gap-3">
+                              <div className="flex-1 space-y-2 w-full">
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center gap-2">
                                     <Video className="h-5 w-5 text-purple-600" />
-                                    <h3 className="font-semibold text-lg">{ticket.title}</h3>
+                                    <h3 className="font-semibold text-lg line-clamp-1">{ticket.title}</h3>
                                   </div>
-                                  <Badge className="bg-purple-100 text-purple-800">
-                                    Zoom Meeting
+                                  <Badge className="bg-purple-100 text-purple-800 shrink-0">
+                                    Zoom
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                
+                                {/* Meta Info - Responsive: Wrap on mobile */}
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground max-md:flex-wrap max-md:gap-y-2 max-md:gap-x-3">
                                   <span className="font-mono">{ticket.ticketNumber}</span>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-4 w-4" />
@@ -343,12 +345,12 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                                     {getStatusBadge(ticket.status)}
                                   </div>
                                 </div>
-                                <div className="text-sm text-muted-foreground">
+                                <div className="text-sm text-muted-foreground line-clamp-1">
                                   <span className="font-medium">{ticket.userName}</span>
                                   {ticket.unitKerja && <span> • {ticket.unitKerja}</span>}
                                 </div>
                               </div>
-                              <div className="flex-shrink-0">
+                              <div className="flex-shrink-0 max-md:hidden">
                                 <Button variant="link" size="sm" className="h-8 w-8 p-0">
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -359,19 +361,19 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                       ))}
                     </div>
 
-                    {/* Pagination */}
+                    {/* Pagination - Responsive: Flex-col on mobile */}
                     <Card>
-                      <CardContent className="flex items-center justify-between py-4">
-                        <div className="text-sm text-muted-foreground">
-                          {pagination && `Halaman ${pagination.current_page} dari ${pagination.last_page} • Menampilkan ${pagination.from}-${pagination.to} dari ${pagination.total}`}
+                      <CardContent className="flex items-center justify-between py-4 max-md:flex-col max-md:gap-4 max-md:items-center">
+                        <div className="text-sm text-muted-foreground text-center">
+                          {pagination && `Halaman ${pagination.current_page} dari ${pagination.last_page} • ${pagination.from}-${pagination.to} dari ${pagination.total}`}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full justify-center md:w-auto">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={handlePrevPage}
                             disabled={!pagination || pagination.current_page === 1 || loading}
-                            className="cursor-pointer"
+                            className="cursor-pointer max-md:flex-1"
                           >
                             Sebelumnya
                           </Button>
@@ -380,7 +382,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
                             size="sm"
                             onClick={handleNextPage}
                             disabled={!pagination || !pagination.has_more || loading}
-                            className="cursor-pointer"
+                            className="cursor-pointer max-md:flex-1"
                           >
                             Berikutnya
                           </Button>

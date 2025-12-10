@@ -147,10 +147,10 @@ const DetailRow = ({
   className?: string;
 }) => (
   <div
-    className={`grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-3 border-b border-slate-100 last:border-0 items-start ${className}`}
+    className={`grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] max-md:grid-cols-1 max-md:gap-1 gap-4 py-3 border-b border-slate-100 last:border-0 items-start ${className}`}
   >
     <div className="text-sm font-medium text-slate-500 shrink-0">{label}</div>
-    <div className="text-sm font-medium text-slate-900 break-words leading-relaxed">
+    <div className="text-sm font-medium text-slate-900 max-md:!w-full break-words leading-relaxed">
       {children || value || "-"}
     </div>
   </div>
@@ -250,9 +250,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
 
   const handlePrint = () => {
     if (!item) return;
-    
+
     const diagnosis = item.diagnosis;
-    
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -373,7 +373,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
       </body>
       </html>
     `;
-    
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(printContent);
@@ -394,11 +394,11 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl min-w-[70vw] max-h-[90vh] flex flex-col p-0 gap-0 outline-none overflow-hidden bg-slate-50">
+      <DialogContent className="md:max-w-4xl min-w-[70vw] max-md:min-w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 outline-none overflow-hidden bg-slate-50">
         {/* --- STICKY HEADER --- */}
-        <div className="shrink-0 px-6 py-4 border-b bg-white z-20 flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
+        <div className="shrink-0 px-6 py-4 border-b bg-white z-20 flex items-start justify-between shadow-[0_1px_2px_rgba(0,0,0,0.03)] max-md:flex-col max-md:gap-4 max-md:px-4 relative">
+          <div className="space-y-1 w-full">
+            <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-slate-700" />
                 <DialogTitle className="text-lg font-bold text-slate-900 tracking-tight leading-none">
@@ -407,11 +407,11 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
               </div>
               {item && (
                 <>
-                  <Separator orientation="vertical" className="h-5" />
+                  <Separator orientation="vertical" className="h-5 hidden md:block" />
                   <span className="font-mono text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                     #{item.ticketNumber}
                   </span>
-                  <Badge 
+                  <Badge
                     variant={item.ticketStatus === 'closed' ? 'default' : 'secondary'}
                     className="text-xs"
                   >
@@ -420,7 +420,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                 </>
               )}
             </div>
-            <DialogDescription className="flex items-center gap-3 text-xs pt-1">
+            <DialogDescription className="flex items-center gap-3 text-xs pt-1 flex-wrap">
               <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                 Dibuat: {item ? formatDate(item.createdAt) : '-'}
               </span>
@@ -437,7 +437,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
             </DialogDescription>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 max-md:w-full max-md:justify-center">
             <Button
               variant="ghost"
               size="icon"
@@ -451,7 +451,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-slate-400 hover:text-slate-700"
+              className="h-8 w-8 text-slate-400 hover:text-slate-700 max-md:absolute max-md:top-3 max-md:right-3"
               onClick={onClose}
             >
               <X className="h-5 w-5" />
@@ -460,7 +460,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
         </div>
 
         {/* --- SCROLLABLE BODY --- */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-md:p-4">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -487,10 +487,10 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                     </span>
                   </DetailRow>
 
-                  <DetailRow label="Tiket Terkait">
-                    <div className="flex flex-col gap-2">
+                  <DetailRow label="Tiket Terkait" className="max-md:!flex max-md:!flex-col">
+                    <div className="flex flex-col max-md:!w-full flex-1 gap-2">
                       {/* Current ticket */}
-                      <div className="flex items-center justify-between gap-2 py-1 px-2 bg-slate-50 rounded border">
+                      <div className="flex max-md:!w-full items-center justify-between gap-2 py-1 px-2 bg-slate-50 rounded border">
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary" className="font-mono text-xs font-normal">
                             {item.ticketNumber}
@@ -509,7 +509,7 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
-                      
+
                       {/* Related tickets */}
                       {item.relatedTickets?.length > 0 ? (
                         item.relatedTickets.map((t) => (
@@ -650,8 +650,8 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                 headerBgClass="bg-purple-50/50"
               >
                 {hasSpareparts ? (
-                  <div className="border rounded-md overflow-hidden bg-white">
-                    <table className="w-full text-sm text-left">
+                  <div className="border rounded-md overflow-x-auto bg-white">
+                    <table className="w-full text-sm text-left min-w-[300px]">
                       <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         <tr>
                           <th className="px-4 py-3 border-b">Item</th>
@@ -709,8 +709,8 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                             <DetailRow label="Pekerjaan" value={vendor.description} />
                           )}
                           {vendor.completionNotes && (
-                            <DetailRow 
-                              label="Catatan Penyelesaian" 
+                            <DetailRow
+                              label="Catatan Penyelesaian"
                               value={vendor.completionNotes}
                               className="border-0 bg-green-50/50 -mx-4 px-4 py-2 rounded-b-lg"
                             />
@@ -748,9 +748,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                         <div className="space-y-2">
                           <DetailRow label="Nama Lisensi" value={license.name} />
                           {license.description && (
-                            <DetailRow 
-                              label="Keterangan" 
-                              value={license.description} 
+                            <DetailRow
+                              label="Keterangan"
+                              value={license.description}
                               className="border-0"
                             />
                           )}
@@ -779,9 +779,9 @@ export const KartuKendaliDetail: React.FC<KartuKendaliDetailProps> = ({
                     <DetailRow label="Selesai" value={formatDate(item.closedAt)} />
                   )}
                   {item.totalWorkOrders > 0 && (
-                    <DetailRow 
-                      label="Work Order" 
-                      value={`${item.completedWorkOrders} selesai dari ${item.totalWorkOrders} total`} 
+                    <DetailRow
+                      label="Work Order"
+                      value={`${item.completedWorkOrders} selesai dari ${item.totalWorkOrders} total`}
                     />
                   )}
                   {item.pendingWorkOrders?.length > 0 && (

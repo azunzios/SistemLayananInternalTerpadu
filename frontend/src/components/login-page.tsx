@@ -297,6 +297,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     />
                   </div>
                 </div>
+
+                {/* Tambah teks SIGAP-TI di bawah icon untuk layar max-md */}
+                <div className="md:hidden text-center mt-2">
+                  <h1 className="text-lg font-bold text-gray-900">SIGAP-TI</h1>
+                </div>
               </CardHeader>
 
               <form onSubmit={handleLogin}>

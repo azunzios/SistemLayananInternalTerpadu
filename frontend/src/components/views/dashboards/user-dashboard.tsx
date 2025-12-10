@@ -265,51 +265,54 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="    
-          bg-blue-500
-          rounded-3xl 
-          p-8 
-          text-white
-          border border-white/30
-          shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
+          // PERBAIKAN: className dibuat satu baris/clean string agar Tailwind terbaca sempurna
+          className="bg-blue-500 rounded-3xl p-8 text-white border border-white/30 shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
         >
-          <div className="flex items-center justify-between">
+          {/* Header: Tetap flex-row (sejajar) di semua layar agar Lanyard tidak turun */}
+          <div className="flex flex-row items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl mb-2">
+              <h1 className="max-md:text-2xl text-3xl mb-2 font-bold">
                 Selamat Datang, {currentUser.name.split(' ')[0]}!
               </h1>
-              <p className="text-blue-100">
+              <p className="text-blue-100 max-md:text-sm md:text-base">
                 {currentUser.unitKerja} • {roleLabels[activeRole] || 'Pegawai'}
               </p>
             </div>
-            <div className="hidden md:block">
-              <IdCardLanyard className="h-20 w-20 text-blue-200 opacity-50" />
+
+            {/* Icon Lanyard: Ukuran menyesuaikan layar (h-14 di mobile, h-20 di desktop) */}
+            <div className="block shrink-0">
+              <IdCardLanyard className="hidden md:block max-md:h-14 max-md:w-14 md:h-20 md:w-20 text-blue-200 opacity-50" />
             </div>
           </div>
 
           <Separator className="my-6 bg-blue-300" />
 
           {/* Statistics Grid */}
-          <div className="flex items-center justify-between">
+          {/* PERBAIKAN: Pastikan grid-cols-1 (mobile) dan md:grid-cols-4 (desktop) tertulis rapi */}
+          <div className="grid grid-cols-1 md:grid-cols-4">
             {loading ? (
-              <div className="w-full flex items-center justify-center py-8">
+              <div className="col-span-1 md:col-span-4 flex items-center justify-center py-8">
                 <Loader className="h-6 w-6 animate-spin text-white" />
               </div>
             ) : stats ? (
               <>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                {/* Item 1 */}
+                <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
                   <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                {/* Item 2 */}
+                <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
                   <p className="text-blue-100 text-sm">Sedang Proses</p>
                   <p className="text-3xl mt-1 font-bold">{stats.in_progress}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center border-r border-blue-300">
+                {/* Item 3 */}
+                <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
                   <p className="text-blue-100 text-sm">Selesai</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completed}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center">
+                {/* Item 4 */}
+                <div className="px-4 py-4 text-center">
                   <p className="text-blue-100 text-sm">Completion Rate</p>
                   <p className="text-3xl mt-1 font-bold">{stats.completion_rate.toFixed(0)}%</p>
                 </div>
@@ -320,7 +323,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
 
         {/* Quick Actions */}
         <div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
@@ -335,27 +338,30 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
                     onClick={action.action}
                   >
                     <CardContent className="p-6">
-                      <div className={`h-12 w-12 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center mb-4`}>
-                        <Icon className="h-6 w-6 text-white" />
+                      {/* Icon beside text layout */}
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`h-12 w-12 shrink-0 bg-gradient-to-br ${action.color} rounded-lg flex items-center justify-center`}>
+                          <Icon className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{action.title}</h3>
+                          <p className="text-sm text-gray-500">{action.description}</p>
+                        </div>
                       </div>
-                      <h3 className="font-semibold mb-2">{action.title}</h3>
-                      <p className="text-sm text-gray-500 mb-4">{action.description}</p>
                       <Button
                         className="
-                          w-full rounded-full group relative overflow-hidden
-                          bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600
-                          text-white font-medium
-                          border border-blue-200/50
-                          shadow-[inset_0px_3px_3px_rgba(255,255,255,0.5),inset_0px_-3px_3px_rgba(0,0,0,0.1),0px_2px_5px_rgba(59,130,246,0.3)]
-                          hover:brightness-105 transition-all duration-300
-                        "
+                    w-full rounded-full group relative overflow-hidden
+                    bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600
+                    text-white font-medium
+                    border border-blue-200/50
+                    shadow-[inset_0px_3px_3px_rgba(255,255,255,0.5),inset_0px_-3px_3px_rgba(0,0,0,0.1),0px_2px_5px_rgba(59,130,246,0.3)]
+                    hover:brightness-105 transition-all duration-300
+                  "
                       >
                         <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
                           Buat Tiket
                           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </span>
-
-                        {/* Layer kilau tambahan agar makin terasa 'sabun' (Opsional) */}
                         <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
                       </Button>
                     </CardContent>

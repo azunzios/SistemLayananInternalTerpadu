@@ -374,7 +374,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4 max-md:flex-col">
         <div>
           <h1 className="text-3xl font-bold">Kelola Tiket</h1>
           <p className="text-muted-foreground">
@@ -383,15 +383,14 @@ export const TicketList: React.FC<TicketListProps> = ({
               : "Review dan kelola semua tiket dari pengguna"}
           </p>
         </div>
-
         {/* Export Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 max-md:w-full">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportExcel}
             disabled={exporting}
-            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all"
+            className="h-8 rounded-full border-slate-300 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-black transition-all max-md:w-full max-md:h-10"
           >
             {exporting ? (
               <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
@@ -406,25 +405,22 @@ export const TicketList: React.FC<TicketListProps> = ({
       {/* Filter Controls */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-3 items-center">
-
-            {/* Search - Wrapper dikunci h-10 */}
-            <div className="relative flex-[2] h-10">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="flex flex-wrap gap-3 items-center max-md:flex-col max-md:items-stretch">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[180px] h-10 max-md:w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Cari tiket..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                // Input h-full agar mengisi wrapper
                 className="pl-9 h-full text-sm w-full !ring-offset-0"
               />
             </div>
 
-            {/* Admin Penyedia - Status Filter only (flex-1) */}
+            {/* Admin Penyedia - Status Filter only */}
             {isAdminPenyedia && (
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                {/* SelectTrigger dipaksa !h-10 */}
-                <SelectTrigger className="!h-10 text-sm flex-1">
+                <SelectTrigger className="!h-10 text-sm flex-1 max-md:w-full">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -443,11 +439,12 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </SelectContent>
               </Select>
             )}
-            {/* Non-Admin Penyedia - Type (flex-1) + Status (flex-1) */}
+
+            {/* Non-Admin Penyedia - Type + Status */}
             {!isAdminPenyedia && (
               <>
                 <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="!h-10 text-sm flex-1">
+                  <SelectTrigger className="!h-10 text-sm flex-1 max-md:w-full">
                     <SelectValue placeholder="Tipe" />
                   </SelectTrigger>
                   <SelectContent>
@@ -456,14 +453,8 @@ export const TicketList: React.FC<TicketListProps> = ({
                     <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
                   </SelectContent>
                 </Select>
-
-                <Select
-                  value={filterStatus}
-                  onValueChange={setFilterStatus}
-                >
-                  <SelectTrigger
-                    className="!h-10 text-sm flex-1"
-                  >
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="!h-10 text-sm flex-1 max-md:w-full">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -488,31 +479,31 @@ export const TicketList: React.FC<TicketListProps> = ({
               </>
             )}
 
-            {/* Info Button - fixed size, no flex */}
-            <Button
-              variant="outline"
-              onClick={() => setShowStatusInfo(true)}
-              className="h-10 w-10 p-0 flex-shrink-0"
-              size="icon"
-              title="Informasi Status"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-
-            {/* Refresh Button - fixed size, no flex */}
-            <Button
-              variant="outline"
-              onClick={handleRefreshData}
-              disabled={loading || statsLoading}
-              className="h-10 w-10 p-0 flex-shrink-0"
-              size="icon"
-              title="Refresh"
-            >
-              <RotateCcw
-                className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
-                  }`}
-              />
-            </Button>
+            {/* Buttons Group (Info & Refresh) */}
+            <div className="flex gap-3 max-md:w-full">
+              <Button
+                variant="outline"
+                onClick={() => setShowStatusInfo(true)}
+                className="h-10 w-10 p-0 flex-shrink-0 max-md:flex-1"
+                size="icon"
+                title="Informasi Status"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRefreshData}
+                disabled={loading || statsLoading}
+                className="h-10 w-10 p-0 flex-shrink-0 max-md:flex-1"
+                size="icon"
+                title="Refresh"
+              >
+                <RotateCcw
+                  className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
+                    }`}
+                />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -528,115 +519,119 @@ export const TicketList: React.FC<TicketListProps> = ({
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-3" />
               <p className="text-lg font-medium">Tidak ada tiket</p>
-              <p className="text-sm">
+              <p className="text-sm text-center">
                 Belum ada tiket yang sesuai dengan filter
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {tickets.map((ticket, index) => {
-                const TypeIcon = getTypeIcon(ticket.type);
+            tickets.length > 0 && (
+              <div className="space-y-3">
+                {tickets.map((ticket, index) => {
+                  const TypeIcon = getTypeIcon(ticket.type);
 
-                return (
-                  <motion.div
-                    key={ticket.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Card
-                      className="hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => onViewTicket(String(ticket.id))}
+                  return (
+                    <motion.div
+                      key={ticket.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          {/* Left: Icon & Content */}
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0">
-                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <TypeIcon className="h-5 w-5 text-primary" />
-                              </div>
-                            </div>
+                      <Card
+                        className="hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => onViewTicket(String(ticket.id))}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex flex-col gap-4">
+                            {/* Layout utama: Icon+Text di kiri, Status di kanan (desktop) atau bawah (mobile) */}
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
 
-                            <div className="flex-1 min-w-0">
-                              {/* Title & Ticket Number */}
-                              <div className="flex items-start gap-2 mb-1">
-                                <h3 className="font-semibold text-sm line-clamp-1 flex-1">
-                                  {ticket.title}
-                                </h3>
-                              </div>
-
-                              {/* Ticket Number */}
-                              <p className="text-xs text-muted-foreground mb-2">
-                                #{ticket.ticketNumber}
-                              </p>
-
-                              {/* Metadata */}
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <UserIcon className="h-3 w-3" />
-                                  <span>{ticket.userName}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{formatDate(ticket.createdAt)}</span>
+                              {/* Icon Wrapper */}
+                              <div className="flex-shrink-0 max-md:hidden">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  <TypeIcon className="h-5 w-5 text-primary" />
                                 </div>
                               </div>
+
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2 max-md:mb-3">
+                                  {/* Mobile Icon (ditampilkan inline di mobile) */}
+                                  <div className="hidden max-md:flex h-8 w-8 rounded bg-primary/10 items-center justify-center flex-shrink-0">
+                                    <TypeIcon className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h3 className="font-semibold text-sm line-clamp-1">
+                                      {ticket.title}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                      #{ticket.ticketNumber}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <UserIcon className="h-3 w-3" />
+                                    <span>{ticket.userName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{formatDate(ticket.createdAt)}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Badges Section */}
+                              <div className="flex sm:flex-col max-md:items-center sm:items-end gap-2 mt-2 sm:mt-0 max-md:justify-between max-md:w-full max-md:border-t max-md:pt-3">
+                                <Badge className={`${getTypeColor(ticket.type)} max-md:text-[10px]`}>
+                                  {getTypeLabel(ticket.type)}
+                                </Badge>
+                                <div className="text-right">
+                                  {getStatusBadge(ticket.status)}
+                                </div>
+                              </div>
+
                             </div>
                           </div>
-
-                          {/* Right: Badges & Action */}
-                          <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                            <div className="flex flex-wrap gap-2 justify-end">
-                              <Badge className={getTypeColor(ticket.type)}>
-                                {getTypeLabel(ticket.type)}
-                              </Badge>
-                            </div>
-
-                            {/* Status Badge */}
-                            <div className="text-right">
-                              {getStatusBadge(ticket.status)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )
           )}
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-6 pt-4 border-t">
-            <div className="text-sm text-muted-foreground">
+          {/* Responsive Pagination */}
+          <div className="flex flex-col-reverse gap-4 md:flex-row items-center justify-between mt-6 pt-4 border-t">
+            {/* Info Text */}
+            <div className="text-sm text-muted-foreground text-center md:text-left">
               {pagination ? (
                 <>
-                  Menampilkan {pagination.from} - {pagination.to} dari{" "}
-                  {pagination.total} tiket
+                  Menampilkan <span className="font-medium text-foreground">{pagination.from}</span> - <span className="font-medium text-foreground">{pagination.to}</span> dari{" "}
+                  <span className="font-medium text-foreground">{pagination.total}</span> data
                 </>
               ) : (
                 "Memuat..."
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Controls */}
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
-                disabled={
-                  !pagination || pagination.current_page <= 1 || loading
-                }
-                className="cursor-pointer"
+                disabled={!pagination || pagination.current_page <= 1 || loading}
+                className="cursor-pointer max-md:px-2"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Sebelumnya
+                <ChevronLeft className="h-4 w-4 md:mr-1" />
+                {/* Text disembunyikan di max-md */}
+                <span className="hidden md:inline">Sebelumnya</span>
               </Button>
 
-              <div className="text-sm text-muted-foreground px-3">
-                Hal. {pagination?.current_page || 1} dari{" "}
-                {pagination?.last_page || 1}
+              <div className="text-sm font-medium px-2 min-w-[80px] text-center">
+                Hal. {pagination?.current_page || 1} / {pagination?.last_page || 1}
               </div>
 
               <Button
@@ -644,17 +639,18 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!pagination || !pagination.has_more || loading}
-                className="cursor-pointer"
+                className="cursor-pointer max-md:px-2"
               >
-                Selanjutnya
-                <ChevronRight className="h-4 w-4 ml-1" />
+                {/* Text disembunyikan di max-md */}
+                <span className="hidden md:inline">Selanjutnya</span>
+                <ChevronRight className="h-4 w-4 md:ml-1" />
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Status Info Dialog - Available for all roles */}
+      {/* Status Info Dialog */}
       <StatusInfoDialog
         open={showStatusInfo}
         onOpenChange={setShowStatusInfo}

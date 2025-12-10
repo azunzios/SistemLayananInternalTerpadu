@@ -250,8 +250,8 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
         roles: (Array.isArray(record.roles)
           ? record.roles
           : record.role
-          ? [record.role]
-          : ["pegawai"]) as any,
+            ? [record.role]
+            : ["pegawai"]) as any,
         unitKerja: String(record.unitKerja ?? record.unit_kerja ?? ""),
         phone: String(record.phone ?? ""),
         avatar: record.avatar ?? undefined,
@@ -395,33 +395,33 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
 
   const renderStatusBadge = useCallback((status: string) => {
     const config: Record<string, { label: string; color: string; icon: any }> =
-      {
-        pending_review: {
-          label: "Pending Review",
-          color: "bg-yellow-100 text-yellow-800",
-          icon: Clock,
-        },
-        approved: {
-          label: "Approved",
-          color: "bg-green-100 text-green-800",
-          icon: CheckCircle,
-        },
-        rejected: {
-          label: "Rejected",
-          color: "bg-red-100 text-red-800",
-          icon: XCircle,
-        },
-        cancelled: {
-          label: "Cancelled",
-          color: "bg-gray-100 text-gray-800",
-          icon: XCircle,
-        },
-        completed: {
-          label: "Completed",
-          color: "bg-green-100 text-green-800",
-          icon: CheckCircle,
-        },
-      };
+    {
+      pending_review: {
+        label: "Pending Review",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: Clock,
+      },
+      approved: {
+        label: "Approved",
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      },
+      rejected: {
+        label: "Rejected",
+        color: "bg-red-100 text-red-800",
+        icon: XCircle,
+      },
+      cancelled: {
+        label: "Cancelled",
+        color: "bg-gray-100 text-gray-800",
+        icon: XCircle,
+      },
+      completed: {
+        label: "Completed",
+        color: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      },
+    };
 
     const statusConfig = config[status] || {
       label: status,
@@ -639,8 +639,7 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
     try {
       setIsSubmittingQuick(true);
       const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+        `${import.meta.env.VITE_API_URL || "http://localhost:8000/api"
         }/tickets`,
         {
           method: "POST",
@@ -805,18 +804,18 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between max-md:flex-col max-md:items-start max-md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold max-md:text-2xl">
             {isManagement ? 'Kelola Zoom Booking' : 'Booking Zoom Meeting'}
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-gray-500 mt-1 max-md:text-sm">
             {isManagement
               ? "Review dan kelola permintaan booking Zoom"
               : "Cek ketersediaan dan booking ruang Zoom meeting"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-md:w-full">
           <Button
             onClick={handleRefreshZoomData}
             variant="outline"
@@ -831,7 +830,7 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
                 setQuickBookingDate(new Date());
               }}
               variant="outline"
-              className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white cursor-pointer"
+              className="gap-2 bg-cyan-600 hover:bg-cyan-700 text-white cursor-pointer max-md:flex-1"
             >
               <Video className="h-4 w-4" />
               Request Slot Booking Zoom

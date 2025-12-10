@@ -162,19 +162,19 @@ export const TeknisiDashboard: React.FC<TeknisiDashboardProps> = ({
             ) : (
               <>
                 {/* border bawah di hp, border kanan di sm ke atas */}
-                <div className="flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
+                <div className="max-md:border-b max-md:border-b-1 max-md:border-blue-300 flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
                   <p className="text-blue-100 text-sm">Total Tiket</p>
                   <p className="text-3xl mt-1 font-bold">{stats.total}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center sm:-b sm:border-b-0 sm:border-r border-blue-300">
+                <div className="max-md:border-b max-md:border-b-1 max-md:border-blue-300 flex-1 px-4 py-4 text-center sm:-b sm:border-b-0 sm:border-r border-blue-300">
                   <p className="text-blue-100 text-sm">Perlu Didiagnosa</p>
                   <p className="text-3xl mt-1 font-bold">{stats.needsDiagnosis}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
+                <div className="max-md:border-b max-md:border-b-1 max-md:border-blue-300 flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
                   <p className="text-blue-100 text-sm">In Progress</p>
                   <p className="text-3xl mt-1 font-bold">{stats.inProgress}</p>
                 </div>
-                <div className="flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
+                <div className="max-md:border-b max-md:border-b-1 max-md:border-blue-300 flex-1 px-4 py-4 text-center sm:border-b sm:border-b-0 sm:border-r border-blue-300">
                   <p className="text-blue-100 text-sm">On Hold</p>
                   <p className="text-3xl mt-1 font-bold">{stats.waitingSparepart}</p>
                 </div>

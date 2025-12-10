@@ -120,7 +120,7 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
   return (
     <Card className="border-none shadow-sm pb-6">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between max-md:flex-col max-md:items-start max-md:gap-4">
           <div>
             <CardTitle>
               Kartu Kendali Pemeliharaan
@@ -129,16 +129,16 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
               Klik pada salah satu baris untuk melihat detail
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative flex items-center gap-2">
-              <div className="relative">
+          <div className="flex items-center gap-2 max-md:w-full">
+            <div className="relative flex items-center gap-2 max-md:flex-1">
+              <div className="relative max-md:flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Cari NUP / kode aset..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="pl-9 w-[250px] lg:w-[300px] h-9 text-sm"
+                  className="pl-9 w-[250px] lg:w-[300px] h-9 text-sm max-md:w-full"
                 />
               </div>
               <Button
@@ -150,10 +150,10 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
                 <Search className="h-4 w-4" />
               </Button>
             </div>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-9 w-9" 
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
               onClick={() => fetchKartuKendali(pagination.currentPage, searchTerm)}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -161,11 +161,11 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
           </div>
         </div>
       </CardHeader>
-      
-      <CardContent> 
+
+      <CardContent>
         {/* Ubah div pembungkus agar memiliki border penuh dan rounded corner */}
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader className="bg-muted/50">
               <TableRow className="border-b">
                 <TableHead className="w-[50px] text-center border-r">No</TableHead>
@@ -191,8 +191,8 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
                 </TableRow>
               ) : (
                 items.map((item, index) => (
-                  <TableRow 
-                    key={item.id} 
+                  <TableRow
+                    key={item.id}
                     className="hover:bg-muted/30 border-b last:border-0 cursor-pointer"
                     onClick={() => onViewDetail(item.ticketId)}
                   >
@@ -232,7 +232,7 @@ export const KartuKendaliList: React.FC<KartuKendaliListProps> = ({
 
         {/* Pagination */}
         {pagination.lastPage > 1 && (
-          <div className="flex items-center justify-between pt-4">
+          <div className="flex items-center justify-between pt-4 max-md:flex-col max-md:gap-4">
             <span className="text-sm text-muted-foreground">
               Menampilkan {items.length} dari {pagination.total} data
             </span>

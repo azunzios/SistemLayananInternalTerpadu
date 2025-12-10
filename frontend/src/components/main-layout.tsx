@@ -390,18 +390,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white" key={refreshKey}>
-      {/* Header */}
-      <Header
-        currentUser={currentUser}
-        onLogout={onLogout}
-        onNavigate={handleNavigate}
-        sidebarCollapsed={sidebarCollapsed}
-        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onRoleSwitch={handleRoleSwitch}
-      />
+    <div className="flex flex-col h-screen" key={refreshKey}>
+      {/* Mobile-only top shadow to separate header from viewport */}
+      <div className="relative max-md:shadow-[0_-16px_40px_rgba(15,23,42,0.32)] max-md:z-10">
+        {/* Header */}
+        <Header
+          currentUser={currentUser}
+          onLogout={onLogout}
+          onNavigate={handleNavigate}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onRoleSwitch={handleRoleSwitch}
+        />
+      </div>
 
-      <div className="flex flex-1 overflow-hidden relative bg-white">
+      <div className="flex flex-1 overflow-hidden max-md:overflow-visible relative bg-blue">
         {/* Sidebar */}
         <Sidebar
           currentUser={currentUser}
@@ -410,11 +413,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
-        {/* Spacer for collapsed sidebar */}
-        {sidebarCollapsed && <div className="w-[72px] flex-shrink-0" />}
+        {/* Spacer for collapsed sidebar - Hidden on mobile */}
+        {sidebarCollapsed && <div className="w-[72px] flex-shrink-0 max-md:hidden" />}
 
         {/* Main Content with rounded corner */}
-        <main className="flex-1 overflow-y-scroll [scrollbar-gutter:stable] bg-[#f1f3f4] rounded-tl-3xl shadow-inner">
+        <main className="flex-1 overflow-y-scroll [scrollbar-gutter:stable] bg-[#f1f3f4] rounded-tl-3xl max-md:rounded-tr-3xl max-md:shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
           <div className="p-6">{renderContent()}</div>
         </main>
       </div>

@@ -52,9 +52,9 @@ export const ReportsView: React.FC<ReportsViewProps> = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between max-md:flex-col max-md:items-start max-md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center">
+          <h1 className="text-3xl font-bold flex items-start">
             Kartu Kendali
           </h1>
           <p className="text-gray-500">
@@ -65,7 +65,7 @@ export const ReportsView: React.FC<ReportsViewProps> = () => {
           onClick={handleExport}
           disabled={isExporting}
           variant="outline" // Gunakan variant bawaan shadcn untuk base style
-          className="rounded-full gap-2 border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-sm transition-all"
+          className="rounded-full gap-2 border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 shadow-sm transition-all max-md:w-full"
         >
           {isExporting ? (
             <Loader2 className="h-4 w-4 animate-spin text-slate-500" />

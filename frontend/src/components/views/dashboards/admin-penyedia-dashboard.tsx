@@ -116,70 +116,63 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="
-    bg-blue-500 
-    rounded-3xl 
-    p-8 
-    text-white
-    border border-white/30
-    shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]
-  "
+        className="bg-blue-500 rounded-3xl p-8 text-white border border-white/30 shadow-[inset_0_0_20px_rgba(255,255,255,0.5),0_10px_20px_rgba(0,0,0,0.2)]"
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl mb-2">
+            <h1 className="max-md:text-2xl text-3xl mb-2 font-bold">
               Admin Penyedia Dashboard
             </h1>
-            <p className="text-blue-100">
+            <p className="text-blue-100 max-md:text-sm md:text-base">
               Kelola work order dan pengadaan dari teknisi
             </p>
           </div>
-          <div className="hidden md:block">
-            <Package className="h-20 w-20 text-black-300 opacity-50" />
+          {/* Icon Package: Sesuai style user-dashboard */}
+          <div className="block shrink-0">
+            <Package className="hidden md:block max-md:h-14 max-md:w-14 md:h-20 md:w-20 text-black-300 opacity-50" />
           </div>
         </div>
 
-        <Separator className="my-6 bg-gray-300" />
+        <Separator className="my-6 bg-blue-300" />
 
-        {/* Statistics Table */}
+        {/* Statistics Grid (formerly Table) */}
         {stats ? (
-          <table className="w-full table-fixed">
-            <thead>
-              <tr>
-                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Total Work Order</th>
-                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Requested</th>
-                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">In Procurement</th>
-                <th className="py-2 text-blue-100 text-sm font-normal border-r border-gray-300">Completed</th>
-                <th className="py-2 text-blue-100 text-sm font-normal">Unsuccessful</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="py-2 text-center border-r border-gray-300">
-                  <p className="text-3xl font-bold">{stats.total}</p>
-                </td>
-                <td className="py-2 text-center border-r border-gray-300">
-                  <p className="text-3xl font-bold">{stats.byStatus.requested}</p>
-                </td>
-                <td className="py-2 text-center border-r border-gray-300">
-                  <p className="text-3xl font-bold">{stats.byStatus.in_procurement}</p>
-                </td>
-                <td className="py-2 text-center border-r border-gray-300">
-                  <p className="text-3xl font-bold">{stats.byStatus.completed}</p>
-                </td>
-                <td className="py-2 text-center">
-                  <p className="text-3xl font-bold">{stats.byStatus.unsuccessful}</p>
-                </td>
-              </tr>
-              <tr>
-                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Semua work order</td>
-                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Menunggu proses</td>
-                <td className="py-1 text-center text-xs text-white border-r border-gray-300">Sedang pengadaan</td>
-                <td className="py-1 text-center text-xs text-whites border-r border-gray-300">Selesai</td>
-                <td className="py-1 text-center text-xs text-white  ">Tidak berhasil</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="grid md:grid-cols-5 max-md:grid-cols-1">
+            {/* Item 1: Total */}
+            <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
+              <p className="text-blue-100 text-sm">Total Work Order</p>
+              <p className="text-3xl mt-1 font-bold">{stats.total}</p>
+              <p className="text-xs text-blue-200 mt-1">Semua work order</p>
+            </div>
+
+            {/* Item 2: Requested */}
+            <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
+              <p className="text-blue-100 text-sm">Requested</p>
+              <p className="text-3xl mt-1 font-bold">{stats.byStatus.requested}</p>
+              <p className="text-xs text-blue-200 mt-1">Menunggu proses</p>
+            </div>
+
+            {/* Item 3: In Procurement */}
+            <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
+              <p className="text-blue-100 text-sm">In Procurement</p>
+              <p className="text-3xl mt-1 font-bold">{stats.byStatus.in_procurement}</p>
+              <p className="text-xs text-blue-200 mt-1">Sedang pengadaan</p>
+            </div>
+
+            {/* Item 4: Completed */}
+            <div className="px-4 py-4 text-center border-b border-blue-300 md:border-none md:border-r">
+              <p className="text-blue-100 text-sm">Completed</p>
+              <p className="text-3xl mt-1 font-bold">{stats.byStatus.completed}</p>
+              <p className="text-xs text-blue-200 mt-1">Selesai</p>
+            </div>
+
+            {/* Item 5: Unsuccessful */}
+            <div className="px-4 py-4 text-center">
+              <p className="text-blue-100 text-sm">Unsuccessful</p>
+              <p className="text-3xl mt-1 font-bold">{stats.byStatus.unsuccessful}</p>
+              <p className="text-xs text-blue-200 mt-1">Tidak berhasil</p>
+            </div>
+          </div>
         ) : (
           <div className="w-full flex items-center justify-center py-8">
             <Loader className="h-6 w-6 animate-spin text-black-600" />
@@ -188,7 +181,7 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
       </motion.div>
 
       {/* Work Order by Type - simple cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardContent className="p-6">
@@ -244,7 +237,7 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
       {/* Recent Work Orders */}
       <Card className="pb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between max-md:flex-col max-md:items-start max-md:gap-4">
             <div>
               <CardTitle>Work Order Terbaru</CardTitle>
               <CardDescription>
@@ -260,7 +253,7 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
     border-2 border-blue-300/50
     shadow-[inset_0px_4px_8px_rgba(255,255,255,0.4),inset_0px_-4px_8px_rgba(0,0,0,0.2),0px_4px_10px_rgba(59,130,246,0.5)]
     hover:brightness-110 transition-all duration-300
-    group px-6
+    group px-6 max-md:w-full
   "
             >
               {/* Efek Kilau Putih (Soap Shine Overlay) */}
@@ -269,7 +262,7 @@ export const AdminPenyediaDashboard: React.FC<AdminPenyediaDashboardProps> = ({
               {/* Kilau kecil tambahan di pojok */}
               <div className="absolute top-1 right-4 w-4 h-2 bg-white/40 blur-sm rounded-full pointer-events-none" />
 
-              <span className="relative z-10 flex items-center gap-2 drop-shadow-sm font-semibold">
+              <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-sm font-semibold">
                 Lihat Semua
                 <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
               </span>

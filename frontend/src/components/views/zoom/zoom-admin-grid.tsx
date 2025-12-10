@@ -529,15 +529,14 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Alert removed as requested */}
       <div className="hidden"></div>
 
-      {/* Date Input */}
+      {/* Date Input - Responsive Stack */}
       <Card>
         <CardHeader>
-          <div className="grid grid-cols-2 gap-4 items-center mb-4">
+          <div className="max-md:flex max-md:flex-col gap-4 md:grid md:grid-cols-2 max-md:items-center mb-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-start max-md:items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Pilih Tanggal
               </CardTitle>
@@ -545,17 +544,20 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 Pilih tanggal untuk melihat dan mengelola jadwal Zoom
               </CardDescription>
             </div>
-            <div className="flex justify-end">
-              <DatePicker
-                value={selectedDate || undefined}
-                onChange={handleCalendarDateChange}
-              />
+            <div className="flex justify-start md:justify-end w-full">
+              <div className="w-full md:w-auto">
+                <DatePicker
+                  value={selectedDate || undefined}
+                  onChange={handleCalendarDateChange}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Grid View - Calendar Style */}
+      {/* Empty State */}
       {!selectedDate && (
         <Card>
           <CardContent className="py-16">
@@ -574,7 +576,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
         <>
           <Card className="pb-6">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="max-md:flex max-md:flex-col gap-4 md:grid md:grid-cols-2 md:items-center md:justify-between">
+                {/* Title Section */}
                 <div className="flex-1">
                   <CardTitle>Jadwal Zoom - Admin Control</CardTitle>
                   {isLoadingCalendar && (
@@ -586,129 +589,132 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                     <p className="text-sm text-red-600 mt-1">{calendarError}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* View Mode Selector - Only show in calendar mode */}
+
+                {/* Controls Section - Wrap on mobile */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  {/* View Mode Selector */}
                   {displayMode === "calendar" && (
-                    <>
-                      <Select
-                        value={viewMode}
-                        onValueChange={(value: "daily" | "monthly") =>
-                          setViewMode(value)
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              Harian
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="monthly">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4" />
-                              Bulanan
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </>
+                    <Select
+                      value={viewMode}
+                      onValueChange={(value: "daily" | "monthly") =>
+                        setViewMode(value)
+                      }
+                    >
+                      <SelectTrigger className="w-full md:w-[140px] order-1 md:order-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Harian
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="monthly">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            Bulanan
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
 
-                  {viewMode === "daily" && displayMode === "calendar" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePreviousDay}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleToday}
-                        className="w-[100px]"
-                      >
-                        Hari Ini
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNextDay}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                  {/* Navigation Buttons - Grouped */}
+                  <div className="flex items-center gap-2 flex-1 md:flex-none justify-end order-2 md:order-none">
+                    {viewMode === "daily" && displayMode === "calendar" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePreviousDay}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleToday}
+                          className="w-[80px] md:w-[100px]"
+                        >
+                          Hari Ini
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNextDay}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
 
-                  {viewMode === "monthly" && displayMode === "calendar" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePreviousMonth}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleThisMonth}
-                        className="w-[100px]"
-                      >
-                        Bulan Ini
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNextMonth}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                    {viewMode === "monthly" && displayMode === "calendar" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePreviousMonth}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleThisMonth}
+                          className="w-[80px] md:w-[100px]"
+                        >
+                          Bulan Ini
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNextMonth}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
 
-                  {/* Navigation for List View */}
-                  {displayMode === "list" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePreviousDay}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleToday}
-                        className="w-[100px]"
-                      >
-                        Hari Ini
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNextDay}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                    {displayMode === "list" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePreviousDay}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleToday}
+                          className="w-[80px] md:w-[100px]"
+                        >
+                          Hari Ini
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNextDay}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+
+            <CardContent className="max-md:px-2"> {/* Padding reduced on mobile */}
               {viewMode === "monthly" ? (
                 <ZoomMonthlyCalendar
                   tickets={calendarTickets}
                   selectedDate={selectedDate}
                 />
               ) : displayMode === "list" ? (
-                /* List View - All Tickets */
+                /* List View - Responsive Cards */
                 <div className="space-y-3">
                   {bookings.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
@@ -746,57 +752,55 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                             transition={{ delay: index * 0.05 }}
                             className="p-4 border-2 border-gray-200 hover:border-blue-300 hover:shadow-md transition-all bg-white"
                           >
-                            <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                               {/* Left Side - Booking Info */}
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-3">
+                              <div className="flex-1 space-y-3">
+                                <div className="flex items-start gap-3">
                                   <div
-                                    className={`h-8 w-8 ${statusStyle.bg} lex items-center justify-center`}
+                                    className={`h-8 w-8 shrink-0 ${statusStyle.bg} flex items-center justify-center`}
                                   >
                                     <StatusIcon
-                                      className={`h-4 w-4 ${
-                                        statusStyle.text === "text-gray-900"
+                                      className={`h-4 w-4 ${statusStyle.text === "text-gray-900"
                                           ? "text-gray-900"
                                           : "text-white"
-                                      }`}
+                                        }`}
                                     />
                                   </div>
-                                  <div>
-                                    <h4 className="font-semibold">
+                                  <div className="min-w-0">
+                                    <h4 className="font-semibold line-clamp-2">
                                       {booking.title}
                                     </h4>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-gray-500 truncate">
                                       {booking.userName}
                                     </p>
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-4 text-sm">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                                   <div className="flex items-center gap-1.5 text-gray-700">
-                                    <Clock className="h-4 w-4" />
+                                    <Clock className="h-4 w-4 shrink-0" />
                                     <span>
                                       {booking.startTime} - {booking.endTime}
                                     </span>
                                   </div>
-                                  {account && (
-                                    <div className="flex items-center gap-1.5">
+                                  {account ? (
+                                    <div className="flex items-center gap-1.5 min-w-0">
                                       <div
-                                        className={`w-3 h-3 rounded-full ${account.color}`}
+                                        className={`w-3 h-3 rounded-full shrink-0 ${account.color}`}
                                       />
-                                      <span className="text-gray-700">
+                                      <span className="text-gray-700 truncate max-w-[150px]">
                                         {account.name}
                                       </span>
                                       {!account.isActive && (
                                         <Badge
                                           variant="secondary"
-                                          className="text-xs"
+                                          className="text-[10px] px-1 h-5"
                                         >
                                           Nonaktif
                                         </Badge>
                                       )}
                                     </div>
-                                  )}{" "}
-                                  {!account && (
+                                  ) : (
                                     <Badge
                                       variant="outline"
                                       className="text-xs"
@@ -807,21 +811,22 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                 </div>
 
                                 {booking.description && (
-                                  <p className="text-sm text-gray-600 line-clamp-2">
+                                  <p className="text-sm text-gray-600 line-clamp-2 bg-gray-50 p-2">
                                     {booking.description}
                                   </p>
                                 )}
                               </div>
 
-                              {/* Right Side - Status & Actions */}
-                              <div className="flex flex-col items-end gap-2">
+                              {/* Right Side - Status & Actions (Responsive) */}
+                              <div className="flex flex-row md:flex-col items-center justify-between md:items-end gap-3 pt-3 border-t md:border-t-0 md:pt-0">
                                 <Badge
+                                  className="w-fit"
                                   variant={
                                     booking.status === "approved"
                                       ? "default"
                                       : booking.status === "ditolak"
-                                      ? "destructive"
-                                      : "secondary"
+                                        ? "destructive"
+                                        : "secondary"
                                   }
                                 >
                                   {statusStyle.label}
@@ -831,7 +836,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setSelectedBooking(booking)}
-                                  className="gap-2"
+                                  className="gap-2 max-md:flex-1 max-md:justify-center max-md:ml-auto md:w-full"
                                 >
                                   <Eye className="h-4 w-4" />
                                   Detail
@@ -845,12 +850,14 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 </div>
               ) : (
                 /* Calendar Grid View */
-                <div className="w-full overflow-hidden">
+                <div className="w-full overflow-hidden border">
                   <div className="flex bg-white overflow-x-auto">
                     {/* Time Column - Sticky */}
-                    <div className="sticky left-0 z-10 flex-shrink-0 w-24 bg-white border-r border-gray-300">
-                      {/* Header Cell - Empty for mathematical axis look */}
-                      <div className="h-12 border-b border-gray-300 flex items-center justify-center"></div>
+                    <div className="sticky left-0 z-20 flex-shrink-0 w-16 md:w-24 bg-white border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      {/* Header Cell */}
+                      <div className="h-12 border-b border-gray-300 flex items-center justify-center bg-gray-50">
+                        <Clock className="h-4 w-4 text-gray-400" />
+                      </div>
                       {/* Time Labels */}
                       {TIME_HOURS.map((hour) => (
                         <div
@@ -859,7 +866,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                           style={{ height: `${PIXELS_PER_HOUR}px` }}
                         >
                           {hour !== 6 && (
-                            <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm text-gray-700 bg-white px-2">
+                            <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs md:text-sm text-gray-700 bg-white px-1 md:px-2 font-medium">
                               {hour.toString().padStart(2, "0")}:00
                             </span>
                           )}
@@ -867,61 +874,59 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                       ))}
                     </div>
 
-                    {/* Account Columns - with horizontal scroll if more than 3 accounts */}
+                    {/* Account Columns */}
                     <div
                       className="flex border-l border-gray-300"
+                      // Removed fixed calc() logic for mobile safety
                       style={{
-                        minWidth:
-                          zoomAccounts.length > 3
-                            ? "auto"
-                            : "calc(100vw - 900px)",
+                        minWidth: "fit-content"
                       }}
                     >
                       {zoomAccounts.map((account, accountIndex) => {
                         const accountBookings = getAccountBookings(account);
-                        // Hitung width: jika <= 3 akun bagi rata fit viewport, jika > 3 gunakan fixed width
-                        const baseWidth =
-                          zoomAccounts.length <= 3
-                            ? `calc((100vw - 320px) / ${zoomAccounts.length})`
+
+                        // Responsive Width Logic:
+                        // On Mobile (max-md): Fixed width 200px to force scrolling
+                        // On Desktop: Dynamic calculation
+                        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                        const baseWidth = isMobile
+                          ? "200px"
+                          : zoomAccounts.length <= 3
+                            ? `calc((100vw - 350px) / ${zoomAccounts.length})`
                             : "320px";
 
                         return (
                           <div
                             key={account.id}
-                            className={`border-r last:border-r-0 border-gray-300 relative shrink-0 ${
-                              accountIndex % 2 === 0
-                                ? "bg-gray-50/30"
-                                : "bg-white"
-                            }`}
+                            className={`border-r last:border-r-0 border-gray-300 relative shrink-0 ${accountIndex % 2 === 0 ? "bg-gray-50/30" : "bg-white"
+                              }`}
                             style={{
                               width: baseWidth,
-                              minWidth: baseWidth,
+                              minWidth: "200px", // Safety minimum
                               flex: "none",
                             }}
                           >
                             {/* Header Cell */}
                             <div
-                              className={`h-12 border-b border-gray-300 flex items-center justify-center px-2 ${
-                                account.isActive ? "bg-gray-100" : "bg-gray-200"
-                              }`}
+                              className={`h-12 border-b border-gray-300 flex items-center justify-center px-2 ${account.isActive ? "bg-gray-100" : "bg-gray-200"
+                                }`}
                             >
-                              <div className="text-center">
-                                <span className="text-sm font-medium block">
+                              <div className="text-center w-full">
+                                <span className="text-sm font-medium block truncate">
                                   {account.name}
                                 </span>
                                 <span
-                                  className={`text-xs ${
-                                    account.isActive
+                                  className={`text-[10px] md:text-xs ${account.isActive
                                       ? "text-green-600"
                                       : "text-gray-500"
-                                  }`}
+                                    }`}
                                 >
                                   {account.isActive ? "● Aktif" : "● Nonaktif"}
                                 </span>
                               </div>
                             </div>
 
-                            {/* Grid Cells Container - Relative positioning for bookings */}
+                            {/* Grid Cells Container */}
                             <div
                               className="relative"
                               style={{ height: `${totalGridHeight}px` }}
@@ -929,14 +934,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                               {/* Inactive Overlay */}
                               {!account.isActive && (
                                 <div className="absolute inset-0 bg-gray-100/60 z-20 flex items-center justify-center pointer-events-none">
-                                  <div className="text-center">
-                                    <PowerOff className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                                    <p className="text-sm text-gray-600 font-semibold">
-                                      Akun Nonaktif
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      Tidak menerima booking baru
-                                    </p>
+                                  <div className="text-center p-2">
+                                    <PowerOff className="h-8 w-8 md:h-12 md:w-12 mx-auto mb-2 text-gray-400" />
                                   </div>
                                 </div>
                               )}
@@ -959,9 +958,7 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                   booking.startTime,
                                   booking.endTime
                                 );
-                                const statusStyle = getStatusStyle(
-                                  booking.status
-                                );
+                                const statusStyle = getStatusStyle(booking.status);
                                 const StatusIcon = statusStyle.icon;
 
                                 return (
@@ -970,40 +967,39 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                     initial={{ scale: 0.95, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className={`absolute left-2 right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} p-2 shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
+                                    className={`absolute left-1 right-1 md:left-2 md:right-2 ${statusStyle.bg} border-2 ${statusStyle.border} ${statusStyle.text} p-1.5 md:p-2 shadow-sm md:shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-all z-10 group`}
                                     style={{
                                       top: `${style.top}px`,
                                       height: `${style.height}px`,
-                                      minHeight: "60px",
+                                      minHeight: "50px",
                                     }}
                                     onClick={() => setSelectedBooking(booking)}
                                   >
-                                    {/* Status Badge */}
+                                    {/* Icon Only on Mobile, Absolute Position */}
                                     <div className="absolute top-1 right-1">
-                                      <StatusIcon className="h-4 w-4" />
+                                      <StatusIcon className="h-3 w-3 md:h-4 md:w-4" />
                                     </div>
 
-                                    <div className="text-xs font-semibold truncate pr-6">
+                                    <div className="text-xs md:text-xs font-semibold truncate pr-4 md:pr-6">
                                       {booking.title}
                                     </div>
-                                    <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
-                                      <Clock className="h-3 w-3 flex-shrink-0" />
+                                    <div className="text-md md:text-xs opacity-90 flex items-center gap-1 mt-0.5 md:mt-1">
+                                      <Clock className="h-2.5 w-2.5 md:h-3 md:w-3 flex-shrink-0" />
                                       <span className="truncate">
                                         {booking.startTime} - {booking.endTime}
                                       </span>
                                     </div>
+
+                                    {/* Detail tambahan jika blok cukup tinggi */}
                                     {style.height > 60 && (
-                                      <>
+                                      <div className="hidden md:block">
                                         <div className="text-xs opacity-90 flex items-center gap-1 mt-1">
                                           <UserIcon className="h-3 w-3 flex-shrink-0" />
                                           <span className="truncate">
                                             {booking.userName}
                                           </span>
                                         </div>
-                                        <div className="text-xs mt-1 px-1.5 py-0.5 bg-white/20 inline-block">
-                                          {statusStyle.label}
-                                        </div>
-                                      </>
+                                      </div>
                                     )}
                                   </motion.div>
                                 );
@@ -1016,34 +1012,34 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                   </div>
 
                   {/* Legend */}
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="mt-0 p-4 bg-gray-50 border-t border-gray-200">
                     <p className="text-sm font-semibold mb-3">
                       Keterangan Status:
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-green-500 rounded flex items-center justify-center">
-                          <CheckCircle className="h-4 w-4 text-white" />
+                        <div className="w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded flex items-center justify-center shrink-0">
+                          <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-white" />
                         </div>
-                        <span className="text-sm">Disetujui</span>
+                        <span className="text-xs md:text-sm">Disetujui</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
-                          <Clock className="h-4 w-4 text-gray-900" />
+                        <div className="w-5 h-5 md:w-6 md:h-6 bg-yellow-400 rounded flex items-center justify-center shrink-0">
+                          <Clock className="h-3 w-3 md:h-4 md:w-4 text-gray-900" />
                         </div>
-                        <span className="text-sm">Pending Review</span>
+                        <span className="text-xs md:text-sm">Pending Review</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center">
-                          <XCircle className="h-4 w-4 text-white" />
+                        <div className="w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded flex items-center justify-center shrink-0">
+                          <XCircle className="h-3 w-3 md:h-4 md:w-4 text-white" />
                         </div>
-                        <span className="text-sm">Ditolak</span>
+                        <span className="text-xs md:text-sm">Ditolak</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gray-200 border-2 border-gray-400 rounded flex items-center justify-center">
-                          <PowerOff className="h-4 w-4 text-gray-600" />
+                        <div className="w-5 h-5 md:w-6 md:h-6 bg-gray-200 border-2 border-gray-400 rounded flex items-center justify-center shrink-0">
+                          <PowerOff className="h-3 w-3 md:h-4 md:w-4 text-gray-600" />
                         </div>
-                        <span className="text-sm">Akun Nonaktif</span>
+                        <span className="text-xs md:text-sm">Akun Nonaktif</span>
                       </div>
                     </div>
                   </div>
@@ -1092,8 +1088,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
             return <Badge variant={config.variant}>{config.label}</Badge>;
           }}
           zoomAccountDisplay={{} as any}
-          onRequestApprove={() => {}}
-          onRequestReject={() => {}}
+          onRequestApprove={() => { }}
+          onRequestReject={() => { }}
           onClose={() => setSelectedBooking(null)}
           currentUser={currentUser}
         />
