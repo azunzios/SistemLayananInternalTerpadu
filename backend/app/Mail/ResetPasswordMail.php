@@ -31,7 +31,7 @@ class ResetPasswordMail extends Mailable
     }
 
     /**
-     * Send email using Mailtrap API or SMTP based on config
+     * Send email - Override to use Mailtrap API or SMTP
      */
     public function send($mailer)
     {
@@ -42,7 +42,7 @@ class ResetPasswordMail extends Mailable
             $apiToken = env('MAILTRAP_API_TOKEN');
             
             if (!$apiToken) {
-                throw new \Exception('MAILTRAP_API_TOKEN not configured');
+                throw new \Exception('MAILTRAP_API_TOKEN not configured in .env file');
             }
 
             // Render email body
