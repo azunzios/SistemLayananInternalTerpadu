@@ -317,7 +317,7 @@ export const ResetPasswordPage: React.FC = () => {
                 </div>
               </div>
 
-              <Alert>
+              <Alert> 
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm">
                   Password harus minimal 8 karakter dan sesuai dengan konfirmasi
@@ -326,7 +326,7 @@ export const ResetPasswordPage: React.FC = () => {
               </Alert>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-2">
+            <CardFooter className="flex flex-col space-y-2 mt-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Mereset Password..." : "Reset Password"}
               </Button>
