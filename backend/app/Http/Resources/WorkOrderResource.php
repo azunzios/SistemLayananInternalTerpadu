@@ -32,6 +32,7 @@ class WorkOrderResource extends JsonResource
             'completion_notes' => $this->completion_notes,
             'completed_at' => $this->completed_at?->toIso8601String(),
             'failure_reason' => $this->failure_reason,
+            'asset_condition_change' => $this->asset_condition_change,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
             'timeline' => TimelineResource::collection($this->whenLoaded('timeline')),

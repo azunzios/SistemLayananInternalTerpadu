@@ -32,7 +32,7 @@ import { FileText, Send } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { TicketDiagnosis } from "@/types";
-import {Spinner} from "@/components/ui/spinner";
+import { Spinner } from "@/components/ui/spinner";
 
 interface TicketDiagnosisFormProps {
   ticketId: string;
@@ -57,9 +57,12 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingDiagnosis, setIsLoadingDiagnosis] = useState(false);
-  const [fetchedDiagnosis, setFetchedDiagnosis] = useState<TicketDiagnosis | null>(null);
+  const [fetchedDiagnosis, setFetchedDiagnosis] =
+    useState<TicketDiagnosis | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [confirmationType, setConfirmationType] = useState<"change" | "save">("save");
+  const [confirmationType, setConfirmationType] = useState<"change" | "save">(
+    "save"
+  );
 
   const [formData, setFormData] = useState({
     problem_description: "",
@@ -75,6 +78,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
     alternative_solution: "",
     technician_notes: "",
     estimasi_hari: "",
+    asset_condition_change: "",
   });
 
   // Fetch diagnosis data dari backend saat modal dibuka
@@ -100,6 +104,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
           alternative_solution: data.alternative_solution || "",
           technician_notes: data.technician_notes || "",
           estimasi_hari: data.estimasi_hari || "",
+          asset_condition_change: data.asset_condition_change || "",
         });
       }
     } catch (error) {
@@ -122,6 +127,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
         alternative_solution: existingDiagnosis.alternative_solution || "",
         technician_notes: existingDiagnosis.technician_notes || "",
         estimasi_hari: existingDiagnosis.estimasi_hari || "",
+        asset_condition_change: existingDiagnosis.asset_condition_change || "",
       });
     }
   }, [existingDiagnosis, fetchedDiagnosis]);
@@ -143,7 +149,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
 
     if (
       formData.repair_type === "unrepairable" &&
-      !formData.unrepairable_reason.trim()
+      !formData.unrepairable_reason
     ) {
       toast.error("Alasan tidak dapat diperbaiki harus diisi");
       return;
@@ -181,13 +187,10 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
     setIsSubmitting(true);
 
     try {
-      await api.post(
-        `tickets/${ticketId}/diagnosis`,
-        formData
-      );
+      await api.post(`tickets/${ticketId}/diagnosis`, formData);
 
       toast.success("Diagnosis berhasil disimpan");
-      
+
       // Panggil callback untuk update parent state (akan trigger refresh)
       onDiagnosisSubmitted();
     } catch (error: any) {
@@ -222,7 +225,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
             {isLoadingDiagnosis ? (
               <div className="flex items-center justify-center py-8">
                 <div className="flex flex-col justify-center items-center gap-4">
-                  <Spinner/>
+                  <Spinner />
                   <p className="text-sm text-gray-600">Memuat diagnosis...</p>
                 </div>
               </div>
@@ -230,289 +233,364 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
               <div className="space-y-6">
                 {/* Identifikasi Masalah */}
                 <Card className="pb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Identifikasi Masalah</CardTitle>
-                <CardDescription className="text-sm">
-                  Jelaskan masalah yang ditemukan
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="problem_description">
-                    Deskripsi Masalah *
-                  </Label>
-                  <Textarea
-                    id="problem_description"
-                    placeholder="Jelaskan masalah yang ditemukan secara detail..."
-                    value={formData.problem_description}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        problem_description: e.target.value,
-                      })
-                    }
-                    rows={4}
-                    className="mt-1.5"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Kategori Masalah *</Label>
-                  <RadioGroup
-                    value={formData.problem_category}
-                    onValueChange={(value: any) =>
-                      setFormData({ ...formData, problem_category: value })
-                    }
-                    className="space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="hardware" id="hw" />
-                      <Label
-                        htmlFor="hw"
-                        className="font-normal cursor-pointer"
-                      >
-                        Hardware
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="software" id="sw" />
-                      <Label
-                        htmlFor="sw"
-                        className="font-normal cursor-pointer"
-                      >
-                        Software
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="lainnya" id="other" />
-                      <Label
-                        htmlFor="other"
-                        className="font-normal cursor-pointer"
-                      >
-                        Lainnya
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Hasil Diagnosis */}
-            <Card className="pb-6">
-              <CardHeader>
-                <CardTitle className="text-lg">Hasil Diagnosis</CardTitle>
-                <CardDescription className="text-sm">
-                  Tentukan jenis perbaikan yang diperlukan
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="mb-2 block">Dapat Diperbaiki? *</Label>
-                  <RadioGroup
-                    value={formData.repair_type}
-                    onValueChange={(value: any) =>
-                      setFormData({ ...formData, repair_type: value })
-                    }
-                    className="space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="direct_repair" id="direct" />
-                      <Label
-                        htmlFor="direct"
-                        className="font-normal cursor-pointer"
-                      >
-                        Bisa diperbaiki langsung
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="need_sparepart" id="sparepart" />
-                      <Label
-                        htmlFor="sparepart"
-                        className="font-normal cursor-pointer"
-                      >
-                        Butuh Sparepart
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="need_vendor" id="vendor" />
-                      <Label
-                        htmlFor="vendor"
-                        className="font-normal cursor-pointer"
-                      >
-                        Butuh Vendor
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="need_license" id="license" />
-                      <Label
-                        htmlFor="license"
-                        className="font-normal cursor-pointer"
-                      >
-                        Butuh Lisensi
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="unrepairable" id="unrepairable" />
-                      <Label
-                        htmlFor="unrepairable"
-                        className="font-normal cursor-pointer"
-                      >
-                        Tidak dapat diperbaiki
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {/* Jika bisa diperbaiki langsung */}
-                {formData.repair_type === "direct_repair" && (
-                  <div>
-                    <Label htmlFor="repair_description">
-                      Deskripsi Perbaikan *
-                    </Label>
-                    <Textarea
-                      id="repair_description"
-                      placeholder="Jelaskan apa yang akan/telah diperbaiki..."
-                      value={formData.repair_description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          repair_description: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="mt-1.5"
-                    />
-                  </div>
-                )}
-
-                {/* Jika tidak dapat diperbaiki */}
-                {formData.repair_type === "unrepairable" && (
-                  <>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Identifikasi Masalah
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      Jelaskan masalah yang ditemukan
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="unrepairable_reason">
-                        Alasan Tidak Dapat Diperbaiki *
+                      <Label htmlFor="problem_description">
+                        Deskripsi Masalah *
                       </Label>
                       <Textarea
-                        id="unrepairable_reason"
-                        placeholder="Jelaskan mengapa tidak dapat diperbaiki..."
-                        value={formData.unrepairable_reason}
+                        id="problem_description"
+                        placeholder="Jelaskan masalah yang ditemukan secara detail..."
+                        value={formData.problem_description}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            unrepairable_reason: e.target.value,
+                            problem_description: e.target.value,
                           })
                         }
-                        rows={3}
+                        rows={4}
                         className="mt-1.5"
                       />
                     </div>
+
                     <div>
-                      <Label htmlFor="alternative_solution">
-                        Solusi Alternatif
-                      </Label>
+                      <Label className="mb-2 block">Kategori Masalah *</Label>
+                      <RadioGroup
+                        value={formData.problem_category}
+                        onValueChange={(value: any) =>
+                          setFormData({ ...formData, problem_category: value })
+                        }
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="hardware" id="hw" />
+                          <Label
+                            htmlFor="hw"
+                            className="font-normal cursor-pointer"
+                          >
+                            Hardware
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="software" id="sw" />
+                          <Label
+                            htmlFor="sw"
+                            className="font-normal cursor-pointer"
+                          >
+                            Software
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lainnya" id="other" />
+                          <Label
+                            htmlFor="other"
+                            className="font-normal cursor-pointer"
+                          >
+                            Lainnya
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Hasil Diagnosis */}
+                <Card className="pb-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Hasil Diagnosis</CardTitle>
+                    <CardDescription className="text-sm">
+                      Tentukan jenis perbaikan yang diperlukan
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="mb-2 block">Dapat Diperbaiki? *</Label>
+                      <RadioGroup
+                        value={formData.repair_type}
+                        onValueChange={(value: any) =>
+                          setFormData({ ...formData, repair_type: value })
+                        }
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="direct_repair" id="direct" />
+                          <Label
+                            htmlFor="direct"
+                            className="font-normal cursor-pointer"
+                          >
+                            Bisa diperbaiki langsung
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="need_sparepart"
+                            id="sparepart"
+                          />
+                          <Label
+                            htmlFor="sparepart"
+                            className="font-normal cursor-pointer"
+                          >
+                            Butuh Sparepart
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="need_vendor" id="vendor" />
+                          <Label
+                            htmlFor="vendor"
+                            className="font-normal cursor-pointer"
+                          >
+                            Butuh Vendor
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="need_license" id="license" />
+                          <Label
+                            htmlFor="license"
+                            className="font-normal cursor-pointer"
+                          >
+                            Butuh Lisensi
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="unrepairable"
+                            id="unrepairable"
+                          />
+                          <Label
+                            htmlFor="unrepairable"
+                            className="font-normal cursor-pointer"
+                          >
+                            Tidak dapat diperbaiki
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    {/* Jika bisa diperbaiki langsung */}
+                    {formData.repair_type === "direct_repair" && (
+                      <div>
+                        <Label htmlFor="repair_description">
+                          Deskripsi Perbaikan *
+                        </Label>
+                        <Textarea
+                          id="repair_description"
+                          placeholder="Jelaskan apa yang akan/telah diperbaiki..."
+                          value={formData.repair_description}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              repair_description: e.target.value,
+                            })
+                          }
+                          rows={3}
+                          className="mt-1.5"
+                        />
+                      </div>
+                    )}
+
+                    {/* Jika tidak dapat diperbaiki */}
+                    {formData.repair_type === "unrepairable" && (
+                      <>
+                        <div>
+                          <Label htmlFor="unrepairable_reason">
+                            Alasan Tidak Dapat Diperbaiki *
+                          </Label>
+                          <Textarea
+                            id="unrepairable_reason"
+                            placeholder="Jelaskan mengapa tidak dapat diperbaiki..."
+                            value={formData.unrepairable_reason}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                unrepairable_reason: e.target.value,
+                              })
+                            }
+                            rows={3}
+                            className="mt-1.5"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="asset_condition_change">
+                            Ubah Kondisi BMN (Opsional)
+                          </Label>
+                          <RadioGroup
+                            value={formData.asset_condition_change}
+                            onValueChange={(value) =>
+                              setFormData({
+                                ...formData,
+                                asset_condition_change: value,
+                              })
+                            }
+                            className="mt-2 space-y-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="Baik" id="baik" />
+                              <Label
+                                htmlFor="baik"
+                                className="font-normal cursor-pointer"
+                              >
+                                Baik
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="Rusak Ringan"
+                                id="rusak_ringan"
+                              />
+                              <Label
+                                htmlFor="rusak_ringan"
+                                className="font-normal cursor-pointer"
+                              >
+                                Rusak Ringan
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem
+                                value="Rusak Berat"
+                                id="rusak_berat"
+                              />
+                              <Label
+                                htmlFor="rusak_berat"
+                                className="font-normal cursor-pointer"
+                              >
+                                Rusak Berat
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Kondisi BMN akan otomatis diubah di database asset
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="alternative_solution">
+                            Solusi Alternatif
+                          </Label>
+                          <Textarea
+                            id="alternative_solution"
+                            placeholder="Saran solusi alternatif (ganti baru, pinjam unit, dll)..."
+                            value={formData.alternative_solution}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                alternative_solution: e.target.value,
+                              })
+                            }
+                            rows={2}
+                            className="mt-1.5"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Info untuk work order */}
+                    {["need_sparepart", "need_vendor", "need_license"].includes(
+                      formData.repair_type
+                    ) && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-sm text-blue-800">
+                          <strong>Catatan:</strong> Setelah menyimpan diagnosis,
+                          Anda akan diminta untuk mengisi Work Order untuk{" "}
+                          {formData.repair_type === "need_sparepart" &&
+                            "pengadaan sparepart"}
+                          {formData.repair_type === "need_vendor" &&
+                            "vendor eksternal"}
+                          {formData.repair_type === "need_license" &&
+                            "lisensi software"}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="technician_notes">Catatan Teknisi</Label>
                       <Textarea
-                        id="alternative_solution"
-                        placeholder="Saran solusi alternatif (ganti baru, pinjam unit, dll)..."
-                        value={formData.alternative_solution}
+                        id="technician_notes"
+                        placeholder="Catatan tambahan..."
+                        value={formData.technician_notes}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            alternative_solution: e.target.value,
+                            technician_notes: e.target.value,
                           })
                         }
                         rows={2}
                         className="mt-1.5"
                       />
                     </div>
-                  </>
-                )}
 
-                {/* Info untuk work order */}
-                {["need_sparepart", "need_vendor", "need_license"].includes(
-                  formData.repair_type
-                ) && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>Catatan:</strong> Setelah menyimpan diagnosis,
-                      Anda akan diminta untuk mengisi Work Order untuk{" "}
-                      {formData.repair_type === "need_sparepart" &&
-                        "pengadaan sparepart"}
-                      {formData.repair_type === "need_vendor" &&
-                        "vendor eksternal"}
-                      {formData.repair_type === "need_license" &&
-                        "lisensi software"}
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <Label htmlFor="technician_notes">Catatan Teknisi</Label>
-                  <Textarea
-                    id="technician_notes"
-                    placeholder="Catatan tambahan..."
-                    value={formData.technician_notes}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        technician_notes: e.target.value,
-                      })
-                    }
-                    rows={2}
-                    className="mt-1.5"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="estimasi_hari">
-                    Estimasi Hari Pengerjaan
-                  </Label>
-                  <Input
-                    id="estimasi_hari"
-                    placeholder="Contoh: 2 hari, 1 minggu, dll"
-                    value={formData.estimasi_hari}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        estimasi_hari: e.target.value,
-                      })
-                    }
-                    className="mt-1.5"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <Label htmlFor="estimasi_hari">
+                        Estimasi Hari Pengerjaan
+                      </Label>
+                      <Input
+                        id="estimasi_hari"
+                        placeholder="Contoh: 2 hari, 1 minggu, dll"
+                        value={formData.estimasi_hari}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            estimasi_hari: e.target.value,
+                          })
+                        }
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
-          )}
-        </div>
 
-        <DialogFooter className="border-t px-6 py-4 flex-shrink-0">
-          <div className="flex gap-2 w-full justify-end">
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="cursor-pointer">
-              <Send className="h-4 w-4 mr-2" />
-              Simpan Diagnosis
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter className="border-t px-6 py-4 flex-shrink-0">
+            <div className="flex gap-2 w-full justify-end">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="cursor-pointer"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Simpan Diagnosis
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmationType === "change" ? "Ubah Diagnosis?" : "Simpan Diagnosis?"}
+              {confirmationType === "change"
+                ? "Ubah Diagnosis?"
+                : "Simpan Diagnosis?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmationType === "change" 
+              {confirmationType === "change"
                 ? "Anda akan mengubah diagnosis yang sudah ada sebelumnya. Pastikan informasi baru sudah benar."
                 : "Diagnosis akan disimpan dan status tiket akan berubah ke 'In Progress'. Pastikan semua data sudah benar."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubmit} className="cursor-pointer">
-              {confirmationType === "change" ? "Ya, Ubah Diagnosis" : "Ya, Simpan Diagnosis"}
+            <AlertDialogCancel className="cursor-pointer">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmSubmit}
+              className="cursor-pointer"
+            >
+              {confirmationType === "change"
+                ? "Ya, Ubah Diagnosis"
+                : "Ya, Simpan Diagnosis"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

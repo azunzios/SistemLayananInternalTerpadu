@@ -61,6 +61,7 @@ class TicketDiagnosisResource extends JsonResource
             // Jika tidak dapat diperbaiki
             'unrepairableReason' => $this->unrepairable_reason,
             'alternativeSolution' => $this->alternative_solution,
+            'assetConditionChange' => $this->asset_condition_change,
             
             // Prioritas & catatan
             'isUrgent' => $this->is_urgent,

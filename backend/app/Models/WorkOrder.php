@@ -26,6 +26,7 @@ class WorkOrder extends Model
         'completion_notes',
         'completed_at',
         'failure_reason',
+        'asset_condition_change',
     ];
 
     protected $casts = [

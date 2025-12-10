@@ -954,4 +954,105 @@ class WorkOrderController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
+    /**
+     * Change BMN condition for unsuccessful work order (sparepart/vendor only)
+     */
+    public function changeBMNCondition(Request $request, WorkOrder $workOrder): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Only teknisi can change BMN condition
+        if (!$this->userHasRole($user, 'teknisi')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Validate work order type and status
+        if (!in_array($workOrder->type, ['sparepart', 'vendor'])) {
+            return response()->json(['message' => 'BMN condition can only be changed for sparepart or vendor work orders'], 400);
+        }
+
+        if ($workOrder->status !== 'unsuccessful') {
+            return response()->json(['message' => 'BMN condition can only be changed for unsuccessful work orders'], 400);
+        }
+
+        $validated = $request->validate([
+            'asset_condition_change' => 'required|in:Baik,Rusak Ringan,Rusak Berat',
+        ]);
+
+        // Get ticket and asset
+        $ticket = $workOrder->ticket;
+        if (!$ticket) {
+            return response()->json(['message' => 'Ticket not found'], 404);
+        }
+
+        $asset = \App\Models\Asset::findByCodeAndNup($ticket->kode_barang, $ticket->nup);
+        if (!$asset) {
+            return response()->json(['message' => 'Asset BMN not found'], 404);
+        }
+
+        $oldCondition = $asset->kondisi;
+        $newCondition = $validated['asset_condition_change'];
+
+        // Update work order
+        $workOrder->update([
+            'asset_condition_change' => $newCondition,
+        ]);
+
+        // Update asset condition
+        $asset->update(['kondisi' => $newCondition]);
+
+        // Create audit log
+        \App\Models\AuditLog::create([
+            'user_id' => $user->id,
+            'action' => 'ASSET_CONDITION_CHANGED',
+            'details' => "Asset {$asset->kode_barang} NUP {$asset->nup} condition changed from {$oldCondition} to {$newCondition} via work order #{$workOrder->id}",
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Send notification to superadmins
+        $superAdmins = \App\Models\User::where('role', 'super_admin')->get();
+        foreach ($superAdmins as $admin) {
+            \App\Models\Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'warning',
+                'title' => 'Perubahan Kondisi Asset BMN (Work Order)',
+                'message' => "Kondisi barang BMN telah diubah melalui work order yang tidak berhasil:\n\nTiket: {$ticket->ticket_number}\nWork Order: #{$workOrder->id} ({$workOrder->type})\n\nKode Barang: {$asset->kode_barang}\nNUP: {$asset->nup}\nNama Barang: {$asset->nama_barang}\nMerek/Tipe: {$asset->merek}\n\nKondisi Lama: {$oldCondition}\nKondisi Baru: {$newCondition}\n\nDiubah oleh: {$user->name}",
+                'reference_type' => 'asset',
+                'reference_id' => $asset->id,
+                'action_url' => "/tickets/{$ticket->id}",
+                'data' => json_encode([
+                    'ticket_id' => $ticket->id,
+                    'work_order_id' => $workOrder->id,
+                    'asset_id' => $asset->id,
+                    'kode_barang' => $asset->kode_barang,
+                    'nup' => $asset->nup,
+                    'old_condition' => $oldCondition,
+                    'new_condition' => $newCondition,
+                ]),
+            ]);
+        }
+
+        // Create timeline entry
+        Timeline::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => $user->id,
+            'action' => 'ASSET_CONDITION_CHANGED',
+            'description' => "Kondisi BMN diubah menjadi {$newCondition} (Work Order #{$workOrder->id} tidak berhasil)",
+            'details' => json_encode([
+                'work_order_id' => $workOrder->id,
+                'work_order_type' => $workOrder->type,
+                'old_condition' => $oldCondition,
+                'new_condition' => $newCondition,
+                'asset_code' => $asset->kode_barang,
+                'asset_nup' => $asset->nup,
+            ]),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kondisi BMN berhasil diubah',
+            'data' => new WorkOrderResource($workOrder->fresh()),
+        ]);
+    }
 }

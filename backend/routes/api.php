@@ -104,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Work Order Management Routes
     Route::apiResource('work-orders', WorkOrderController::class);
     Route::patch('/work-orders/{workOrder}/status', [WorkOrderController::class, 'updateStatus']);
+    Route::patch('/work-orders/{workOrder}/change-bmn-condition', [WorkOrderController::class, 'changeBMNCondition']);
     Route::get('/work-orders/stats/summary', [WorkOrderController::class, 'stats']);
     
     // Sparepart Request Management Routes

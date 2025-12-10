@@ -350,6 +350,7 @@ export interface TicketDiagnosis {
   // Jika tidak dapat diperbaiki
   unrepairable_reason?: string;
   alternative_solution?: string;
+  asset_condition_change?: string;
 
   // Catatan teknisi
   technician_notes?: string;

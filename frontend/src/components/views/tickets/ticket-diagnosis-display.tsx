@@ -70,8 +70,30 @@ export const TicketDiagnosisDisplay: React.FC<TicketDiagnosisDisplayProps> = ({
         <>
           <hr className="my-3" />
           <div>
-            <h4 className="font-semibold mb-1">Alasan Tidak Dapat Diperbaiki</h4>
+            <h4 className="font-semibold mb-1">
+              Alasan Tidak Dapat Diperbaiki
+            </h4>
             <p className="text-gray-700">{diagnosis.unrepairable_reason}</p>
+          </div>
+        </>
+      )}
+
+      {/* Kondisi BMN yang Diubah */}
+      {diagnosis.asset_condition_change && (
+        <>
+          <hr className="my-3" />
+          <div>
+            <h4 className="font-semibold mb-1">Perubahan Kondisi BMN</h4>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-gray-700">
+                <span className="text-amber-700 font-medium">
+                  ⚠️ Kondisi barang diubah menjadi:{" "}
+                </span>
+                <span className="font-semibold text-amber-900">
+                  {diagnosis.asset_condition_change}
+                </span>
+              </p>
+            </div>
           </div>
         </>
       )}
