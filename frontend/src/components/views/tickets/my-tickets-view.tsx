@@ -359,7 +359,7 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
                                   : "text-purple-600"
                                   }`,
                               })}
-                              <h3 className="font-semibold text-lg max-md:text-sm max-md:line-clamp-1">
+                              <h3 className="font-semibold md:text-lg max-md:text-sm max-md:line-clamp-1">
                                 {ticket.title}
                               </h3>
                             </div>

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '../../components/login-page';
-import { RegisterPage } from '../../components/register-page';
+import { AboutUsPage } from '../../components/about-us-page';
 import { MainLayout } from '../../components/main-layout';
 import { ProtectedRoute } from '../guards/ProtectedRoute';
 import { PublicRoute } from '../guards/PublicRoute';
@@ -35,11 +35,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({
           }
         />
         <Route
-          path={ROUTES.REGISTER}
+          path={ROUTES.ABOUT_US}
           element={
-            <PublicRoute user={currentUser}>
-              <RegisterPage onLogin={onLogin} />
-            </PublicRoute>
+            <AboutUsPage />
           }
         />
         <Route

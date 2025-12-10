@@ -207,12 +207,12 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-full min-w-2xl h-[85vh] flex flex-col p-0">
+        <DialogContent className="md:max-w-full max-md:!w-[90vw] md:min-w-2xl h-[85vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b flex items-start justify-between">
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              <DialogTitle>
-                Form Diagnosis Barang - {ticketNumber}
+              <DialogTitle className="flex flex-col justify-start align-start">
+                Form Diagnosis Barang <div className="text-left"> {ticketNumber} </div>
               </DialogTitle>
             </div>
             <div className="flex items-center gap-3">

@@ -210,6 +210,9 @@ class TicketController extends Controller
         // Active users = users who are not soft-deleted (simplified since last_login_at doesn't exist)
         $activeUsers = $totalUsers;
 
+        // Total BMN assets
+        $totalAssets = \App\Models\Asset::count();
+
         // Total tickets
         $totalTickets = Ticket::count();
         
@@ -297,6 +300,7 @@ class TicketController extends Controller
             'stats' => [
                 'totalUsers' => $totalUsers,
                 'activeUsers' => $activeUsers,
+                'totalAssets' => $totalAssets,
                 'totalTickets' => $totalTickets,
                 'pendingTickets' => $pendingTickets,
                 'completedTickets' => $completedTickets,

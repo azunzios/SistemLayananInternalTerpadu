@@ -1,18 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Users, Package, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import {
-<<<<<<< HEAD
-=======
   Shield,
   Users,
   Package,
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import {
->>>>>>> main
   BarChart,
   Bar,
   PieChart,
@@ -24,17 +19,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-<<<<<<< HEAD
-} from "recharts";
-import { useSuperAdminDashboard } from "@/hooks/use-super-admin-dashboard";
-import type { User } from "@/types";
-import type { ViewType } from "@/components/main-layout";
-=======
 } from 'recharts';
 import { useSuperAdminDashboard } from '@/hooks/use-super-admin-dashboard';
 import type { User } from '@/types';
 import type { ViewType } from '@/components/main-layout';
->>>>>>> main
 
 interface SuperAdminDashboardProps {
   currentUser: User;
@@ -91,17 +79,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       >
         <div className="flex items-center justify-between">
           <div>
-<<<<<<< HEAD
-            <h1 className="text-3xl mb-2 flex items-center gap-3">
-              Super Admin Dashboard
-            </h1>
-            <p className="text-blue-100">
-=======
             <h1 className="max-md:text-2xl text-3xl mb-2 flex items-center gap-3 font-bold">
               Super Admin Dashboard
             </h1>
             <p className="text-blue-100 max-md:text-sm md:text-base">
->>>>>>> main
               Overview sistem dan monitoring lengkap
             </p>
           </div>
@@ -111,15 +92,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         </div>
 
         {/* Shortcuts Grid - Modified to Indigo Theme (to match Blue) */}
-<<<<<<< HEAD
-        <div className="flex items-center justify-center gap-6 px-8 md:px-40 mt-10">
-          {/* BUTTON 1: User Management */}
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onNavigate("users")}
-            className="
-            relative group flex-1 py-4 px-8 rounded-full transition-all duration-300
-=======
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 px-0 md:px-40 mt-10">
 
           {/* BUTTON 1: User Management */}
@@ -128,7 +100,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             onClick={() => onNavigate('users')}
             className="
             relative group w-full md:flex-1 py-4 px-8 rounded-full transition-all duration-300
->>>>>>> main
             
             /* Base Color: Changed from Green to Indigo/Dark Blue */
             bg-gradient-to-b from-indigo-600 to-indigo-700
@@ -146,17 +117,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
             <div className="relative flex items-center justify-between gap-4 z-10">
               <div className="text-left pl-2">
-<<<<<<< HEAD
-                <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider drop-shadow-sm">
-                  User Management
-                </p>
-                <p className="text-white font-bold text-lg mt-0.5 drop-shadow-md">
-                  {stats?.totalUsers ?? 0} Users
-                </p>
-=======
                 <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider drop-shadow-sm">User Management</p>
                 <p className="text-white font-bold text-lg mt-0.5 drop-shadow-md">{stats?.totalUsers ?? 0} Users</p>
->>>>>>> main
               </div>
               {/* Icon Circle: Darker Indigo */}
               <div className="h-10 w-10 bg-indigo-900 rounded-full flex items-center justify-center shadow-inner border border-white/10">
@@ -168,15 +130,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
           {/* BUTTON 2: Asset Management */}
           <motion.button
             whileTap={{ scale: 0.98 }}
-<<<<<<< HEAD
-            onClick={() => onNavigate("bmn-assets")}
-            className="
-            relative group flex-1 py-4 px-8 rounded-full transition-all duration-300
-=======
             onClick={() => onNavigate('bmn-assets')}
             className="
             relative group w-full md:flex-1 py-4 px-8 rounded-full transition-all duration-300
->>>>>>> main
             
             /* Base Color: Changed from Green to Indigo/Dark Blue */
             bg-gradient-to-b from-indigo-600 to-indigo-700
@@ -194,17 +150,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
 
             <div className="relative flex items-center justify-between gap-4 z-10">
               <div className="text-left pl-2">
-<<<<<<< HEAD
-                <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider drop-shadow-sm">
-                  Asset Management
-                </p>
-                <p className="text-white font-bold text-lg mt-0.5 drop-shadow-md">
-                  Kelola Aset
-                </p>
-=======
                 <p className="text-indigo-100 text-xs font-medium uppercase tracking-wider drop-shadow-sm">Asset Management</p>
                 <p className="text-white font-bold text-lg mt-0.5 drop-shadow-md">Kelola Aset</p>
->>>>>>> main
               </div>
               {/* Icon Circle: Darker Indigo */}
               <div className="h-10 w-10 bg-indigo-900 rounded-full flex items-center justify-center shadow-inner border border-white/10">
@@ -216,40 +163,19 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       </motion.div>
 
       {/* Remaining Charts Section (Tidak berubah) */}
-<<<<<<< HEAD
-      <div className="grid gap-6 grid-cols-3 w-full">
-        {/* Users by Role - Full width */}
-        <Card className="col-span-2 w-full">
-=======
       <div className="grid gap-6 grid-cols-1 md:grid-cols-3 w-full">
         {/* Users by Role - Full width */}
-        <Card className="col-span-1 md:col-span-2 w-full">
->>>>>>> main
-          <CardHeader>
-            <CardTitle>Distribusi Role</CardTitle>
+        <Card className="col-span-1 md:col-span-2 w-full !p-0">
+          <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center !m-0 !p-4">
+            <CardTitle className="text-white ">Distribusi Role</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="w-full h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={usersByRole}>
                   <CartesianGrid strokeDasharray="3 3" />
-<<<<<<< HEAD
-                  <XAxis
-                    dataKey="name"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                  />
-=======
                   <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
->>>>>>> main
                   <Tooltip />
                   <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -259,22 +185,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
         </Card>
 
         <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle>Distribusi Jenis Tiket</CardTitle>
+          <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center !p-4">
+            <CardTitle className="text-white">Distribusi Jenis Tiket</CardTitle>
           </CardHeader>
           <CardContent className="p-0 pb-6">
-<<<<<<< HEAD
-            <div className="h-[280px] w-full relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                {/* Cek apakah ada data tiket */}
-                {ticketsByType.some((item) => item.value > 0) ? (
-                  <ResponsiveContainer width="99%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={
-                          ticketsByType.filter((item) => item.value > 0) as any
-                        }
-=======
 
             <div className="h-[280px] w-full relative">
 
@@ -286,7 +200,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                     <PieChart>
                       <Pie
                         data={ticketsByType.filter(item => item.value > 0) as any}
->>>>>>> main
                         cx="50%"
                         cy="45%"
                         labelLine={false}
@@ -295,25 +208,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                         fill="#8884d8"
                         dataKey="value"
                         nameKey="name"
-<<<<<<< HEAD
-                        label={({ name, percent }) =>
-                          `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
-                        style={{ fontSize: "11px" }}
-                      >
-                        {ticketsByType
-                          .filter((item) => item.value > 0)
-                          .map((_entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[index % COLORS.length]}
-                            />
-                          ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value: number) => [value, "Jumlah"]}
-                      />
-=======
                         label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                         style={{ fontSize: '11px' }}
                       >
@@ -322,7 +216,6 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => [value, 'Jumlah']} />
->>>>>>> main
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -332,10 +225,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                     <p className="text-sm">Belum ada data tiket</p>
                   </div>
                 )}
-<<<<<<< HEAD
-=======
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
->>>>>>> main
+        {/* Asset BMN Card */}
+        <Card className="col-span-1">
+          <CardHeader className="bg-gradient-to-r !p-4 from-emerald-500 to-teal-500 flex items-center">
+            <CardTitle className="text-white">Total Asset BMN</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px] w-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="h-32 w-32 rounded-full border-4 border-emerald-500 flex items-center justify-center">
+                    <p className="text-4xl font-bold text-emerald-600">
+                      {stats?.totalAssets ?? 0}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Asset terdaftar di sistem
+                </p>
               </div>
             </div>
           </CardContent>
@@ -343,8 +255,4 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       </div>
     </div>
   );
-<<<<<<< HEAD
-};
-=======
 }
->>>>>>> main

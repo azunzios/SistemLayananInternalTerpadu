@@ -390,7 +390,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
       const isActive = current === status;
       const colors: Record<WorkOrderStatus, { active: string; inactive: string }> = {
         requested: {
-          active: "bg-blue-600 border-blue-600 text-white shadow-md",
+          active: "bg-blue-600 border-blue-600 text-white",
           inactive: "bg-white border-gray-300 text-gray-400 hover:border-blue-300 hover:text-blue-400"
         },
         in_procurement: {
@@ -412,13 +412,13 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
     return (
       <div className="py-4 w-full">
         {/* Main Flow: 1 -----> 2 -----> 3 */}
-        <div className="flex items-center justify-center gap-0 mb-6 max-md:overflow-x-auto max-md:justify-start max-md:pb-4 max-md:px-4">
+        <div className="flex items-center overflow-y-visible justify-center gap-0 mb-6 max-md:overflow-x-auto max-md:justify-start max-md:pb-4 max-md:px-4">
           {steps.map((step, index) => (
-            <div key={step.status} className="flex items-center shrink-0">
+            <div key={step.status} className="flex items-center shrink-0 overflow-y-visible">
               {/* Step Circle + Labels */}
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 cursor-pointer transition-all ${getStepStyle(step.status)} ${current === step.status ? "scale-110" : ""}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 cursor-pointer transition-all ${getStepStyle(step.status)} ${current === step.status ? "scale-100" : ""}`}
                   onClick={() => handleStatusClick(step.status)}
                 >
                   {step.icon}
@@ -553,27 +553,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
         </CardHeader>
         <CardContent>
-<<<<<<< HEAD
-          <Table className="border border-gray-200">
-            <TableHeader className="bg-muted/50">
-              <TableRow className="border-b">
-                <TableHead className="border-r">ID</TableHead>
-                <TableHead className="border-r">Tipe</TableHead>
-                <TableHead className="border-r">Status</TableHead>
-                <TableHead className="border-r">Tiket</TableHead>
-                <TableHead>Dibuat</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-gray-500"
-                  >
-                    <RotateCw className="h-6 w-6 animate-spin mx-auto" />
-                  </TableCell>
-=======
           <div className="overflow-x-auto">
             <Table className="border border-gray-200 min-w-[800px]">
               <TableHeader className="bg-muted/50">
@@ -583,7 +562,6 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                   <TableHead className="border-r">Status</TableHead>
                   <TableHead className="border-r">Tiket</TableHead>
                   <TableHead>Dibuat</TableHead>
->>>>>>> main
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -593,7 +571,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                       colSpan={5}
                       className="text-center py-8 text-gray-500"
                     >
-                      <RotateCcw className="h-6 w-6 animate-spin mx-auto" />
+                      <RotateCw className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : workOrders.length === 0 ? (
@@ -686,40 +664,47 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
         </CardContent>
       </Card>
 
-      {/* Detail & Update Dialog */}
+     {/* Detail & Update Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="md:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detail & Status Work Order</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="md:max-w-3xl max-md:!w-[95vw] max-md:!max-h-[90vh] max-md:!p-4 max-md:!rounded-xl max-md:!overflow-y-auto">
+          <DialogHeader className="max-md:!pb-2 max-md:!text-left">
+            <DialogTitle className="max-md:!text-lg max-md:!leading-tight">
+              Detail & Status Work Order
+            </DialogTitle>
+            <DialogDescription className="max-md:!text-xs max-md:!mt-1">
               {selectedWO &&
-                `Work Order ${selectedWO.type === "sparepart" ? "Sparepart" : "Vendor"
+                `Work Order ${
+                  selectedWO.type === "sparepart" ? "Sparepart" : "Vendor"
                 } - Klik lingkaran status di bawah untuk mengubah.`}
             </DialogDescription>
           </DialogHeader>
 
           {selectedWO && (
-            <div className="space-y-6 py-2">
+            <div className="space-y-6 py-2 max-md:!space-y-4 max-md:!py-1">
               {/* --- STATUS STEPPER UI --- */}
-              <div className="bg-slate-50 rounded-xl border border-slate-100 p-2">
+              <div className="bg-slate-50 rounded-xl border border-slate-100 p-2 max-md:!p-2 max-md:!overflow-x-auto">
+                {/* Pastikan komponen StatusStepper di dalamnya juga responsif atau bisa di-scroll */}
                 <StatusStepper />
               </div>
 
               {/* Conditional Input Fields based on Status Click */}
-              <div className="space-y-4 px-1">
-
+              <div className="space-y-4 px-1 max-md:!px-0 max-md:!space-y-3">
                 {/* 1. Field untuk In Procurement / Completed (Khusus Vendor) */}
                 {selectedWO.type === "vendor" &&
                   (updateForm.status === "in_procurement" ||
                     updateForm.status === "completed") && (
-                    <div className="bg-yellow-50/50 border border-yellow-100 rounded-lg p-4 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Building className="h-4 w-4 text-yellow-600" />
-                        <h4 className="font-semibold text-sm text-yellow-800">Data Vendor Diperlukan</h4>
+                    <div className="bg-yellow-50/50 border border-yellow-100 rounded-lg p-4 space-y-4 animate-in fade-in zoom-in-95 duration-200 max-md:!p-3 max-md:!space-y-3">
+                      <div className="flex items-center gap-2 mb-2 max-md:!mb-1">
+                        <Building className="h-4 w-4 text-yellow-600 max-md:!h-3.5 max-md:!w-3.5" />
+                        <h4 className="font-semibold text-sm text-yellow-800 max-md:!text-xs">
+                          Data Vendor Diperlukan
+                        </h4>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="vendorName">Nama Vendor *</Label>
+                      <div className="grid grid-cols-2 gap-4 max-md:!grid-cols-1 max-md:!gap-3">
+                        <div className="space-y-2 max-md:!space-y-1">
+                          <Label htmlFor="vendorName" className="max-md:!text-xs">
+                            Nama Vendor *
+                          </Label>
                           <Input
                             id="vendorName"
                             value={updateForm.vendorName}
@@ -730,11 +715,13 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                               })
                             }
                             placeholder="PT. Contoh Vendor"
-                            className="bg-white"
+                            className="bg-white max-md:!h-9 max-md:!text-sm"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="vendorContact">Kontak Vendor *</Label>
+                        <div className="space-y-2 max-md:!space-y-1">
+                          <Label htmlFor="vendorContact" className="max-md:!text-xs">
+                            Kontak Vendor *
+                          </Label>
                           <Input
                             id="vendorContact"
                             value={updateForm.vendorContact}
@@ -745,7 +732,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                               })
                             }
                             placeholder="0812..."
-                            className="bg-white"
+                            className="bg-white max-md:!h-9 max-md:!text-sm"
                           />
                         </div>
                       </div>
@@ -753,33 +740,40 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                   )}
 
                 {/* 2. Field untuk Completed (Catatan Akhir) */}
-                {updateForm.status === "completed" && selectedWO.type === "vendor" && (
-                  <div className="bg-green-50/50 border border-green-100 rounded-lg p-4 space-y-2 animate-in fade-in zoom-in-95 duration-200">
-                    <Label htmlFor="vendorCompletionNotes" className="text-green-800 font-semibold">
-                      Catatan Penyelesaian
-                    </Label>
-                    <Textarea
-                      id="vendorCompletionNotes"
-                      value={updateForm.vendorCompletionNotes}
-                      onChange={(e) =>
-                        setUpdateForm({
-                          ...updateForm,
-                          vendorCompletionNotes: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      placeholder="Deskripsikan hasil pekerjaan..."
-                      className="bg-white border-green-200 focus-visible:ring-green-500"
-                    />
-                  </div>
-                )}
+                {updateForm.status === "completed" &&
+                  selectedWO.type === "vendor" && (
+                    <div className="bg-green-50/50 border border-green-100 rounded-lg p-4 space-y-2 animate-in fade-in zoom-in-95 duration-200 max-md:!p-3 max-md:!space-y-2">
+                      <Label
+                        htmlFor="vendorCompletionNotes"
+                        className="text-green-800 font-semibold max-md:!text-xs"
+                      >
+                        Catatan Penyelesaian
+                      </Label>
+                      <Textarea
+                        id="vendorCompletionNotes"
+                        value={updateForm.vendorCompletionNotes}
+                        onChange={(e) =>
+                          setUpdateForm({
+                            ...updateForm,
+                            vendorCompletionNotes: e.target.value,
+                          })
+                        }
+                        rows={3}
+                        placeholder="Deskripsikan hasil pekerjaan..."
+                        className="bg-white border-green-200 focus-visible:ring-green-500 max-md:!text-sm"
+                      />
+                    </div>
+                  )}
 
                 {/* 3. Field untuk Unsuccessful (Alasan Gagal) */}
                 {updateForm.status === "unsuccessful" && (
-                  <div className="bg-red-50/50 border border-red-100 rounded-lg p-4 space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="bg-red-50/50 border border-red-100 rounded-lg p-4 space-y-2 animate-in fade-in zoom-in-95 duration-200 max-md:!p-3 max-md:!space-y-2">
                     <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <Label htmlFor="failureReason" className="text-red-800 font-semibold">
+                      <AlertTriangle className="h-4 w-4 text-red-600 max-md:!h-3.5 max-md:!w-3.5" />
+                      <Label
+                        htmlFor="failureReason"
+                        className="text-red-800 font-semibold max-md:!text-xs"
+                      >
                         Alasan Gagal / Dibatalkan *
                       </Label>
                     </div>
@@ -793,35 +787,50 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                         })
                       }
                       rows={3}
-                      placeholder="Jelaskan mengapa work order ini gagal atau tidak dapat dilanjutkan..."
-                      className="bg-white border-red-200 focus-visible:ring-red-500"
+                      placeholder="Jelaskan alasan kegagalan..."
+                      className="bg-white border-red-200 focus-visible:ring-red-500 max-md:!text-sm"
                     />
                   </div>
                 )}
               </div>
 
-              <Separator />
+              <Separator className="max-md:!my-2" />
 
               {/* Sparepart Details View */}
               {selectedWO.type === "sparepart" && selectedWO.items && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Detail Sparepart</h4>
-                  <div className="rounded-md border">
-                    <Table>
+                <div className="space-y-3 max-md:!space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider max-md:!text-xs">
+                    Detail Sparepart
+                  </h4>
+                  {/* Container Table Responsif */}
+                  <div className="rounded-md border max-md:!overflow-x-auto">
+                    <Table className="max-md:!min-w-[300px]">
                       <TableHeader>
                         <TableRow className="bg-slate-50">
-                          <TableHead>Nama</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>Satuan</TableHead>
+                          <TableHead className="max-md:!text-xs max-md:!h-8 max-md:!py-1 max-md:!px-2">
+                            Nama
+                          </TableHead>
+                          <TableHead className="max-md:!text-xs max-md:!h-8 max-md:!py-1 max-md:!px-2">
+                            Qty
+                          </TableHead>
+                          <TableHead className="max-md:!text-xs max-md:!h-8 max-md:!py-1 max-md:!px-2">
+                            Satuan
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {parseItems(selectedWO.items).map(
                           (item: any, idx: number) => (
                             <TableRow key={idx}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
-                              <TableCell>{item.quantity}</TableCell>
-                              <TableCell>{item.unit}</TableCell>
+                              <TableCell className="font-medium max-md:!text-xs max-md:!py-2 max-md:!px-2">
+                                {item.name}
+                              </TableCell>
+                              <TableCell className="max-md:!text-xs max-md:!py-2 max-md:!px-2">
+                                {item.quantity}
+                              </TableCell>
+                              <TableCell className="max-md:!text-xs max-md:!py-2 max-md:!px-2">
+                                {item.unit}
+                              </TableCell>
                             </TableRow>
                           )
                         )}
@@ -833,10 +842,14 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
               {/* Vendor Details View (Static Info) */}
               {selectedWO.type === "vendor" && (
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Detail Request</h4>
-                  <div className="p-3 bg-slate-50 rounded-lg border text-sm">
-                    <p className="text-muted-foreground mb-1">Deskripsi Pekerjaan:</p>
+                <div className="space-y-3 max-md:!space-y-2">
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider max-md:!text-xs">
+                    Detail Request
+                  </h4>
+                  <div className="p-3 bg-slate-50 rounded-lg border text-sm max-md:!p-2.5 max-md:!text-xs">
+                    <p className="text-muted-foreground mb-1">
+                      Deskripsi Pekerjaan:
+                    </p>
                     <p>{selectedWO.vendorDescription || "-"}</p>
                   </div>
                 </div>
@@ -844,15 +857,18 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 max-md:!flex-col-reverse max-md:!gap-3 max-md:!pt-2">
             <Button
               variant="outline"
               onClick={() => setShowDetailDialog(false)}
-              className="cursor-pointer"
+              className="cursor-pointer max-md:!w-full max-md:!h-10 max-md:!text-sm"
             >
               Tutup
             </Button>
-            <Button onClick={handleUpdateWorkOrder} className="min-w-[120px] cursor-pointer">
+            <Button
+              onClick={handleUpdateWorkOrder}
+              className="min-w-[120px] cursor-pointer max-md:!w-full max-md:!h-10 max-md:!text-sm"
+            >
               Simpan Update
             </Button>
           </DialogFooter>
@@ -861,24 +877,24 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
       {/* Dialog Konfirmasi Perubahan Status */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-md:max-w-[90vw] max-md:p-4">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <AlertDialogTitle className="flex items-center gap-2 max-md:text-base">
+              <AlertTriangle className="h-5 w-5 max-md:h-4 max-md:w-4 text-yellow-500" />
               Konfirmasi Perubahan Status
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Apakah Anda yakin ingin mengubah status work order ini?</p>
+            <AlertDialogDescription className="space-y-2 max-md:text-sm">
+              <div>Apakah Anda yakin ingin mengubah status work order ini?</div>
               {selectedWO && pendingStatus && (
-                <div className="mt-3 p-3 bg-muted rounded-lg space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="mt-3 p-3 max-md:p-2 bg-muted rounded-lg space-y-2">
+                  <div className="flex items-center justify-between text-sm max-md:text-xs">
                     <span className="text-muted-foreground">Status saat ini:</span>
                     <span className="font-medium">{getStatusLabel(selectedWO.status)}</span>
                   </div>
                   <div className="flex items-center justify-center">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 max-md:h-3 max-md:w-3 text-muted-foreground" />
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-sm max-md:text-xs">
                     <span className="text-muted-foreground">Status baru:</span>
                     <span className={`font-bold ${pendingStatus === "completed" ? "text-green-600" :
                       pendingStatus === "unsuccessful" ? "text-red-600" :
@@ -891,24 +907,23 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
                 </div>
               )}
               {pendingStatus === "completed" && (
-                <p className="flex items-center gap-2 text-sm text-green-800 mt-2">
-                  <BadgeCheck className="h-4 w-4" />
-                  Work order yang selesai akan otomatis dicatat di Kartu Kendali
-                </p>
-
+                <div className="flex items-center gap-2 text-sm max-md:text-xs text-green-800 mt-2">
+                  <BadgeCheck className="h-4 w-4 max-md:h-3.5 max-md:w-3.5" />
+                  <span>Work order yang selesai akan otomatis dicatat di Kartu Kendali</span>
+                </div>
               )}
               {pendingStatus === "unsuccessful" && (
-                <p className="text-sm text-red-600 mt-2">
+                <div className="text-sm max-md:text-xs text-red-600 mt-2">
                   ⚠ Anda akan diminta mengisi alasan kegagalan
-                </p>
+                </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelStatusChange} className="cursor-pointer">
+          <AlertDialogFooter className="max-md:flex-col max-md:gap-2">
+            <AlertDialogCancel onClick={handleCancelStatusChange} className="cursor-pointer max-md:w-full max-md:m-0">
               Batal
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmStatusChange} className="cursor-pointer">
+            <AlertDialogAction onClick={handleConfirmStatusChange} className="cursor-pointer max-md:w-full">
               Ya, Ubah Status
             </AlertDialogAction>
           </AlertDialogFooter>

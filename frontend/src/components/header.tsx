@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
 
               <div className="hidden md:block items-center gap-3">
                 <div className="flex flex-col">
-                  <h1 className="text-sm font-bold text-gray-900">SIGAP-TI</h1>
+                  <h1 className="text-sm font-black text-gray-900">Sigap-ti</h1>
                   <p className="text-[10px] text-gray-500 !mb-0">BPS Provinsi NTB</p>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onNavigat
               {/* Content Notifikasi */}
               <SheetContent
                 side="right"
-                className="max-sm:w-[90vw] sm:max-w-sm p-0 flex flex-col h-full [&>button]:hidden"
+                className="max-sm:w-[90vw] sm:max-w-sm p-0 flex flex-col h-full [&>button]:hidden !mb-0 !gap-0"
               >
                 {/* Header: Judul & Action Buttons */}
                 <div className="flex-shrink-0 flex items-center justify-between h-[72px] pl-4 pr-4 bg-blue-50 border-b border-gray-100">

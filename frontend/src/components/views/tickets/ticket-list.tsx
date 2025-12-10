@@ -393,17 +393,10 @@ export const TicketList: React.FC<TicketListProps> = ({
       {/* Filter Controls */}
       <Card>
         <CardContent className="p-4">
-<<<<<<< HEAD
-          <div className="flex gap-3 items-center">
-            {/* Search - Wrapper dikunci h-10 */}
-            <div className="relative flex-[2] h-10">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-=======
           <div className="flex flex-wrap gap-3 items-center max-md:flex-col max-md:items-stretch">
             {/* Search */}
             <div className="relative flex-1 min-w-[180px] h-10 max-md:w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
->>>>>>> main
               <Input
                 placeholder="Cari tiket..."
                 value={searchTerm}
@@ -448,14 +441,8 @@ export const TicketList: React.FC<TicketListProps> = ({
                     <SelectItem value="zoom_meeting">Zoom Meeting</SelectItem>
                   </SelectContent>
                 </Select>
-<<<<<<< HEAD
-
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="!h-10 text-sm flex-1">
-=======
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="!h-10 text-sm flex-1 max-md:w-full">
->>>>>>> main
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -495,34 +482,6 @@ export const TicketList: React.FC<TicketListProps> = ({
               </>
             )}
 
-<<<<<<< HEAD
-            {/* Info Button - fixed size, no flex */}
-            <Button
-              variant="outline"
-              onClick={() => setShowStatusInfo(true)}
-              className="h-10 w-10 p-0 flex-shrink-0"
-              size="icon"
-              title="Informasi Status"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-
-            {/* Refresh Button - fixed size, no flex */}
-            <Button
-              variant="outline"
-              onClick={handleRefreshData}
-              disabled={loading || statsLoading}
-              className="h-10 w-10 p-0 flex-shrink-0"
-              size="icon"
-              title="Refresh"
-            >
-              <RotateCw
-                className={`h-4 w-4 ${
-                  loading || statsLoading ? "animate-spin" : ""
-                }`}
-              />
-            </Button>
-=======
             {/* Buttons Group (Info & Refresh) */}
             <div className="flex gap-3 max-md:w-full">
               <Button
@@ -542,13 +501,12 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="icon"
                 title="Refresh"
               >
-                <RotateCcw
+                <RotateCw
                   className={`h-4 w-4 ${loading || statsLoading ? "animate-spin" : ""
                     }`}
                 />
               </Button>
             </div>
->>>>>>> main
           </div>
         </CardContent>
       </Card>
@@ -667,14 +625,8 @@ export const TicketList: React.FC<TicketListProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
-<<<<<<< HEAD
-                disabled={
-                  !pagination || pagination.current_page <= 1 || loading
-                }
-=======
                 disabled={!pagination || pagination.current_page <= 1 || loading}
                 className="cursor-pointer max-md:px-2"
->>>>>>> main
               >
                 <ChevronLeft className="h-4 w-4 md:mr-1" />
                 {/* Text disembunyikan di max-md */}
@@ -690,10 +642,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!pagination || !pagination.has_more || loading}
-<<<<<<< HEAD
-=======
                 className="cursor-pointer max-md:px-2"
->>>>>>> main
               >
                 {/* Text disembunyikan di max-md */}
                 <span className="hidden md:inline">Selanjutnya</span>

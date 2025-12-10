@@ -247,22 +247,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
       {/* Filter Controls - Responsive: Flex-col and stretch on mobile */}
       <Card>
         <CardContent className="p-4">
-<<<<<<< HEAD
-          <div className="flex items-center justify-between gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshData}
-              disabled={loading || statsLoading}
-              className="h-8"
-            >
-              <RotateCw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-
-=======
           <div className="flex justify-between gap-4 max-md:items-stretch">
->>>>>>> main
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -279,7 +264,7 @@ export const ZoomTicketList: React.FC<ZoomTicketListProps> = ({ onViewDetail }) 
               disabled={loading || statsLoading}
               className="h-8"
             >
-              <RotateCcw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
+              <RotateCw className={`h-4 w-4 ${loading || statsLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </CardContent>

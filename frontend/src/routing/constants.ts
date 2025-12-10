@@ -2,7 +2,7 @@
 export const ROUTES = {
   // Auth routes
   LOGIN: '/auth/login',
-  REGISTER: '/auth/register',
+  ABOUT_US: '/about-us',
   
   // Protected routes with role - Main structure: /{role}/{menu}
   HOME: '/:role',

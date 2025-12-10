@@ -2,7 +2,7 @@
 /frontend/node_modules/
 /frontend/dist/
 /frontend/build/
-
+/frontend/.env
 
 # ===== BACKEND =====
 /backend/vendor/
@@ -11,7 +11,7 @@
 !/backend/storage/app
 !/backend/storage/framework
 !/backend/storage/logs
-
+/backend/.env
 
 # ===== GLOBAL =====
 .vscode/

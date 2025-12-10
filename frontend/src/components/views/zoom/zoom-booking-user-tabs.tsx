@@ -134,13 +134,8 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
     setIsLoadingBookings(true);
     try {
       const params = new URLSearchParams();
-<<<<<<< HEAD
-      params.append("page", page.toString());
-      params.append("per_page", "15");
-=======
       params.append('page', page.toString());
       params.append('per_page', '15');
->>>>>>> main
 
       const statusFilter = STATUS_FILTER_MAP[status];
       if (statusFilter) {
@@ -178,13 +173,6 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
 
   return (
     <Tabs defaultValue="check-availability" className="space-y-4">
-<<<<<<< HEAD
-      <TabsList>
-        <TabsTrigger
-          value="check-availability"
-          className="gap-2 cursor-pointer hover:bg-white"
-        >
-=======
       {/* MODIFIKASI 1: Main Tabs 
         - TabsList diberi w-full agar memenuhi lebar
         - TabsTrigger diberi flex-1 agar ukuran tombol sama rata
@@ -192,18 +180,10 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
       */}
       <TabsList className="w-full">
         <TabsTrigger value="check-availability" className="gap-2 cursor-pointer hover:bg-white flex-1">
->>>>>>> main
           <Search className="h-4 w-4" />
           <span className="max-md:hidden">Cek Ketersediaan</span>
         </TabsTrigger>
-<<<<<<< HEAD
-        <TabsTrigger
-          value="my-bookings"
-          className="gap-2 cursor-pointer hover:bg-white"
-        >
-=======
         <TabsTrigger value="my-bookings" className="gap-2 cursor-pointer hover:bg-white flex-1">
->>>>>>> main
           <CalendarIcon className="h-4 w-4" />
           <span>Booking Saya</span>
         </TabsTrigger>
@@ -263,17 +243,6 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
       </TabsContent>
 
       <TabsContent value="my-bookings" className="space-y-4">
-<<<<<<< HEAD
-        <Tabs
-          value={currentStatus}
-          onValueChange={(val) => handleStatusChange(val as any)}
-        >
-          <TabsList>
-            <TabsTrigger value="all">Semua ({stats?.all ?? "-"})</TabsTrigger>
-            <TabsTrigger value="pending" className="gap-2">
-              <Clock className="h-4 w-4" />
-              Pending ({stats?.pending ?? "-"})
-=======
         <Tabs value={currentStatus} onValueChange={(val) => handleStatusChange(val as any)}>
 
           {/* MODIFIKASI 2: Status Tabs (Filter)
@@ -291,25 +260,16 @@ export const ZoomBookingUserTabs: React.FC<ZoomBookingUserTabsProps> = ({
               <Clock className="h-4 w-4" />
               <span className="">Pending</span>
               <span className="max-md:hidden">({stats?.pending ?? '-'})</span>
->>>>>>> main
             </TabsTrigger>
             <TabsTrigger value="approved" className="gap-[2px] flex-1">
               <CheckCircle className="h-4 w-4" />
-<<<<<<< HEAD
-              Disetujui ({stats?.approved ?? "-"})
-=======
               <span className="">Disetujui</span>
               <span className="max-md:hidden">({stats?.approved ?? '-'})</span>
->>>>>>> main
             </TabsTrigger>
             <TabsTrigger value="rejected" className="gap-[2px] flex-1">
               <XCircle className="h-4 w-4" />
-<<<<<<< HEAD
-              Ditolak ({stats?.rejected ?? "-"})
-=======
               <span className="">Ditolak</span>
               <span className="max-md:hidden">({stats?.rejected ?? '-'})</span>
->>>>>>> main
             </TabsTrigger>
           </TabsList>
 

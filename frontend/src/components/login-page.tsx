@@ -226,11 +226,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   <Button type="submit" className={soapButtonPrimary} disabled={isLoading}>
                     {isLoading ? "Mengirim..." : "Kirim Link Reset"}
                   </Button>
-                  
+
                   {/* TOMBOL KEMBALI (GAYA SABUN SEKUNDER) */}
                   <Button
                     type="button"
-                    variant="ghost" 
+                    variant="ghost"
                     className={soapButtonSecondary}
                     onClick={() => {
                       setShowForgotPassword(false);
@@ -249,13 +249,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     Email reset password telah dikirim ke
                   </p>
                   <p className="text-green-900 font-bold text-lg my-1">
-                     {forgotPasswordEmail}
+                    {forgotPasswordEmail}
                   </p>
                   <p className="text-sm text-green-600 mt-2">
                     Silakan cek inbox Anda dan klik link yang diberikan
                   </p>
                 </div>
-                
+
                 {/* TOMBOL KEMBALI KEDUA (GAYA SABUN SEKUNDER) */}
                 <Button
                   variant="ghost"
@@ -287,7 +287,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <Card className="w-full max-w-4xl overflow-hidden shadow-2xl rounded-2xl border-white/50">
           <CardContent className="grid p-0 md:grid-cols-2">
             <div className="flex flex-col justify-center p-6 pb-0 !mb-0 sm:p-10 bg-white/50 backdrop-blur-sm">
-              <CardHeader className="p-0 px-6 mb-6 text-center md:text-left max-w-full">
+              <CardHeader className="p-0 px-6 pt-6 mb-6 text-center md:text-left max-w-full">
                 <div className="flex justify-center md:justify-start">
                   <div className="h-20 w-20 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100">
                     <img
@@ -300,7 +300,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
                 {/* Tambah teks SIGAP-TI di bawah icon untuk layar max-md */}
                 <div className="md:hidden text-center mt-2">
-                  <h1 className="text-lg font-bold text-gray-900">SIGAP-TI</h1>
+                  <h1 className="text font-black text-xl text-gray-900">Sigap-ti</h1>
                 </div>
               </CardHeader>
 
@@ -350,7 +350,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         autoComplete="current-password"
                         className="rounded-xl border-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 h-11 !pr-12"
                       />
-                      
+
                       {/* TOMBOL MATA DIPERBAIKI */}
                       <button
                         type="button"
@@ -415,9 +415,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 </CardFooter>
               </form>
             </div>
-            
+
             {/* Banner Side (Kanan) */}
-            <div className="relative hidden h-full bg-muted md:block">
+            <div className="relative hidden h-full bg-muted md:block overflow-hidden">
               <img
                 src="/banner.jpg"
                 alt=""
@@ -429,10 +429,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 alt="Image"
                 className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale z-10 opacity-80"
               />
-              <div className="absolute inset-0 z-15 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              <div className="absolute bottom-8 z-20 w-full px-8 flex flex-col gap-2">
-                <h2 className="text-white text-2xl font-bold tracking-tight">SIGAP-TI</h2>
-                <div className="text-gray-200 text-sm font-light leading-relaxed max-w-sm">
+              {/* Filter biru penuh untuk overlay */}
+              <div className="absolute inset-0 z-15 bg-blue-600/15" />
+              {/* Gradient untuk kontras teks di bawah */}
+              <div className="absolute inset-0 z-16 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+              
+              <div className="absolute bottom-8 left-8 z-20 flex flex-col gap-2">
+                <h1 className="text-white text-5xl font-black">Sigap-ti</h1>
+                <div className="text-white text-lg leading max-w-sm drop-shadow-md">
                   Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 export interface DashboardStats {
   totalUsers: number;
   activeUsers: number;
+  totalAssets: number;
   totalTickets: number;
   pendingTickets: number;
   completedTickets: number;
@@ -35,6 +36,7 @@ interface UseSuperAdminDashboardReturn {
 const defaultStats: DashboardStats = {
   totalUsers: 0,
   activeUsers: 0,
+  totalAssets: 0,
   totalTickets: 0,
   pendingTickets: 0,
   completedTickets: 0,

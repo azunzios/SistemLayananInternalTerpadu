@@ -645,7 +645,7 @@ export const TicketDetailInfo: React.FC<TicketDetailInfoProps> = ({
 
       {/* Diagnosis Modal */}
       <Dialog open={showDiagnosisModal} onOpenChange={setShowDiagnosisModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="md:max-w-2xl md:max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Hasil Diagnosis</DialogTitle>
           </DialogHeader>
