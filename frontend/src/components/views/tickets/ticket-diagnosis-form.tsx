@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { TicketDiagnosis } from "@/types";
 import { Spinner } from "@/components/ui/spinner";
+import { Separator } from "@/components/ui/separator";
 
 interface TicketDiagnosisFormProps {
   ticketId: string;
@@ -207,14 +208,16 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-full min-w-2xl h-[85vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              <DialogTitle>
                 Form Diagnosis Barang - {ticketNumber}
               </DialogTitle>
+            </div>
+            <div className="flex items-center gap-3">
               {formData.repair_type === "unrepairable" && (
-                <div className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">
+                <div className="bg-red-100 border border-red-300 text-red-700 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap">
                   Tidak Dapat Diperbaiki
                 </div>
               )}
@@ -261,8 +264,10 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                       />
                     </div>
 
+                    <Separator className="my-4" />
+
                     <div>
-                      <Label className="mb-2 block">Kategori Masalah *</Label>
+                      <Label className="mb-3 block font-semibold">Kategori Masalah *</Label>
                       <RadioGroup
                         value={formData.problem_category}
                         onValueChange={(value: any) =>
@@ -270,7 +275,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         }
                         className="space-y-2"
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="hardware" id="hw" />
                           <Label
                             htmlFor="hw"
@@ -279,7 +284,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Hardware
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="software" id="sw" />
                           <Label
                             htmlFor="sw"
@@ -288,7 +293,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Software
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="lainnya" id="other" />
                           <Label
                             htmlFor="other"
@@ -302,6 +307,8 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                   </CardContent>
                 </Card>
 
+                <Separator className="my-2" />
+
                 {/* Hasil Diagnosis */}
                 <Card className="pb-6">
                   <CardHeader>
@@ -312,7 +319,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label className="mb-2 block">Dapat Diperbaiki? *</Label>
+                      <Label className="mb-3 block font-semibold">Dapat Diperbaiki? *</Label>
                       <RadioGroup
                         value={formData.repair_type}
                         onValueChange={(value: any) =>
@@ -320,7 +327,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         }
                         className="space-y-2"
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="direct_repair" id="direct" />
                           <Label
                             htmlFor="direct"
@@ -329,7 +336,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Bisa diperbaiki langsung
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem
                             value="need_sparepart"
                             id="sparepart"
@@ -341,7 +348,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Butuh Sparepart
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="need_vendor" id="vendor" />
                           <Label
                             htmlFor="vendor"
@@ -350,7 +357,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Butuh Vendor
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem value="need_license" id="license" />
                           <Label
                             htmlFor="license"
@@ -359,7 +366,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Butuh Lisensi
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                           <RadioGroupItem
                             value="unrepairable"
                             id="unrepairable"
@@ -373,6 +380,8 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         </div>
                       </RadioGroup>
                     </div>
+
+                    <Separator className="my-4" />
 
                     {/* Jika bisa diperbaiki langsung */}
                     {formData.repair_type === "direct_repair" && (
@@ -418,8 +427,10 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                           />
                         </div>
 
+                        <Separator className="my-4" />
+
                         <div>
-                          <Label htmlFor="asset_condition_change">
+                          <Label htmlFor="asset_condition_change" className="font-semibold mb-3 block">
                             Ubah Kondisi BMN (Opsional)
                           </Label>
                           <RadioGroup
@@ -430,9 +441,9 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                                 asset_condition_change: value,
                               })
                             }
-                            className="mt-2 space-y-2"
+                            className="space-y-2"
                           >
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                               <RadioGroupItem value="Baik" id="baik" />
                               <Label
                                 htmlFor="baik"
@@ -441,7 +452,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                                 Baik
                               </Label>
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                               <RadioGroupItem
                                 value="Rusak Ringan"
                                 id="rusak_ringan"
@@ -453,7 +464,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                                 Rusak Ringan
                               </Label>
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
                               <RadioGroupItem
                                 value="Rusak Berat"
                                 id="rusak_berat"
@@ -470,6 +481,8 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             Kondisi BMN akan otomatis diubah di database asset
                           </p>
                         </div>
+
+                        <Separator className="my-4" />
 
                         <div>
                           <Label htmlFor="alternative_solution">
@@ -496,7 +509,7 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                     {["need_sparepart", "need_vendor", "need_license"].includes(
                       formData.repair_type
                     ) && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                         <p className="text-sm text-blue-800">
                           <strong>Catatan:</strong> Setelah menyimpan diagnosis,
                           Anda akan diminta untuk mengisi Work Order untuk{" "}
@@ -509,6 +522,8 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         </p>
                       </div>
                     )}
+
+                    <Separator className="my-4" />
 
                     <div>
                       <Label htmlFor="technician_notes">Catatan Teknisi</Label>

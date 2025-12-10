@@ -16,37 +16,40 @@
         }
         .container {
             background-color: #ffffff;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 0;
+            border: 2px solid #0066cc;
         }
         .header {
+            background-color: #0066cc;
+            color: #ffffff;
+            padding: 30px;
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #0066cc;
+            border-bottom: 3px solid #004d99;
         }
         .logo {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
-            color: #0066cc;
             margin-bottom: 10px;
+            letter-spacing: 2px;
         }
         .subtitle {
-            color: #666;
-            font-size: 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            opacity: 0.95;
         }
         .content {
-            margin-bottom: 30px;
+            padding: 30px;
         }
         .greeting {
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            color: #0066cc;
         }
         .message {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             color: #555;
+            line-height: 1.7;
         }
         .button-container {
             text-align: center;
@@ -58,19 +61,20 @@
             background-color: #0066cc;
             color: #ffffff !important;
             text-decoration: none;
-            border-radius: 5px;
             font-weight: 600;
             font-size: 16px;
-            transition: background-color 0.3s;
+            border: 2px solid #0066cc;
+            transition: all 0.3s;
         }
         .reset-button:hover {
             background-color: #0052a3;
+            border-color: #0052a3;
         }
         .alternative-link {
-            margin-top: 20px;
-            padding: 15px;
             background-color: #f8f9fa;
-            border-radius: 5px;
+            border: 2px solid #dee2e6;
+            padding: 20px;
+            margin: 25px 0;
             word-break: break-all;
         }
         .alternative-text {
@@ -84,35 +88,40 @@
         }
         .warning {
             background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
+            border: 2px solid #ffc107;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 25px 0;
         }
         .warning-text {
             color: #856404;
             font-size: 14px;
             margin: 0;
+            line-height: 1.6;
         }
         .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-top: 3px solid #dee2e6;
             text-align: center;
             font-size: 12px;
-            color: #999;
+            color: #666;
+        }
+        .footer p {
+            margin: 5px 0;
         }
         .expiry-info {
             background-color: #e7f3ff;
-            border-left: 4px solid #0066cc;
-            padding: 12px;
-            margin: 20px 0;
-            border-radius: 4px;
+            border: 2px solid #0066cc;
+            border-left: 5px solid #0066cc;
+            padding: 20px;
+            margin: 25px 0;
         }
         .expiry-text {
             color: #004085;
-            font-size: 13px;
+            font-size: 14px;
             margin: 0;
+            line-height: 1.6;
         }
     </style>
 </head>
@@ -120,7 +129,10 @@
     <div class="container">
         <div class="header">
             <div class="logo">SIGAP-TI</div>
-            <div class="subtitle">Sistem Layanan Internal Terpadu<br>BPS Provinsi NTB</div>
+            <div class="subtitle">
+                Sistem Layanan Internal Terpadu<br>
+                Badan Pusat Statistik Provinsi Nusa Tenggara Barat
+            </div>
         </div>
 
         <div class="content">
@@ -132,12 +144,12 @@
             </div>
 
             <div class="button-container">
-                <a href="{{ $resetUrl }}" class="reset-button">Reset Password</a>
+                <a href="{{ $resetUrl }}" class="reset-button">RESET PASSWORD</a>
             </div>
 
             <div class="expiry-info">
                 <p class="expiry-text">
-                    <strong>⏰ Perhatian:</strong> Link reset password ini akan <strong>kadaluarsa dalam 1 jam</strong> setelah email ini dikirim.
+                    <strong>PERHATIAN:</strong> Link reset password ini akan <strong>kadaluarsa dalam 1 jam</strong> setelah email ini dikirim.
                 </p>
             </div>
 
@@ -148,15 +160,16 @@
 
             <div class="warning">
                 <p class="warning-text">
-                    <strong>⚠️ Penting:</strong> Jika Anda tidak meminta reset password, abaikan email ini. Akun Anda tetap aman dan tidak ada perubahan yang akan dilakukan.
+                    <strong>PENTING:</strong> Jika Anda tidak meminta reset password, abaikan email ini. Akun Anda tetap aman dan tidak ada perubahan yang akan dilakukan.
                 </p>
             </div>
         </div>
 
         <div class="footer">
-            <p>Email ini dikirim secara otomatis oleh sistem SIGAPTI.</p>
+            <p><strong>SIGAP-TI BPS Provinsi Nusa Tenggara Barat</strong></p>
+            <p style="margin-top: 10px;">Email ini dikirim secara otomatis oleh sistem.</p>
             <p>Mohon tidak membalas email ini.</p>
-            <p>&copy; {{ date('Y') }} BPS Provinsi Nusa Tenggara Barat</p>
+            <p style="margin-top: 10px;">&copy; {{ date('Y') }} BPS Provinsi Nusa Tenggara Barat. All Rights Reserved.</p>
         </div>
     </div>
 </body>

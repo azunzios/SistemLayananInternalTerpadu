@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Models\AuditLog;
+use App\Mail\NewUserMail;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
@@ -82,6 +84,9 @@ class UserController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        // Store plain password for email
+        $plainPassword = $validated['password'];
+        
         $validated['password'] = Hash::make($validated['password']);
 
         // Set role (single) dari roles dengan priority logic
@@ -99,6 +104,14 @@ class UserController extends Controller
         $validated['role'] = $primaryRole;
 
         $user = User::create($validated);
+
+        // Send welcome email with credentials
+        try {
+            Mail::to($user->email)->send(new NewUserMail($user, $plainPassword));
+        } catch (\Exception $e) {
+            // Log error but don't fail user creation
+            \Log::error('Failed to send new user email: ' . $e->getMessage());
+        }
 
         // Audit log
         AuditLog::create([
