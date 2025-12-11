@@ -275,29 +275,50 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         }
                         className="space-y-2"
                       >
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.problem_category === 'hardware' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, problem_category: 'hardware' })}
+                        >
                           <RadioGroupItem value="hardware" id="hw" />
                           <Label
                             htmlFor="hw"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Hardware
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.problem_category === 'software' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, problem_category: 'software' })}
+                        >
                           <RadioGroupItem value="software" id="sw" />
                           <Label
                             htmlFor="sw"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Software
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.problem_category === 'lainnya' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, problem_category: 'lainnya' })}
+                        >
                           <RadioGroupItem value="lainnya" id="other" />
                           <Label
                             htmlFor="other"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Lainnya
                           </Label>
@@ -327,53 +348,88 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                         }
                         className="space-y-2"
                       >
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.repair_type === 'direct_repair' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, repair_type: 'direct_repair' })}
+                        >
                           <RadioGroupItem value="direct_repair" id="direct" />
                           <Label
                             htmlFor="direct"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Bisa diperbaiki langsung
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.repair_type === 'need_sparepart' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, repair_type: 'need_sparepart' })}
+                        >
                           <RadioGroupItem
                             value="need_sparepart"
                             id="sparepart"
                           />
                           <Label
                             htmlFor="sparepart"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Butuh Sparepart
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.repair_type === 'need_vendor' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, repair_type: 'need_vendor' })}
+                        >
                           <RadioGroupItem value="need_vendor" id="vendor" />
                           <Label
                             htmlFor="vendor"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Butuh Vendor
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.repair_type === 'need_license' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, repair_type: 'need_license' })}
+                        >
                           <RadioGroupItem value="need_license" id="license" />
                           <Label
                             htmlFor="license"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Butuh Lisensi
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                        <div 
+                          className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            formData.repair_type === 'unrepairable' 
+                              ? 'bg-orange-300 border-orange-400' 
+                              : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                          onClick={() => setFormData({ ...formData, repair_type: 'unrepairable' })}
+                        >
                           <RadioGroupItem
                             value="unrepairable"
                             id="unrepairable"
                           />
                           <Label
                             htmlFor="unrepairable"
-                            className="font-normal cursor-pointer"
+                            className="font-normal cursor-pointer flex-1"
                           >
                             Tidak dapat diperbaiki
                           </Label>
@@ -443,35 +499,40 @@ export const TicketDiagnosisForm: React.FC<TicketDiagnosisFormProps> = ({
                             }
                             className="space-y-2"
                           >
-                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
-                              <RadioGroupItem value="Baik" id="baik" />
-                              <Label
-                                htmlFor="baik"
-                                className="font-normal cursor-pointer"
-                              >
-                                Baik
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                            <div 
+                              className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.asset_condition_change === 'Rusak Ringan' 
+                                  ? 'bg-orange-300 border-orange-400' 
+                                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                              }`}
+                              onClick={() => setFormData({ ...formData, asset_condition_change: 'Rusak Ringan' })}
+                            >
                               <RadioGroupItem
                                 value="Rusak Ringan"
                                 id="rusak_ringan"
                               />
                               <Label
                                 htmlFor="rusak_ringan"
-                                className="font-normal cursor-pointer"
+                                className="font-normal cursor-pointer flex-1"
                               >
                                 Rusak Ringan
                               </Label>
                             </div>
-                            <div className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50">
+                            <div 
+                              className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.asset_condition_change === 'Rusak Berat' 
+                                  ? 'bg-orange-300 border-orange-400' 
+                                  : 'border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                              }`}
+                              onClick={() => setFormData({ ...formData, asset_condition_change: 'Rusak Berat' })}
+                            >
                               <RadioGroupItem
                                 value="Rusak Berat"
                                 id="rusak_berat"
                               />
                               <Label
                                 htmlFor="rusak_berat"
-                                className="font-normal cursor-pointer"
+                                className="font-normal cursor-pointer flex-1"
                               >
                                 Rusak Berat
                               </Label>

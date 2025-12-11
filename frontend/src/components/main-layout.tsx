@@ -225,17 +225,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     // Get active role untuk permission check
     const activeRole = getActiveRole(currentUser.id) || currentUser.role;
 
-    // DEBUG: Log untuk troubleshooting multi-role
-    console.log("🎯 MAIN LAYOUT DEBUG:", {
-      "getActiveRole()": getActiveRole(currentUser.id),
-      "currentUser.role": currentUser.role,
-      "currentUser.roles": currentUser.roles,
-      "activeRole (final)": activeRole,
-      sessionStorage: sessionStorage.getItem(
-        `bps_active_role_${currentUser.id}`
-      ),
-    });
-
     switch (currentView) {
       case "dashboard":
         return (

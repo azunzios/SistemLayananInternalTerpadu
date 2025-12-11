@@ -53,18 +53,9 @@ export const DetailDialog: React.FC<DetailDialogProps> = ({
   // Tombol 'buka di tab tiket' hanya untuk pembuat tiket (user yang membuka booking ini)
   const canViewTicketButton = () => {
     if (!currentUser || !booking) {
-      console.log("canViewTicketButton: missing currentUser or booking", {
-        currentUser,
-        booking,
-      });
       return false;
     }
     const result = booking.userId === currentUser.id;
-    console.log("canViewTicketButton:", {
-      bookingUserId: booking.userId,
-      currentUserId: currentUser.id,
-      result,
-    });
     return result;
   };
 

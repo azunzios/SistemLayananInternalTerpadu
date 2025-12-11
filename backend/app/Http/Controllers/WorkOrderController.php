@@ -561,13 +561,15 @@ class WorkOrderController extends Controller
      */
     public function kartuKendali(Request $request): JsonResponse
     {
-        // Ambil semua tiket perbaikan kecuali yang rejected dan direct_repair
+        // Ambil semua tiket perbaikan kecuali yang rejected
+        // PENTING: Filter work order completed harus dilakukan SEBELUM pagination
         $query = Ticket::where('type', 'perbaikan')
             ->where('status', '!=', 'rejected')
-            ->whereHas('diagnosis', function ($q) {
-                $q->where('repair_type', '!=', 'direct_repair');
+            // Filter: HANYA tiket yang punya work order completed
+            ->whereHas('workOrders', function ($q) {
+                $q->where('status', 'completed');
             })
-            ->with(['user', 'diagnosis.technician', 'assignedUser', 'workOrders' => function ($q) {
+            ->with(['user', 'assignedUser', 'workOrders' => function ($q) {
                 $q->where('status', 'completed')
                   ->orderBy('completed_at', 'desc');
             }]);
@@ -596,12 +598,7 @@ class WorkOrderController extends Controller
         $tickets = $query->orderBy('updated_at', 'desc')->paginate($perPage);
 
         // Transform data - 1 entry per tiket
-        // Filter hanya tiket yang punya work order completed (bukan unsuccessful)
         $data = $tickets->map(function ($ticket) {
-            // Skip tiket yang tidak punya work order completed
-            if ($ticket->workOrders->isEmpty()) {
-                return null;
-            }
             
             $formData = is_string($ticket->form_data) ? json_decode($ticket->form_data, true) : ($ticket->form_data ?? []);
             
@@ -626,9 +623,8 @@ class WorkOrderController extends Controller
             // Hitung total work orders completed untuk tiket ini
             $workOrderCount = $ticket->workOrders->count();
             
-            // Get teknisi dari assignedTo atau diagnosis
+            // Get teknisi dari assignedTo
             $technicianName = $ticket->assignedUser?->name 
-                ?? $ticket->diagnosis?->technician?->name 
                 ?? $latestWo?->createdBy?->name 
                 ?? null;
 

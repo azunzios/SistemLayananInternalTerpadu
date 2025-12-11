@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import type { Ticket } from '@/types';
+import type { Ticket, User } from '@/types';
+import { getActiveRole } from '@/lib/storage';
 
 interface ZoomAccount {
   id: string;
@@ -48,9 +49,10 @@ interface ZoomAccount {
 
 interface ZoomAccountManagementProps {
   tickets: Ticket[];
+  currentUser: User;
 }
 
-export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ tickets }) => {
+export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ tickets, currentUser }) => {
   const [accounts, setAccounts] = useState<ZoomAccount[]>([]);
 
   const [editingAccount, setEditingAccount] = useState<ZoomAccount | null>(null);
@@ -89,6 +91,13 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
 
 
   const handleAddNew = () => {
+    // Check if user is admin_layanan
+    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    if (activeRole !== 'admin_layanan') {
+      toast.error('Akses Ditolak', { description: "Anda tidak memiliki izin yang cukup", descriptionClassName: "!text-black" })
+      return;
+    }
+
     const colors = ['blue', 'purple', 'green', 'orange', 'red', 'teal', 'indigo', 'pink'];
     const newSlotNumber = accounts.length + 1;
     const colorIndex = (accounts.length) % colors.length;
@@ -110,6 +119,13 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
   };
 
   const handleEdit = (account: ZoomAccount) => {
+    // Check if user is admin_layanan
+    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    if (activeRole !== 'admin_layanan') {
+      toast.error('Akses Ditolak', { description: "Anda tidak memiliki izin yang cukup", descriptionClassName: "!text-black" })
+      return;
+    }
+
     setEditingAccount({ ...account });
     setValidationErrors({});
     setIsDialogOpen(true);
@@ -198,6 +214,13 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
   };
 
   const handleToggleActive = (accountId: string) => {
+    // Check if user is admin_layanan
+    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    if (activeRole !== 'admin_layanan') {
+      toast.error('Akses Ditolak', { description: "Anda tidak memiliki izin yang cukup", descriptionClassName: "!text-black" })
+      return;
+    }
+
     const account = accounts.find(acc => acc.id === accountId);
     if (!account) return;
 
@@ -256,6 +279,22 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
 
   const handleDelete = async () => {
     if (!accountToDelete) return;
+
+    // Check if user is admin_layanan
+    const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    if (activeRole !== 'admin_layanan') {
+      toast.error("Akses Ditolak", {
+        className: "",
+        description: (
+          <p className="text-black">
+            Anda tidak dapat melakukan aksi tersebut.
+          </p>
+        )
+      });
+      setShowDeleteConfirm(false);
+      setAccountToDelete(null);
+      return;
+    }
 
     try {
       await api.delete(`zoom/accounts/${accountToDelete.id}`);
@@ -367,8 +406,8 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
             <div>
               <p className="font-semibold text-blue-900">Tentang Slot Zoom</p>
               <p className="text-sm text-blue-700 mt-1">
-                Slot Zoom adalah representasi akun Zoom yang sudah ada di organisasi Anda. 
-                Menambah slot di sini <strong>tidak</strong> membuat akun Zoom baru, 
+                Slot Zoom adalah representasi akun Zoom yang sudah ada di organisasi Anda.
+                Menambah slot di sini <strong>tidak</strong> membuat akun Zoom baru,
                 melainkan mendaftarkan kredensial akun Zoom yang sudah ada agar dapat digunakan untuk booking meeting.
               </p>
             </div>
@@ -432,65 +471,65 @@ export const ZoomAccountManagement: React.FC<ZoomAccountManagementProps> = ({ ti
                       Spesifikasi & Keamanan
                     </h4>
 
-                      {/* Plan Type & Max Participants */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-gray-500">Tipe Akun</Label>
-                        <div className="p-2.5 bg-gray-50 rounded-md border border-gray-200">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">Zoom {account.planType}</p>
-                              <p className="text-xs text-gray-600 mt-0.5">
-                                Maks. {account.maxParticipants} peserta
-                              </p>
-                            </div>
-                            <Badge variant="outline" className={`text-xs ${colorClasses.text}`}>
-                              {account.planType}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Host Key */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-gray-500 flex items-center gap-1">
-                          <Key className="h-3 w-3" />
-                          Host Key
-                        </Label>
-                        {!account.hostKey || account.hostKey.trim() === '' ? (
-                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-md">
-                            <div className="flex items-center gap-2 text-red-700">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              <p className="text-xs font-semibold">Isi Host Key</p>
-                            </div>
-                            <p className="text-xs text-red-600 mt-0.5">
-                              Host Key belum diatur
+                    {/* Plan Type & Max Participants */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-gray-500">Tipe Akun</Label>
+                      <div className="p-2.5 bg-gray-50 rounded-md border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">Zoom {account.planType}</p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Maks. {account.maxParticipants} peserta
                             </p>
                           </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <Input
-                              value="••••••"
-                              readOnly
-                              className="font-mono bg-gray-50 text-sm h-9"
-                            />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-9 w-9"
-                              onClick={() => handleCopy(account.hostKey, 'Host Key')}
-                            >
-                              {copiedField === 'Host Key' ? (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-500">
-                          Klik salin untuk menyalin Host Key
-                        </p>
+                          <Badge variant="outline" className={`text-xs ${colorClasses.text}`}>
+                            {account.planType}
+                          </Badge>
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Host Key */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-gray-500 flex items-center gap-1">
+                        <Key className="h-3 w-3" />
+                        Host Key
+                      </Label>
+                      {!account.hostKey || account.hostKey.trim() === '' ? (
+                        <div className="p-2.5 bg-red-50 border border-red-200 rounded-md">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                            <p className="text-xs font-semibold">Isi Host Key</p>
+                          </div>
+                          <p className="text-xs text-red-600 mt-0.5">
+                            Host Key belum diatur
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input
+                            value="••••••"
+                            readOnly
+                            className="font-mono bg-gray-50 text-sm h-9"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9"
+                            onClick={() => handleCopy(account.hostKey, 'Host Key')}
+                          >
+                            {copiedField === 'Host Key' ? (
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Klik salin untuk menyalin Host Key
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

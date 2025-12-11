@@ -57,15 +57,6 @@ export const MyTicketsView: React.FC<MyTicketsViewProps> = ({
   const isTeknisi = effectiveRole === "teknisi";
   const scope = isTeknisi ? "assigned" : "my";
 
-  console.log("🔍 MY TICKETS VIEW DEBUG:", {
-    activeRole,
-    "currentUser.role": currentUser.role,
-    "currentUser.roles": currentUser.roles,
-    effectiveRole,
-    isTeknisi,
-    scope,
-  });
-
   // Reset filterStatus ketika filterType berubah
   useEffect(() => {
     setFilterStatus("all");

@@ -87,17 +87,6 @@ export const TicketList: React.FC<TicketListProps> = ({
   const isAdminPenyedia = effectiveRole === "admin_penyedia";
   const isPegawai = effectiveRole === "pegawai";
 
-  // DEBUG: Log untuk troubleshooting multi-role
-  console.log("🔍 TICKET LIST DEBUG:", {
-    activeRole,
-    "currentUser.role": currentUser.role,
-    "currentUser.roles": currentUser.roles,
-    effectiveRole,
-    isPegawai,
-    isTeknisi,
-    isAdmin,
-  });
-
   // Untuk multi-role users, tentukan scope berdasarkan activeRole saat ini
   // Bukan berdasarkan "only" logic karena bisa punya multiple roles
 
@@ -192,25 +181,7 @@ export const TicketList: React.FC<TicketListProps> = ({
         }
       }
 
-      // Scope according to active role (untuk multi-role, kirim scope sesuai role yang sedang aktif)
-      if (isPegawai) {
-        query.push("scope=my");
-        console.log("✅ Sending scope=my (Pegawai)");
-      } else if (isTeknisi) {
-        query.push("scope=assigned");
-        console.log("⚠️ Sending scope=assigned (Teknisi)");
-      } else if (isAdminPenyedia) {
-        query.push("scope=work_order_needed");
-        console.log("📦 Sending scope=work_order_needed (Admin Penyedia)");
-      } else if (isAdmin) {
-        query.push("admin_view=true");
-        console.log("🔓 Sending admin_view=true (Admin/Super Admin)");
-      } else {
-        console.log("🔓 No scope sent");
-      }
-
       const url = `tickets?${query.join("&")}`;
-      console.log("📡 API Request URL:", url);
       const res: any = await api.get(url);
 
       let data = Array.isArray(res) ? res : res?.data || [];
@@ -226,12 +197,6 @@ export const TicketList: React.FC<TicketListProps> = ({
           (t: any) => (t.assignedTo || t.assigned_to) === currentUser.id
         );
       }
-
-      console.log("📊 Ticket List - Loaded tickets:", {
-        count: data.length,
-        firstTicket: data[0],
-        hasMeta: !!responseMeta,
-      });
 
       setTickets(data);
       setPagination({

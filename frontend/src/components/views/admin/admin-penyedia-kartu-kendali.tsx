@@ -50,8 +50,6 @@ export const AdminPenyediaKartuKendali: React.FC = () => {
       // api.get already returns the full response, so we access response.data directly
       const workOrders = Array.isArray(response.data) ? response.data : [];
 
-      console.log("Work orders fetched:", workOrders);
-
       // Transform data to match interface
       const transformedData = workOrders.map((wo: any) => ({
         id: wo.id,

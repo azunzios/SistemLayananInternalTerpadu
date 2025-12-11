@@ -392,7 +392,7 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus User</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-black">
               Apakah Anda yakin ingin menghapus user "{deletingUser?.name}"?
               Aksi ini tidak dapat dibatalkan.
             </AlertDialogDescription>

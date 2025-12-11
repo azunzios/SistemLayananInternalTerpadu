@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Video, Calendar, Settings, List } from 'lucide-react';
-import { getTickets } from '@/lib/storage';
+import { getTickets, getCurrentUser } from '@/lib/storage';
 import { ZoomAdminGrid } from './zoom-admin-grid';
 import { ZoomAccountManagement } from './zoom-account-management';
 import { ZoomTicketList } from './zoom-ticket-list';
@@ -14,6 +14,7 @@ interface ZoomManagementViewProps {
 
 export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNavigate, onViewTicket }) => {
   const tickets = getTickets();
+  const currentUser = getCurrentUser();
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const handleViewTicketDetail = (ticketId: string) => {
@@ -83,7 +84,7 @@ export const ZoomManagementView: React.FC<ZoomManagementViewProps> = ({ onNaviga
       </TabsContent>
 
       <TabsContent value="accounts" className="mt-6">
-        <ZoomAccountManagement tickets={tickets} />
+        {currentUser && <ZoomAccountManagement tickets={tickets} currentUser={currentUser} />}
       </TabsContent>
     </Tabs>
   </div>

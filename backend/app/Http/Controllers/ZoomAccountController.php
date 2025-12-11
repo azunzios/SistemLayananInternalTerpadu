@@ -234,15 +234,16 @@ class ZoomAccountController extends Controller
     }
 
     /**
-     * Authorize admin access
+     * Authorize admin_layanan access only
      */
     private function authorizeAdmin()
     {
         $user = auth()->user();
         $activeRole = $user->role ?? 'pegawai';
         
-        if (!in_array($activeRole, ['admin_layanan', 'super_admin'])) {
-            abort(403, 'Unauthorized. Admin access required.');
+        // Only admin_layanan can manage zoom accounts
+        if ($activeRole !== 'admin_layanan') {
+            abort(403, 'Unauthorized. Only admin_layanan can manage zoom accounts.');
         }
     }
 }

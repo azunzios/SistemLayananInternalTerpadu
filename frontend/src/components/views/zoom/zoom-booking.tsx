@@ -639,7 +639,7 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
     try {
       setIsSubmittingQuick(true);
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000/api"
+        `${import.meta.env.VITE_API || "http://localhost:8000/api"
         }/tickets`,
         {
           method: "POST",

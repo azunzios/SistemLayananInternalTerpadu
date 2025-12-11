@@ -661,8 +661,6 @@ export const TicketDetailAlerts: React.FC<TicketDetailAlertsProps> = ({
                   // Refresh ticket data first, then show feedback modal
                   await onUpdate?.();
                   
-                  // Show feedback modal after closing ticket
-                  console.log("🔔 Opening feedback modal for ticket:", ticket.id);
                   setShowFeedbackModal(true);
                 } catch (error: any) {
                   console.error("Failed to close ticket:", error);

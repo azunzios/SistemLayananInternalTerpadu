@@ -263,7 +263,7 @@ export async function loadDataFromApiOnce(role: string = "pegawai") {
 // Force refresh data from API (ignores cache)
 export async function refreshTicketsFromApi() {
   if (isRefreshing) {
-    console.log("⏭️ Skipping duplicate refresh call");
+    console.log("Skipping duplicate refresh call");
     return;
   }
   isRefreshing = true;
@@ -271,7 +271,7 @@ export async function refreshTicketsFromApi() {
     // Refresh only first page & meta; keep previously loaded other pages (could invalidate, but acceptable)
     await loadTicketsPage(1);
     console.log(
-      "✅ Tickets first page refreshed from API. Total:",
+      "Tickets first page refreshed from API. Total:",
       ticketsMeta.total
     );
   } catch (err) {
@@ -325,7 +325,7 @@ export { api } from "./api";
 
 // No longer needed - backend handles initialization
 export const initializeDefaultData = () => {
-  console.log("🔄 Using real backend - no local initialization needed");
+  console.log("Welcome to sigap-ti!");
 };
 
 // ============================================

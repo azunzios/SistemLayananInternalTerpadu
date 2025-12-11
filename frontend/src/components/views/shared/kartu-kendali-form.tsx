@@ -51,16 +51,12 @@ export const KartuKendaliForm: React.FC<KartuKendaliFormProps> = ({
 
       try {
         setLoadingAsset(true);
-        console.log("Fetching asset with:", { assetCode, assetNup });
         const response: any = await api.get(
           `assets/search/by-code-nup?asset_code=${assetCode}&asset_nup=${assetNup}`
         );
 
-        console.log("Asset search response:", response);
-
         if (response.asset) {
           setAssetData(response.asset);
-          console.log("Asset data loaded:", response.asset);
         } else {
           console.error("Asset not found in response");
           toast.error("Data aset tidak ditemukan");

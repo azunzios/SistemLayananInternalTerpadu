@@ -62,6 +62,8 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [editingAsset, setEditingAsset] = useState<AssetBMN | null>(null);
   const [importing, setImporting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<AssetBMN | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -96,9 +98,6 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
       if (kondisiFilter) params.append("kondisi", kondisiFilter);
 
       const response: any = await api.get(`/bmn-assets?${params.toString()}`);
-      console.log("API Response:", response);
-      console.log("Response data:", response.data);
-      console.log("Assets array:", response.data);
 
       // Response langsung adalah data, bukan wrapped dalam .data lagi
       setAssets(response.data || []);
@@ -167,12 +166,19 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
   };
 
   // Handle delete asset
-  const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus asset ini?")) return;
+  const handleDelete = (asset: AssetBMN) => {
+    setAssetToDelete(asset);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!assetToDelete) return;
 
     try {
-      await api.delete(`/bmn-assets/${id}`);
+      await api.delete(`/bmn-assets/${assetToDelete.id}`);
       toast.success("Asset berhasil dihapus");
+      setShowDeleteDialog(false);
+      setAssetToDelete(null);
       fetchAssets();
     } catch (error: any) {
       console.error("Error deleting asset:", error);
@@ -502,7 +508,7 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-sm"
-                        onClick={() => handleDelete(asset.id)}
+                        onClick={() => handleDelete(asset)}
                         title="Hapus Asset"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -677,7 +683,65 @@ export const BmnAssetManagement: React.FC<BmnAssetManagementProps> = () => {
               Batal
             </Button>
             <Button onClick={handleSubmit}>
-              {editingAsset ? "Simpan Perubahan" : "Tambah Asset"}
+              {editingAsset ? "Update" : "Tambah"} Asset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="md:max-w-md max-md:w-[90vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Konfirmasi Hapus Asset
+            </DialogTitle>
+            <DialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Asset akan dihapus secara permanen dari sistem.
+            </DialogDescription>
+          </DialogHeader>
+
+          {assetToDelete && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">
+                  Anda akan menghapus asset berikut:
+                </p>
+                <div className="mt-3 space-y-2">
+                  <div>
+                    <p className="text-xs text-red-600">Kode Barang</p>
+                    <p className="font-semibold text-red-900">{assetToDelete.kodeBarang}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-600">NUP</p>
+                    <p className="font-semibold text-red-900">{assetToDelete.nup}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-red-600">Nama Barang</p>
+                    <p className="font-semibold text-red-900">{assetToDelete.namaBarang}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setAssetToDelete(null);
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Ya, Hapus Asset
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -75,7 +75,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="max-md:max-w-[450px] md:max-h-[90vh] max-md:max-h-[80vh] overflow-y-scroll">
         <DialogHeader>
           <DialogTitle>Berikan Feedback</DialogTitle>
           <DialogDescription>

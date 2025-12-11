@@ -104,7 +104,6 @@ export const TicketDetail: React.FC<TicketDetailProps> = ({
         const response = await api.get<any>(`tickets/${ticketId}`);
         const ticketData = response.data || response;
         setTicketDetail(ticketData);
-        console.log("📝 Ticket Detail fetched:", ticketData);
       } catch (error) {
         console.error("Failed to fetch ticket detail:", error);
         toast.error("Gagal memuat detail tiket");

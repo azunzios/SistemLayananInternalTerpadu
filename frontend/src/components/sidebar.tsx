@@ -170,7 +170,6 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   currentView,
   showExpanded,
   onClick,
-  index,
   isMobile,
   collapsed,
 }) => {

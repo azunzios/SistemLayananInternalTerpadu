@@ -182,13 +182,11 @@ export const ZoomAdminReviewModal: React.FC<ZoomAdminReviewModalProps> = ({
         const response = await api.get("zoom/accounts");
         if (Array.isArray(response)) {
           setZoomAccounts(response);
-          console.log("Loaded zoom accounts from API:", response);
         }
       } catch (err: any) {
         const errorMsg =
           err?.body?.message || err?.message || "Gagal memuat data akun Zoom";
         setAccountsError(errorMsg);
-        console.error("Failed to load zoom accounts:", err);
       }
     };
 

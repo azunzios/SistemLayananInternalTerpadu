@@ -666,7 +666,7 @@ export const WorkOrderList: React.FC<WorkOrderListProps> = ({
 
      {/* Detail & Update Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="md:max-w-3xl max-md:!w-[95vw] max-md:!max-h-[90vh] max-md:!p-4 max-md:!rounded-xl max-md:!overflow-y-auto">
+        <DialogContent className="md:max-w-3xl md:max-h-[90vh] max-md:!w-[95vw] md:overflow-y-scroll max-md:!max-h-[90vh] max-md:!p-4 max-md:!rounded-xl max-md:!overflow-y-auto">
           <DialogHeader className="max-md:!pb-2 max-md:!text-left">
             <DialogTitle className="max-md:!text-lg max-md:!leading-tight">
               Detail & Status Work Order

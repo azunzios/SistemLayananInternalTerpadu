@@ -205,7 +205,11 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser }) =
       })
       .catch(err => {
         console.error('Failed to delete user', err);
-        toast.error('Gagal menghapus user');
+        
+        toast.error('Tidak dapat menghapus user', {
+          description: 'Periksa: User ini memiliki data terkait di sistem (tiket, work order, notifikasi, dll) dan tidak dapat dihapus. Silakan nonaktifkan user sebagai gantinya.',
+          descriptionClassName: '!text-black',
+        });
       })
       .finally(() => {
         setShowDeleteDialog(false);
