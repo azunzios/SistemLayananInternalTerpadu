@@ -8,9 +8,6 @@ use App\Models\ZoomAccount;
 
 class ZoomAccountSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $accounts = [

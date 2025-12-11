@@ -31,13 +31,13 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
 
   const steps = [
     {
-      title: 'Selamat Datang di Sistem Ticketing BPS NTB! 🎉',
+      title: 'Selamat Datang di Sistem Ticketing BPS NTB!',
       description: 'Mari kami bantu Anda memahami cara menggunakan sistem ini',
       icon: Sparkles,
       color: 'from-blue-500 to-purple-600',
       content: (
         <div className="space-y-4">
-          <p className="text-gray-600">
+          <p className="text-black text-center">
             Sistem ini memudahkan Anda untuk mengajukan berbagai layanan internal seperti perbaikan peralatan dan booking Zoom meeting.
           </p>
           <div className="grid gap-3">
@@ -176,7 +176,7 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
       title: 'Siap Memulai! 🚀',
       description: 'Anda sudah siap menggunakan sistem',
       icon: Sparkles,
-      color: 'from-purple-500 to-pink-600',
+      color: '',
       content: (
         <div className="space-y-4">
           <div className="text-center py-6">
@@ -226,20 +226,28 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
   };
 
   const currentStepData = steps[currentStep];
-  const Icon = currentStepData.icon;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onComplete(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="
+    md:max-w-2xl 
+    md:max-h-[90vh] 
+    max-md:max-h-[90vh] 
+    md:max-w-[90vw] 
+    overflow-y-auto 
+    border-1 
+    bg-gradient-to-t
+    from-[#b3b3b3]
+    via-[#d9d9d9]
+    to-[#f2f2f2]
+  "
+      >
+
         <DialogHeader>
-          <div className="flex items-center gap-4 mb-4">
-            <div className={`h-12 w-12 bg-gradient-to-br ${currentStepData.color} rounded-lg flex items-center justify-center`}>
-              <Icon className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <DialogTitle>{currentStepData.title}</DialogTitle>
-              <DialogDescription>{currentStepData.description}</DialogDescription>
-            </div>
+          <div className="mb-4">
+            <DialogTitle>{currentStepData.title}</DialogTitle>
+            <DialogDescription className='text-black'>{currentStepData.description}</DialogDescription>
           </div>
 
           {/* Progress Indicator */}
@@ -247,9 +255,8 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
             {steps.map((_, index) => (
               <div
                 key={index}
-                className={`h-1.5 flex-1 rounded-full transition-all ${
-                  index <= currentStep ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
+                className={`h-1.5 flex-1 rounded-full transition-all ${index <= currentStep ? 'bg-blue-600' : 'bg-gray-400'
+                  }`}
               />
             ))}
           </div>
@@ -268,28 +275,33 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
           </motion.div>
         </AnimatePresence>
 
-        <DialogFooter className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            Step {currentStep + 1} dari {steps.length}
-          </div>
+        <DialogFooter className="md:!flex md:!flex-col items-center gap-3">
           <div className="flex gap-2">
             {currentStep > 0 && (
-              <Button variant="outline" onClick={handlePrev}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Sebelumnya
+              <Button variant="outline" className="rounded-full bg-gray-700 hover:bg-gray-800 w-[120px]" onClick={handlePrev}>
+                  <div className="flex items-center gap-2 text-white">
+                    <ArrowLeft className="h-4 w-4" />
+                    Sebelumnya
+                  </div>
               </Button>
             )}
-            <Button onClick={handleNext}>
+            <Button onClick={handleNext}
+              className='rounded-full bg-gray-700 hover:bg-gray-800 w-[120px]'>
               {currentStep < steps.length - 1 ? (
                 <>
-                  Selanjutnya <ArrowRight className="h-4 w-4 ml-2" />
+                  <div className="flex items-center gap-2 text-white">
+                    Selanjutnya <ArrowRight className="h-4 w-4" />
+                  </div>
                 </>
               ) : (
                 <>
-                  Mulai Menggunakan <CheckCircle className="h-4 w-4 ml-2" />
+                  Selesai <CheckCircle className="h-4 w-4 ml-2" />
                 </>
               )}
             </Button>
+          </div>
+          <div className="text-sm text-black">
+            Step {currentStep + 1} dari {steps.length}
           </div>
         </DialogFooter>
       </DialogContent>
