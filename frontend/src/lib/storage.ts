@@ -1,6 +1,7 @@
 // API-based storage management utilities for BPS NTB Ticketing System
 // All data now managed through backend API - no localStorage
 
+import React from "react";
 import type {
   User,
   Ticket,
@@ -325,7 +326,8 @@ export { api } from "./api";
 
 // No longer needed - backend handles initialization
 export const initializeDefaultData = () => {
-  console.log("Welcome to sigap-ti!");
+  console.log("Welcome to Sigap-ti!");
+  console.log(React.version);
 };
 
 // ============================================

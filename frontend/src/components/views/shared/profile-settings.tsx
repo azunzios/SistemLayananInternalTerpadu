@@ -68,7 +68,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       toast.success('Avatar berhasil diupload');
     } catch (err: any) {
       console.error('Failed to upload avatar', err);
-      const message = err?.body?.message || 'Gagal mengupload avatar';
+      const message = err?.body?.message || 'Gagal mengupload avatar (cek ukuran (maksimal 1 Mb) dan format file)';
       toast.error(message);
     } finally {
       setIsUploadingAvatar(false);
