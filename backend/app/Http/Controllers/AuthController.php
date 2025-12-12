@@ -30,7 +30,7 @@ class AuthController extends Controller
             }
             if ($user->locked_until && $user->locked_until->isFuture()) {
                 throw ValidationException::withMessages([
-                    'email' => ['Account locked until '.$user->locked_until->format('Y-m-d H:i:s').'.'],
+                    'email' => ['Account locked until '.$user->locked_until->format('Y-m-d H:i:s').' UTC (WITA = +06.00)'],
                 ]);
             }
         }

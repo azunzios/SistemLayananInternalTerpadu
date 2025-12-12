@@ -90,9 +90,9 @@ class TicketController extends Controller
             } elseif ($scope === 'assigned') {
                 // Explicit "assigned": tiket yang di-assign ke user
                 $query->where('assigned_to', $user->id);
-            } elseif ($scope === 'work_order_needed') {
-                // Admin penyedia: tiket yang punya work order atau butuh work order
-                $query->whereHas('workOrders');
+            } elseif ($scope === 'perbaikan_tickets') {
+                // Admin penyedia: semua tiket perbaikan
+                $query->where('type', 'perbaikan');
             } else {
                 // Use active role (single column) for filtering, not roles array
                 $activeRole = $user->role ?? 'pegawai';
@@ -415,9 +415,9 @@ class TicketController extends Controller
                 } elseif ($scope === 'assigned') {
                     // "assigned": tiket yang di-assign ke user
                     $query->where('assigned_to', $user->id);
-                } elseif ($scope === 'work_order_needed') {
-                    // Admin penyedia: tiket yang punya work order
-                    $query->whereHas('workOrders');
+                } elseif ($scope === 'perbaikan_tickets') {
+                    // Admin penyedia: semua tiket perbaikan
+                    $query->where('type', 'perbaikan');
                 } else {
                     // Use active role (single column) for filtering
                     $activeRole = $user->role ?? 'pegawai';

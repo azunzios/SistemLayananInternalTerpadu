@@ -113,8 +113,8 @@ export const TicketList: React.FC<TicketListProps> = ({
       if (isAdmin) {
         query.push("admin_view=true");
       } else if (isAdminPenyedia) {
-        // Admin penyedia melihat tiket yang butuh work order
-        query.push("scope=work_order_needed");
+        // Admin penyedia: semua tiket perbaikan
+        query.push("scope=perbaikan_tickets");
       } else if (isPegawai) {
         query.push("scope=my");
       } else if (isTeknisi) {
@@ -148,6 +148,17 @@ export const TicketList: React.FC<TicketListProps> = ({
       const query = [];
       query.push(`page=${page}`);
       query.push(`per_page=15`);
+
+      // Add scope for role-based filtering
+      if (isAdminPenyedia) {
+        query.push("scope=perbaikan_tickets");
+      } else if (isPegawai) {
+        query.push("scope=my");
+      } else if (isTeknisi) {
+        query.push("scope=assigned");
+      } else if (isAdmin) {
+        query.push("admin_view=true");
+      }
 
       // Add search parameter
       if (searchTerm) {
@@ -187,23 +198,10 @@ export const TicketList: React.FC<TicketListProps> = ({
       let data = Array.isArray(res) ? res : res?.data || [];
       const responseMeta = res?.meta || res;
 
-      // Safety: filter di frontend sesuai activeRole agar pegawai tidak melihat tiket orang lain
-      if (isPegawai) {
-        data = data.filter(
-          (t: any) => (t.userId || t.user_id) === currentUser.id
-        );
-      } else if (isTeknisi) {
-        data = data.filter(
-          (t: any) => (t.assignedTo || t.assigned_to) === currentUser.id
-        );
-      }
-
+      // Backend already handles filtering via scope parameter
       setTickets(data);
       setPagination({
-        total:
-          isPegawai || isTeknisi
-            ? data.length
-            : responseMeta.total || data.length,
+        total: responseMeta.total || data.length,
         per_page: responseMeta.per_page || 15,
         current_page: responseMeta.current_page || page,
         last_page: responseMeta.last_page || 1,
@@ -332,7 +330,7 @@ export const TicketList: React.FC<TicketListProps> = ({
           <h1 className="text-3xl font-bold">Kelola Tiket</h1>
           <p className="text-muted-foreground">
             {isAdminPenyedia
-              ? "Review dan kelola semua tiket yang membutuhkan work order"
+              ? "Review dan kelola semua tiket perbaikan"
               : "Review dan kelola semua tiket dari pengguna"}
           </p>
         </div>
@@ -378,7 +376,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">
-                    Semua ({statsLoading ? "..." : stats.total})
+                    Semua Tiket Perbaikan ({statsLoading ? "..." : stats.total})
                   </SelectItem>
                   <SelectItem value="submitted">
                     Pending ({statsLoading ? "..." : stats.pending})

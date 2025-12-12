@@ -241,13 +241,14 @@ export const UserOnboarding: React.FC<UserOnboardingProps> = ({ open, onComplete
     from-[#b3b3b3]
     via-[#d9d9d9]
     to-[#f2f2f2]
+    !p-8
   "
       >
 
         <DialogHeader>
-          <div className="mb-4">
+          <div className="mb-4 mt-4">
             <DialogTitle>{currentStepData.title}</DialogTitle>
-            <DialogDescription className='text-black'>{currentStepData.description}</DialogDescription>
+            <DialogDescription className='text-black mt-2'>{currentStepData.description}</DialogDescription>
           </div>
 
           {/* Progress Indicator */}

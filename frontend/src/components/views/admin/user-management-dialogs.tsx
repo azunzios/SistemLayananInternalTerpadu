@@ -103,7 +103,7 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={onCreateDialogChange}>
         {/* MODIFIED: Added max-h-[85vh] and flex flex-col */}
-        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogContent className="md:max-w-md md:max-h-[85vh] max-md:max-w-[90vw] max-md:max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Tambah User Baru</DialogTitle>
             <DialogDescription>
@@ -272,7 +272,7 @@ export const UserManagementDialogs: React.FC<UserManagementDialogsProps> = ({
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={onEditDialogChange}>
         {/* MODIFIED: Added max-h-[85vh] and flex flex-col */}
-        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogContent className="md:max-w-md md:max-h-[85vh] max-md:max-w-[90vw] max-md:max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>Perbarui informasi user</DialogDescription>
