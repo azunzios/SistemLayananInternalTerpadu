@@ -866,8 +866,8 @@ class WorkOrderController extends Controller
                 'no' => $no++,
                 'ticket_number' => $ticket?->ticket_number ?? '-',
                 'ticket_title' => $ticket?->title ?? '-',
-                'asset_code' => $formData['assetCode'] ?? $formData['kode_barang'] ?? $ticket?->kode_barang ?? '-',
-                'asset_nup' => $formData['assetNUP'] ?? $formData['nup'] ?? $ticket?->nup ?? '-',
+                'asset_code' => $ticket?->kode_barang ?? $formData['assetCode'] ?? $formData['kode_barang'] ?? '-',
+                'asset_nup' => $ticket?->nup ?? $formData['assetNUP'] ?? $formData['nup'] ?? '-',
                 'requester' => $ticket?->user?->name ?? '-',
                 'technician' => $wo->createdBy?->name ?? '-',
                 // Diagnosis
