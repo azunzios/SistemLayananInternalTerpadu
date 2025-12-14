@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\Asset;
-use App\Models\Category;
 use App\Models\Timeline;
 use App\Models\WorkOrder;
 use App\Http\Resources\TicketResource;
@@ -27,7 +26,7 @@ class TicketController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Ticket::with('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments', 'diagnosis.technician');
+        $query = Ticket::with('user', 'assignedUser', 'timeline.user', 'zoomAccount', 'comments', 'diagnosis.technician');
 
         // Filter by type
         if ($request->has('type')) {
@@ -63,11 +62,6 @@ class TicketController extends Controller
         // Filter by severity (perbaikan only)
         if ($request->has('severity')) {
             $query->where('severity', $request->severity);
-        }
-
-        // Filter by category
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
         }
 
         // Search by ticket number or title
@@ -124,7 +118,7 @@ class TicketController extends Controller
         // Check authorization
         $this->authorizeTicketAccess($ticket);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user', 'diagnosis.technician', 'workOrders', 'feedback.user'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount', 'comments.user', 'comments.replies.user', 'diagnosis.technician', 'workOrders', 'feedback.user'));
     }
 
     /**
@@ -683,7 +677,7 @@ class TicketController extends Controller
         // Notifikasi ke admin_layanan
         TicketNotificationService::onTicketCreated($ticket);
 
-        return response()->json(new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount')), 201);
+        return response()->json(new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount')), 201);
     }
 
     /**
@@ -710,7 +704,7 @@ class TicketController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -749,7 +743,7 @@ class TicketController extends Controller
         // Notifikasi ke teknisi dan pelapor
         TicketNotificationService::onTicketAssigned($ticket);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -804,7 +798,7 @@ class TicketController extends Controller
         // Notifikasi ke pelapor
         TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'approved');
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user'));
     }
 
     /**
@@ -935,7 +929,7 @@ class TicketController extends Controller
             TicketNotificationService::onStatusChanged($ticket, $oldStatus, $validated['status']);
         }
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -1023,7 +1017,7 @@ class TicketController extends Controller
         // Notifikasi ke pelapor
         TicketNotificationService::onZoomApproved($ticket);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -1073,7 +1067,7 @@ class TicketController extends Controller
         // Notifikasi ke pelapor
         TicketNotificationService::onZoomRejected($ticket, $validated['reason']);
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -1129,7 +1123,7 @@ class TicketController extends Controller
         // Notifikasi ke pelapor
         TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'rejected');
 
-        return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+        return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
     }
 
     /**
@@ -1162,7 +1156,7 @@ class TicketController extends Controller
             // Notifikasi ke pelapor
             TicketNotificationService::onStatusChanged($ticket, $oldStatus, 'assigned');
 
-            return new TicketResource($ticket->load('user', 'assignedUser', 'category', 'timeline.user', 'zoomAccount'));
+            return new TicketResource($ticket->load('user', 'assignedUser', 'timeline.user', 'zoomAccount'));
         }
 
         return response()->json(['message' => 'Invalid ticket type for this action'], 400);

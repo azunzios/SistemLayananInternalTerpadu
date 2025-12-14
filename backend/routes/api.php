@@ -6,7 +6,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\BmnAssetController;
 use App\Http\Controllers\TicketController;
@@ -22,11 +21,6 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/password/forgot', [PasswordResetController::class, 'sendResetLink']);
 Route::post('/password/verify-token', [PasswordResetController::class, 'verifyToken']);
 Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
-
-// Public endpoints (no auth required)
-Route::get('/categories/by-type/{type}', [CategoryController::class, 'getByType']);
-Route::get('/categories/meta/field-types', [CategoryController::class, 'getFieldTypes']);
-Route::get('/categories/meta/category-types', [CategoryController::class, 'getCategoryTypes']);
 
 Route::middleware('auth:sanctum')->group(function () {
     // Profile routes

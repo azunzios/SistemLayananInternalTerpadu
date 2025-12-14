@@ -77,14 +77,6 @@ class Ticket extends Model
     }
 
     /**
-     * Get the category
-     */
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-
-    /**
      * Get the timeline events
      */
     public function timeline(): HasMany

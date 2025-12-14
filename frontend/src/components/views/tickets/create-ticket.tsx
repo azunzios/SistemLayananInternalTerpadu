@@ -34,7 +34,7 @@ import {
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import type { User, TicketType, SeverityLevel, Category } from "@/types";
+import type { User, TicketType, SeverityLevel } from "@/types";
 
 interface CreateTicketProps {
   currentUser: User;
@@ -53,7 +53,6 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
     title: "",
     description: "",
     severity: "normal" as SeverityLevel,
-    categoryId: "", // Required by backend
 
     // Perbaikan - New fields
     assetCode: "", // Kode Barang
@@ -73,46 +72,11 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Asset check state
   const [assetInfo, setAssetInfo] = useState<any>(null);
   const [isCheckingAsset, setIsCheckingAsset] = useState(false);
   const [assetChecked, setAssetChecked] = useState(false);
-
-  // Fetch categories on mount - hanya untuk zoom_meeting, perbaikan tidak perlu kategori
-  useEffect(() => {
-    if (ticketType === "zoom_meeting") {
-      const fetchCategories = async () => {
-        try {
-          setLoading(true);
-          const result = await api.get<Category[]>(
-            `/categories/by-type/${ticketType}`
-          );
-          const cats = Array.isArray(result) ? result : [];
-          setCategories(cats);
-
-          // Auto-select first category if available
-          if (cats.length > 0) {
-            setFormData((prev) => ({
-              ...prev,
-              categoryId: String(cats[0].id),
-            }));
-          }
-        } catch (err) {
-          console.error("Failed to fetch categories:", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchCategories();
-    } else {
-      // Perbaikan tidak butuh kategori
-      setLoading(false);
-    }
-  }, [ticketType]);
 
   const getTicketIcon = () => {
     switch (ticketType) {
@@ -192,16 +156,6 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
 
     if (!formData.description.trim()) {
       toast.error("Deskripsi harus diisi");
-      return;
-    }
-
-    // Kategori hanya wajib jika ada kategori yang tersedia (untuk zoom_meeting)
-    if (
-      ticketType === "zoom_meeting" &&
-      categories.length > 0 &&
-      !formData.categoryId
-    ) {
-      toast.error("Kategori harus dipilih");
       return;
     }
 
@@ -424,45 +378,6 @@ export const CreateTicket: React.FC<CreateTicketProps> = ({
                     required
                   />
                 </div>
-
-                {ticketType === "zoom_meeting" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="category">
-                      Kategori {categories.length > 0 ? "*" : "(Opsional)"}
-                    </Label>
-                    <Select
-                      value={formData.categoryId}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, categoryId: value })
-                      }
-                      disabled={loading || categories.length === 0}
-                    >
-                      <SelectTrigger id="category">
-                        <SelectValue
-                          placeholder={
-                            loading
-                              ? "Memuat kategori..."
-                              : categories.length === 0
-                              ? "Tidak ada kategori"
-                              : "Pilih kategori"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={String(cat.id)}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {categories.length === 0 && !loading && (
-                      <p className="text-xs text-gray-500">
-                        Tidak ada kategori yang tersedia untuk form ini
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {ticketType === "perbaikan" && (
                   <div className="space-y-2">

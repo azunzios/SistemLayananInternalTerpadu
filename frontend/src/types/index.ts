@@ -76,25 +76,6 @@ export interface User {
   lockedUntil?: string;
 }
 
-export interface Category {
-  id: string | number;
-  name: string;
-  type: TicketType; // Menentukan kategori ini untuk 'perbaikan' or 'zoom_meeting'
-  fields?: CategoryField[]; // Optional - tidak selalu diperlukan tapi ada beberapa pertanyaan yang di (*) atau wajib dijawab
-  assignedRoles?: UserRole[]; // Role yg menangani kategori ini
-  isActive?: boolean;
-  description?: string;
-  createdAt?: string;
-}
-
-export interface CategoryField {
-  id: string;
-  label: string;
-  type: "text" | "textarea" | "number" | "select" | "file" | "date" | "email";
-  required: boolean;
-  options?: string[];
-}
-
 export interface Attachment {
   id: string;
   name: string;

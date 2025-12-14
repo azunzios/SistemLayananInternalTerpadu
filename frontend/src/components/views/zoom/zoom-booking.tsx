@@ -653,7 +653,22 @@ export const ZoomBooking: React.FC<ZoomBookingProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengajukan booking");
+        
+        // Ambil error message dari errors field jika ada
+        let errorMessage = errorData.message || "Gagal mengajukan booking";
+        
+        if (errorData.errors) {
+          // Ambil error pertama dari field manapun
+          const firstError = Object.values(errorData.errors)
+            .flat()
+            .find(err => typeof err === 'string');
+          
+          if (firstError) {
+            errorMessage = firstError;
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       await handleRefreshZoomData();

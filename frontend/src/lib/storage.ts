@@ -5,7 +5,6 @@ import React from "react";
 import type {
   User,
   Ticket,
-  Category,
   AuditLog,
   Notification,
   WorkOrder,
@@ -35,7 +34,6 @@ const cache = {
   currentUser: null as User | null,
   activeRole: new Map<string, string>(),
   tickets: [] as Ticket[],
-  categories: [] as Category[],
   users: [] as User[],
   auditLogs: [] as AuditLog[],
   notifications: [] as Notification[],
@@ -44,11 +42,10 @@ const cache = {
 };
 
 const datasetLoaded: Record<
-  "tickets" | "categories" | "users" | "workOrders" | "notifications",
+  "tickets" | "users" | "workOrders" | "notifications",
   boolean
 > = {
   tickets: false,
-  categories: false,
   users: false,
   workOrders: false,
   notifications: false,
@@ -80,7 +77,6 @@ export function resetAllCaches() {
   cache.currentUser = null;
   cache.activeRole = new Map<string, string>();
   cache.tickets = [];
-  cache.categories = [];
   cache.users = [];
   cache.auditLogs = [];
   cache.notifications = [];
@@ -216,10 +212,6 @@ const datasetLoaders: Record<keyof typeof datasetLoaded, () => Promise<void>> =
       await loadTicketsPage(1);
     }
   },
-  categories: async () => {
-    // Categories API endpoint disabled - not used
-    // await loadCategoriesFromApi();
-  },
   users: async () => {
     await loadUsersFromApi();
   },
@@ -240,7 +232,6 @@ const roleDatasetMap: Record<string, (keyof typeof datasetLoaded)[]> = {
   super_admin: [
     "tickets",
     "users",
-    "categories",
     "workOrders",
     "notifications",
   ],
@@ -516,24 +507,6 @@ export const saveTickets = async (tickets: Ticket[]) => {
     await api.put("tickets", tickets);
   } catch (err) {
     console.error("Failed to save tickets:", err);
-  }
-};
-
-// ============================================
-// Category Management - Now via API
-// ============================================
-
-export const getCategories = (): Category[] => {
-  return cache.categories;
-};
-
-export const saveCategories = async (categories: Category[]) => {
-  cache.categories = categories;
-  datasetLoaded.categories = true;
-  try {
-    await api.put("categories", categories);
-  } catch (err) {
-    console.error("Failed to save categories:", err);
   }
 };
 

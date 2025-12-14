@@ -21,14 +21,6 @@ class TicketResource extends JsonResource
             'type' => $this->type,
             'title' => $this->title,
             'description' => $this->description,
-            'categoryId' => $this->category_id,
-            'category' => $this->whenLoaded('category', function () {
-                return $this->category ? [
-                    'id' => $this->category->id,
-                    'name' => $this->category->name,
-                    'type' => $this->category->type,
-                ] : null;
-            }),
             
             // User info - fetched from user relationship
             'userId' => $this->user_id,

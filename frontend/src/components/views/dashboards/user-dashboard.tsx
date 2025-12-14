@@ -10,6 +10,7 @@ import {
   Loader,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { getActiveRole } from '@/lib/storage';
 import { UserOnboarding } from '@/components/views/shared';
@@ -224,11 +225,37 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, onNav
     try {
       setIsSubmittingQuick(true);
       await api.post('tickets', payload);
+      toast.success('Booking berhasil diajukan!');
       resetQuickBookingState();
       setShowQuickBooking(false);
       onNavigate('my-tickets');
     } catch (err: any) {
       console.error('Failed to submit booking:', err);
+      
+      // Extract error message from API response
+      let errorMessage = 'Gagal mengajukan booking';
+      
+      if (err?.body) {
+        // Check if there's a message
+        if (err.body.message) {
+          errorMessage = err.body.message;
+        }
+        
+        // Check for validation errors
+        if (err.body.errors) {
+          const firstError = Object.values(err.body.errors)
+            .flat()
+            .find(e => typeof e === 'string');
+          
+          if (firstError) {
+            errorMessage = firstError;
+          }
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSubmittingQuick(false);
     }
