@@ -6,7 +6,6 @@ import type {
   User,
   Ticket,
   Category,
-  SparepartRequest,
   AuditLog,
   Notification,
   WorkOrder,
@@ -38,7 +37,6 @@ const cache = {
   tickets: [] as Ticket[],
   categories: [] as Category[],
   users: [] as User[],
-  sparepartRequests: [] as SparepartRequest[],
   auditLogs: [] as AuditLog[],
   notifications: [] as Notification[],
   workOrders: [] as WorkOrder[],
@@ -84,7 +82,6 @@ export function resetAllCaches() {
   cache.tickets = [];
   cache.categories = [];
   cache.users = [];
-  cache.sparepartRequests = [];
   cache.auditLogs = [];
   cache.notifications = [];
   cache.workOrders = [];
@@ -541,24 +538,7 @@ export const saveCategories = async (categories: Category[]) => {
 };
 
 // ============================================
-// Sparepart Requests - Now via API
-// ============================================
-
-export const getSparepartRequests = (): SparepartRequest[] => {
-  return cache.sparepartRequests;
-};
-
-export const saveSparepartRequests = async (requests: SparepartRequest[]) => {
-  cache.sparepartRequests = requests;
-  try {
-    await api.put("sparepart-requests", requests);
-  } catch (err) {
-    console.error("Failed to save sparepart requests:", err);
-  }
-};
-
-// ============================================
-// Sparepart Requests - Now via API
+// Audit Logs - Now via API
 // ============================================
 
 export const getAuditLogs = (): AuditLog[] => {

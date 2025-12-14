@@ -119,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 {/* Mobile Close Button */}
         {isMobile && (
           <div className="flex justify-between items-center p-4 h-[72px] bg-blue-50 md:hidden border-b border-gray-100">
-            <span className="font-bold text-xl">Sigap-ti</span>
+            <span className="font-bold text-xl">SIGAP-TI</span>
             <button
               type="button"
               onClick={onToggleCollapse}

@@ -300,7 +300,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
                 {/* Tambah teks SIGAP-TI di bawah icon untuk layar max-md */}
                 <div className="md:hidden text-center mt-2">
-                  <h1 className="text font-black text-xl text-gray-900">Sigap-ti</h1>
+                  <h1 className="text font-black text-xl text-gray-900">SIGAP-TI</h1>
                 </div>
               </CardHeader>
 
@@ -435,7 +435,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <div className="absolute inset-0 z-16 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
               
               <div className="absolute bottom-8 left-8 z-20 flex flex-col gap-2">
-                <h1 className="text-white text-5xl font-black">Sigap-ti</h1>
+                <h1 className="text-white text-5xl font-black">SIGAP-TI</h1>
                 <div className="text-white text-lg leading max-w-sm drop-shadow-md">
                   Sistem Layanan Internal Terpadu Badan Pusat Statistik Provinsi Nusa Tenggara Barat
                 </div>

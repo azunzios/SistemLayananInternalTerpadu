@@ -309,21 +309,6 @@ export interface KartuKendaliEntry {
   createdAt: string;
 }
 
-export interface SparepartRequest {
-  id: string;
-  ticketId: string;
-
-  spareparts: SparepartItem[];
-
-  status: "pending" | "approved" | "in_procurement" | "ready" | "delivered";
-  requestedBy: string; // Teknisi ID
-  createdAt: string;
-  updatedAt: string;
-  timeline: TimelineEvent[];
-  estimatedDeliveryDate?: string;
-  actualDeliveryDate?: string;
-}
-
 // Ticket Diagnosis - Hasil diagnosa perbaikan barang
 export interface TicketDiagnosis {
   id: string;

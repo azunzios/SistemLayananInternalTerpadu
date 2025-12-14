@@ -224,6 +224,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const renderContent = () => {
     // Get active role untuk permission check
     const activeRole = getActiveRole(currentUser.id) || currentUser.role;
+    
 
     switch (currentView) {
       case "dashboard":

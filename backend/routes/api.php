@@ -11,7 +11,6 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\BmnAssetController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\WorkOrderController;
-use App\Http\Controllers\SparepartRequestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ZoomAccountController;
 use App\Http\Controllers\CommentController;
@@ -106,13 +105,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/work-orders/{workOrder}/status', [WorkOrderController::class, 'updateStatus']);
     Route::patch('/work-orders/{workOrder}/change-bmn-condition', [WorkOrderController::class, 'changeBMNCondition']);
     Route::get('/work-orders/stats/summary', [WorkOrderController::class, 'stats']);
-    
-    // Sparepart Request Management Routes
-    Route::apiResource('sparepart-requests', SparepartRequestController::class);
-    Route::patch('/sparepart-requests/{sparepartRequest}/approve', [SparepartRequestController::class, 'approve']);
-    Route::patch('/sparepart-requests/{sparepartRequest}/reject', [SparepartRequestController::class, 'reject']);
-    Route::patch('/sparepart-requests/{sparepartRequest}/fulfill', [SparepartRequestController::class, 'fulfill']);
-    Route::get('/sparepart-requests/stats/summary', [SparepartRequestController::class, 'stats']);
     
     // Kartu Kendali - data from completed work orders (grouped by ticket)
     // Put export BEFORE the {ticket} route so /export is not caught as {ticket}
