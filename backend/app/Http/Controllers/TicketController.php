@@ -1579,8 +1579,8 @@ class TicketController extends Controller
             $sheet->setCellValue('S' . $row, $ticket->zoom_meeting_link ?? '-');
             $sheet->setCellValue('T' . $row, $ticket->zoom_passcode ?? '-');
             $sheet->setCellValue('U' . $row, $ticket->zoom_rejection_reason ?? '-');
-            $sheet->setCellValue('V' . $row, $ticket->created_at?->format('Y-m-d H:i:s'));
-            $sheet->setCellValue('W' . $row, $ticket->updated_at?->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('V' . $row, $ticket->created_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('W' . $row, $ticket->updated_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'));
 
             $row++;
             $no++;
@@ -1674,6 +1674,11 @@ class TicketController extends Controller
             
             $diagnosis = $ticket->diagnosis;
 
+            // Get asset info - prioritas dari kolom ticket, fallback ke form_data
+            $kodeBarang = $ticket->kode_barang ?? $formData['asset_code'] ?? $formData['kode_barang'] ?? '-';
+            $nup = $ticket->nup ?? $formData['nup'] ?? $formData['asset_nup'] ?? '-';
+            $namaBarang = $formData['asset_name'] ?? $formData['nama_barang'] ?? '-';
+
             $sheet->setCellValue('A' . $row, $no);
             $sheet->setCellValue('B' . $row, $ticket->ticket_number);
             $sheet->setCellValue('C' . $row, $typeLabels[$ticket->type] ?? $ticket->type);
@@ -1684,9 +1689,9 @@ class TicketController extends Controller
             $sheet->setCellValue('H' . $row, $ticket->user?->email ?? '-');
             $sheet->setCellValue('I' . $row, $ticket->user?->unit_kerja ?? '-');
             $sheet->setCellValue('J' . $row, $ticket->assignedUser?->name ?? '-');
-            $sheet->setCellValue('K' . $row, $formData['asset_code'] ?? $formData['kode_barang'] ?? '-');
-            $sheet->setCellValue('L' . $row, $formData['nup'] ?? $formData['asset_nup'] ?? '-');
-            $sheet->setCellValue('M' . $row, $formData['asset_name'] ?? $formData['nama_barang'] ?? '-');
+            $sheet->setCellValue('K' . $row, $kodeBarang);
+            $sheet->setCellValue('L' . $row, $nup);
+            $sheet->setCellValue('M' . $row, $namaBarang);
             $sheet->setCellValue('N' . $row, $diagnosis?->physical_condition ?? '-');
             $sheet->setCellValue('O' . $row, $diagnosis ? ($diagnosis->is_repairable ? 'Ya' : 'Tidak') : '-');
             $sheet->setCellValue('P' . $row, $diagnosis?->repair_recommendation ?? '-');
@@ -1694,8 +1699,8 @@ class TicketController extends Controller
             $sheet->setCellValue('R' . $row, $ticket->zoom_start_time ?? '-');
             $sheet->setCellValue('S' . $row, $ticket->zoom_end_time ?? '-');
             $sheet->setCellValue('T' . $row, $ticket->zoom_meeting_link ?? '-');
-            $sheet->setCellValue('U' . $row, $ticket->created_at?->format('Y-m-d H:i:s'));
-            $sheet->setCellValue('V' . $row, $ticket->updated_at?->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('U' . $row, $ticket->created_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'));
+            $sheet->setCellValue('V' . $row, $ticket->updated_at?->timezone('Asia/Jakarta')->format('Y-m-d H:i:s'));
 
             $row++;
             $no++;
