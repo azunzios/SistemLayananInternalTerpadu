@@ -1,0 +1,2892 @@
+openapi: 3.0.3
+info:
+  title: 'Laravel API Documentation'
+  description: ''
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8000'
+tags:
+  -
+    name: Endpoints
+    description: ''
+paths:
+  /api/login:
+    post:
+      summary: ''
+      operationId: postApiLogin
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: gbailey@example.net
+                password:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - email
+                - password
+      security: []
+  /api/password/forgot:
+    post:
+      summary: 'Send password reset link via email'
+      operationId: sendPasswordResetLinkViaEmail
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: gbailey@example.net
+              required:
+                - email
+      security: []
+  /api/password/verify-token:
+    post:
+      summary: 'Verify reset token'
+      operationId: verifyResetToken
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: gbailey@example.net
+                token:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - email
+                - token
+      security: []
+  /api/password/reset:
+    post:
+      summary: 'Reset password'
+      operationId: resetPassword
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: gbailey@example.net
+                token:
+                  type: string
+                  description: ''
+                  example: architecto
+                password:
+                  type: string
+                  description: 'Must be at least 8 characters.'
+                  example: ']|{+-0pBNvYg'
+              required:
+                - email
+                - token
+                - password
+      security: []
+  /api/profile:
+    get:
+      summary: 'Get current authenticated user'
+      operationId: getCurrentAuthenticatedUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'Update current user profile'
+      operationId: updateCurrentUserProfile
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                nip:
+                  type: string
+                  description: ''
+                  example: null
+                jabatan:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                email:
+                  type: string
+                  description: ''
+                  example: null
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  example: gzmiyvdljnikhway
+              required:
+                - name
+                - jabatan
+                - phone
+      security: []
+  /api/change-password:
+    post:
+      summary: 'Change user password'
+      operationId: changeUserPassword
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  description: ''
+                  example: architecto
+                new_password:
+                  type: string
+                  description: 'The value and <code>current_password</code> must be different. Must match the regex /[a-z]/. Must match the regex /[A-Z]/. Must match the regex /[0-9]/. Must match the regex /[@$!%*#?&]/. Must be at least 8 characters.'
+                  example: ngzmiyvdljnikhwaykcmyuwpwl
+                new_password_confirmation:
+                  type: string
+                  description: 'The value and <code>new_password</code> must match.'
+                  example: architecto
+              required:
+                - current_password
+                - new_password
+                - new_password_confirmation
+      security: []
+  /api/upload-avatar:
+    post:
+      summary: 'Upload user avatar'
+      operationId: uploadUserAvatar
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: 'Must be an image. Must not be greater than 2048 kilobytes.'
+              required:
+                - avatar
+      security: []
+  /api/change-role:
+    post:
+      summary: 'Change user active role'
+      operationId: changeUserActiveRole
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - role
+      security: []
+  /api/logout:
+    post:
+      summary: ''
+      operationId: postApiLogout
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  /api/users:
+    get:
+      summary: 'Get all users (paginated)'
+      operationId: getAllUserspaginated
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'Create new user'
+      operationId: createNewUser
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: zbailey@example.net
+                password:
+                  type: string
+                  description: 'Must be at least 8 characters.'
+                  example: '-0pBNvYgxw'
+                nip:
+                  type: string
+                  description: ''
+                  example: architecto
+                jabatan:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                unit_kerja:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: g
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  example: zmiyvdljnikhwayk
+                roles:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: string
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: true
+              required:
+                - name
+                - email
+                - password
+                - nip
+                - jabatan
+                - unit_kerja
+                - phone
+      security: []
+  '/api/users/{id}':
+    get:
+      summary: 'Get single user by ID'
+      operationId: getSingleUserByID
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'Update user'
+      operationId: updateUser
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: ''
+                  example: null
+                nip:
+                  type: string
+                  description: ''
+                  example: null
+                jabatan:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                unit_kerja:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: g
+                phone:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  example: zmiyvdljnikhwayk
+                roles:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: string
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: false
+                password:
+                  type: string
+                  description: 'Must be at least 8 characters.'
+                  example: 'iw/kXaz<m5L[)~=NG5'
+                  nullable: true
+      security: []
+    delete:
+      summary: 'Delete user'
+      operationId: deleteUser
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/users/{user_id}/roles':
+    patch:
+      summary: 'Update user roles (multi-role management)'
+      operationId: updateUserRolesmultiRoleManagement
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roles:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: string
+      security: []
+    parameters:
+      -
+        in: path
+        name: user_id
+        description: 'The ID of the user.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/users/bulk/update:
+    post:
+      summary: 'Bulk update users (for admin)'
+      operationId: bulkUpdateUsersforAdmin
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_ids:
+                  type: array
+                  description: 'The <code>id</code> of an existing record in the users table.'
+                  example: null
+                  items:
+                    type: string
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: true
+                roles:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: string
+              required:
+                - is_active
+      security: []
+  /api/assets/search/by-code-nup:
+    get:
+      summary: 'Search assets by code and NUP (for ticket creation)'
+      operationId: searchAssetsByCodeAndNUPforTicketCreation
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/bmn-assets:
+    get:
+      summary: 'Get all assets dengan filtering dan pagination'
+      operationId: getAllAssetsDenganFilteringDanPagination
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'Create new asset'
+      operationId: createNewAsset
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kode_satker:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: b
+                  nullable: true
+                nama_satker:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                kode_barang:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: g
+                nama_barang:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: z
+                nup:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: m
+                kondisi:
+                  type: string
+                  description: ''
+                  example: 'Rusak Berat'
+                  enum:
+                    - Baik
+                    - 'Rusak Ringan'
+                    - 'Rusak Berat'
+                merek:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: i
+                  nullable: true
+                ruangan:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'y'
+                  nullable: true
+                serial_number:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: v
+                  nullable: true
+                pengguna:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: d
+                  nullable: true
+              required:
+                - kode_barang
+                - nama_barang
+                - nup
+                - kondisi
+      security: []
+  /api/bmn-assets/kondisi-options:
+    get:
+      summary: 'Get asset kondisi options'
+      operationId: getAssetKondisiOptions
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/bmn-assets/template:
+    get:
+      summary: "Download template Excel\nGET /bmn-assets/template"
+      operationId: downloadTemplateExcelGETbmnAssetstemplate
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/bmn-assets/export/all:
+    get:
+      summary: "Export all assets ke Excel\nGET /bmn-assets/export"
+      operationId: exportAllAssetsKeExcelGETbmnAssetsexport
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/bmn-assets/import:
+    post:
+      summary: "Import assets dari Excel file\nPOST /bmn-assets/import"
+      operationId: importAssetsDariExcelFilePOSTbmnAssetsimport
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'Must be a file. Must not be greater than 10240 kilobytes.'
+              required:
+                - file
+      security: []
+  '/api/bmn-assets/{asset_id}':
+    get:
+      summary: 'Get single asset'
+      operationId: getSingleAsset
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'Update asset'
+      operationId: updateAsset
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kode_satker:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: b
+                  nullable: true
+                nama_satker:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                kode_barang:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: g
+                nama_barang:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: z
+                nup:
+                  type: string
+                  description: 'Must not be greater than 50 characters.'
+                  example: m
+                kondisi:
+                  type: string
+                  description: ''
+                  example: 'Rusak Berat'
+                  enum:
+                    - Baik
+                    - 'Rusak Ringan'
+                    - 'Rusak Berat'
+                merek:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: i
+                  nullable: true
+                ruangan:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'y'
+                  nullable: true
+                serial_number:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: v
+                  nullable: true
+                pengguna:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: d
+                  nullable: true
+      security: []
+    delete:
+      summary: 'Delete asset'
+      operationId: deleteAsset
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: asset_id
+        description: 'The ID of the asset.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/tickets-counts:
+    get:
+      summary: 'Get ticket counts by status for current user'
+      operationId: getTicketCountsByStatusForCurrentUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/stats/dashboard:
+    get:
+      summary: 'Get dashboard statistics for current user based on role'
+      operationId: getDashboardStatisticsForCurrentUserBasedOnRole
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/stats/admin-dashboard:
+    get:
+      summary: 'Get dashboard statistics for admin (all tickets, no role filtering)'
+      operationId: getDashboardStatisticsForAdminallTicketsNoRoleFiltering
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/stats/super-admin-dashboard:
+    get:
+      summary: "Get super admin dashboard statistics\nReturns: stats, ticketsByType, usersByRole"
+      operationId: getSuperAdminDashboardStatisticsReturnsStatsTicketsByTypeUsersByRole
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/stats/admin-layanan-dashboard:
+    get:
+      summary: "Get comprehensive admin layanan dashboard data dengan statistik dan 7-hari trend\nstatistik: total, perbaikan (submitted), zoom (pending_review), closed (dengan %), trend 7 hari"
+      operationId: getComprehensiveAdminLayananDashboardDataDenganStatistikDan7HariTrendStatistikTotalPerbaikansubmittedZoompendingReviewCloseddenganTrend7Hari
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/stats/zoom-bookings:
+    get:
+      summary: 'Get zoom booking statistics (counts by status) for current user'
+      operationId: getZoomBookingStatisticscountsByStatusForCurrentUser
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/zoom-bookings:
+    get:
+      summary: 'Get paginated zoom meeting bookings for current user with optional status filter'
+      operationId: getPaginatedZoomMeetingBookingsForCurrentUserWithOptionalStatusFilter
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  example: pending_review
+                  enum:
+                    - pending_review
+                    - approved
+                    - rejected
+                  nullable: true
+                page:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  example: 16
+                  nullable: true
+                per_page:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 100.'
+                  example: 22
+                  nullable: true
+      security: []
+  /api/tickets/calendar/grid:
+    get:
+      summary: "Get calendar grid data for zoom bookings\nSupports different view modes: daily, weekly, monthly"
+      operationId: getCalendarGridDataForZoomBookingsSupportsDifferentViewModesDailyWeeklyMonthly
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: 'Must be a valid date in the format <code>Y-m-d</code>.'
+                  example: '2025-12-15'
+                  nullable: true
+                month:
+                  type: string
+                  description: 'Must be a valid date in the format <code>Y-m</code>.'
+                  example: 2025-12
+                  nullable: true
+                view:
+                  type: string
+                  description: ''
+                  example: daily
+                  enum:
+                    - daily
+                    - weekly
+                    - monthly
+                  nullable: true
+      security: []
+  /api/tickets/export/zoom:
+    get:
+      summary: "Export zoom tickets to Excel\nGET /tickets/export/zoom"
+      operationId: exportZoomTicketsToExcelGETticketsexportzoom
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets/export/all:
+    get:
+      summary: "Export all tickets to Excel\nGET /tickets/export/all"
+      operationId: exportAllTicketsToExcelGETticketsexportall
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/tickets:
+    get:
+      summary: 'Get all tickets with filtering'
+      operationId: getAllTicketsWithFiltering
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'Create new ticket (both perbaikan and zoom)'
+      operationId: createNewTicketbothPerbaikanAndZoom
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: ''
+                  example: perbaikan
+                  enum:
+                    - perbaikan
+                    - zoom_meeting
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                kode_barang:
+                  type: string
+                  description: 'Perbaikan fields. This field is required when <code>type</code> is <code>perbaikan</code>.'
+                  example: architecto
+                nup:
+                  type: string
+                  description: 'This field is required when <code>type</code> is <code>perbaikan</code>.'
+                  example: architecto
+                asset_location:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                severity:
+                  type: string
+                  description: 'This field is required when <code>type</code> is <code>perbaikan</code>.'
+                  example: normal
+                  enum:
+                    - low
+                    - normal
+                    - high
+                    - critical
+                zoom_date:
+                  type: string
+                  description: 'Zoom fields - validasi minimal, jumlah peserta & breakout room tidak wajib. This field is required when <code>type</code> is <code>zoom_meeting</code>. Must be a valid date. Must be a date after or equal to <code>today</code>.'
+                  example: '2052-01-08'
+                zoom_start_time:
+                  type: string
+                  description: 'This field is required when <code>type</code> is <code>zoom_meeting</code>. Must be a valid date in the format <code>H:i</code>.'
+                  example: '12:31'
+                zoom_end_time:
+                  type: string
+                  description: 'This field is required when <code>type</code> is <code>zoom_meeting</code>. Must be a valid date in the format <code>H:i</code>. Must be a date after <code>zoom_start_time</code>.'
+                  example: '2052-01-08'
+                zoom_estimated_participants:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  example: 39
+                  nullable: true
+                zoom_co_hosts:
+                  type: array
+                  description: Dibebaskan.
+                  example: null
+                  items:
+                    type: object
+                    nullable: true
+                    properties:
+                      name:
+                        type: string
+                        description: ''
+                        example: architecto
+                      email:
+                        type: string
+                        description: 'Must be a valid email address.'
+                        example: zbailey@example.net
+                zoom_breakout_rooms:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  example: 84
+                  nullable: true
+                zoom_attachments:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: string
+                form_data:
+                  type: object
+                  description: 'Dynamic form data.'
+                  example: null
+                  properties: {  }
+                  nullable: true
+                attachments:
+                  type: array
+                  description: 'Must be a file. Must not be greater than 2048 kilobytes.'
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - type
+                - title
+                - description
+      security: []
+  '/api/tickets/{id}':
+    get:
+      summary: 'Get single ticket'
+      operationId: getSingleTicket
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'Update ticket'
+      operationId: updateTicket
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                form_data:
+                  type: object
+                  description: ''
+                  example: null
+                  properties: {  }
+                  nullable: true
+                work_orders_ready:
+                  type: boolean
+                  description: ''
+                  example: true
+                  nullable: true
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/assign':
+    patch:
+      summary: 'Assign ticket to teknisi (admin_layanan only)'
+      operationId: assignTicketToTeknisiadminLayananOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assigned_to:
+                  type: string
+                  description: 'The <code>id</code> of an existing record in the users table.'
+                  example: architecto
+              required:
+                - assigned_to
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/status':
+    patch:
+      summary: 'Update ticket status'
+      operationId: updateTicketStatus
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  example: architecto
+                estimated_schedule:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                reject_reason:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                notes:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                mark_work_orders_ready:
+                  type: boolean
+                  description: ''
+                  example: true
+                  nullable: true
+                completion_data:
+                  type: object
+                  description: ''
+                  example: null
+                  properties:
+                    tindakan_dilakukan:
+                      type: string
+                      description: 'Data form completion.'
+                      example: architecto
+                      nullable: true
+                    komponen_diganti:
+                      type: string
+                      description: ''
+                      example: architecto
+                      nullable: true
+                    hasil_perbaikan:
+                      type: string
+                      description: ''
+                      example: architecto
+                      nullable: true
+                    saran_perawatan:
+                      type: string
+                      description: ''
+                      example: architecto
+                      nullable: true
+                    catatan_tambahan:
+                      type: string
+                      description: ''
+                      example: architecto
+                      nullable: true
+                    foto_bukti:
+                      type: string
+                      description: ''
+                      example: architecto
+                      nullable: true
+                  nullable: true
+              required:
+                - status
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/approve':
+    patch:
+      summary: "Approve ticket (admin_layanan only)\nChanges status to 'assigned' for repair tickets"
+      operationId: approveTicketadminLayananOnlyChangesStatusToassignedForRepairTickets
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/approve-zoom':
+    patch:
+      summary: "Approve zoom booking (admin_layanan only)\nAdmin dapat memilih akun zoom berbeda dari yang disarankan"
+      operationId: approveZoomBookingadminLayananOnlyAdminDapatMemilihAkunZoomBerbedaDariYangDisarankan
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                zoom_meeting_link:
+                  type: string
+                  description: 'Must be a valid URL.'
+                  example: 'http://www.bailey.biz/quos-velit-et-fugiat-sunt-nihil-accusantium-harum.html'
+                zoom_meeting_id:
+                  type: string
+                  description: ''
+                  example: architecto
+                zoom_passcode:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                zoom_account_id:
+                  type: string
+                  description: 'The <code>id</code> of an existing record in the zoom_accounts table.'
+                  example: architecto
+              required:
+                - zoom_meeting_link
+                - zoom_meeting_id
+                - zoom_account_id
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/reject-zoom':
+    patch:
+      summary: 'Reject zoom meeting (admin_layanan only)'
+      operationId: rejectZoomMeetingadminLayananOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: ''
+                  example: architecto
+              required:
+                - reason
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/reject':
+    patch:
+      summary: 'Reject perbaikan ticket (admin_layanan only)'
+      operationId: rejectPerbaikanTicketadminLayananOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Must not be greater than 500 characters.'
+                  example: b
+              required:
+                - reason
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/technician-stats:
+    get:
+      summary: 'Get technician statistics (active tickets count)'
+      operationId: getTechnicianStatisticsactiveTicketsCount
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  '/api/tickets/{ticket_id}/comments':
+    get:
+      summary: "Get comments for a ticket dengan pagination\nGET /tickets/{ticketId}/comments?page=1&per_page=30"
+      operationId: getCommentsForATicketDenganPaginationGETticketsticketIdcommentspage1perPage30
+      description: "Mengembalikan comments dalam urutan DESC (terbaru di atas)\ndengan eager load replies (max 2 level)"
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: "Create a new comment on a ticket\nPOST /tickets/{ticketId}/comments\nBody: {\n  \"content\": \"."
+      operationId: createANewCommentOnATicketPOSTticketsticketIdcommentsBodycontent
+      description: "..\",\n  \"parent_comment_id\": null (optional, untuk reply)\n}"
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: 'Must be at least 1 character. Must not be greater than 5000 characters.'
+                  example: b
+                parent_comment_id:
+                  type: string
+                  description: 'The <code>id</code> of an existing record in the comments table.'
+                  example: null
+                  nullable: true
+              required:
+                - content
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/feedback':
+    post:
+      summary: "Store feedback for a ticket\nPOST /tickets/{ticket}/feedback"
+      operationId: storeFeedbackForATicketPOSTticketsticketfeedback
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  description: 'Must be at least 1. Must not be greater than 5.'
+                  example: 1
+                feedback_text:
+                  type: string
+                  description: 'Must not be greater than 1000 characters.'
+                  example: 'n'
+                  nullable: true
+              required:
+                - rating
+      security: []
+    get:
+      summary: "Get feedback for a ticket\nGET /tickets/{ticket}/feedback"
+      operationId: getFeedbackForATicketGETticketsticketfeedback
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/diagnosis':
+    get:
+      summary: 'Get diagnosis for a ticket'
+      operationId: getDiagnosisForATicket
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'Create or update diagnosis'
+      operationId: createOrUpdateDiagnosis
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                problem_description:
+                  type: string
+                  description: ''
+                  example: architecto
+                problem_category:
+                  type: string
+                  description: ''
+                  example: software
+                  enum:
+                    - hardware
+                    - software
+                    - lainnya
+                repair_type:
+                  type: string
+                  description: ''
+                  example: unrepairable
+                  enum:
+                    - direct_repair
+                    - need_sparepart
+                    - need_vendor
+                    - need_license
+                    - unrepairable
+                repair_description:
+                  type: string
+                  description: 'This field is required when <code>repair_type</code> is <code>direct_repair</code>.'
+                  example: architecto
+                  nullable: true
+                unrepairable_reason:
+                  type: string
+                  description: 'This field is required when <code>repair_type</code> is <code>unrepairable</code>.'
+                  example: architecto
+                  nullable: true
+                asset_condition_change:
+                  type: string
+                  description: ''
+                  example: 'Rusak Berat'
+                  enum:
+                    - Baik
+                    - 'Rusak Ringan'
+                    - 'Rusak Berat'
+                  nullable: true
+                alternative_solution:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                technician_notes:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                estimasi_hari:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+              required:
+                - problem_description
+                - problem_category
+                - repair_type
+      security: []
+    delete:
+      summary: 'Delete diagnosis'
+      operationId: deleteDiagnosis
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  '/api/tickets/{ticket_id}/work-orders':
+    get:
+      summary: 'Get work orders by ticket'
+      operationId: getWorkOrdersByTicket
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/work-orders:
+    get:
+      summary: "Get all work orders with filtering\n?status=requested&type=sparepart&ticket_id=1&page=1&per_page=15"
+      operationId: getAllWorkOrdersWithFilteringstatusrequestedtypesparepartticketId1page1perPage15
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: "Create a new work order\nPOST /work-orders\nRequest body:\n{\n  \"ticket_id\": 1,\n  \"type\": \"sparepart\",\n  \"items\": [\n    {\"name\": \"Charger\", \"quantity\": 1, \"unit\": \"pcs\", \"estimated_price\": 150000},\n    {\"name\": \"Cable\", \"quantity\": 2, \"unit\": \"pcs\", \"estimated_price\": 50000}\n  ]\n}\nOR for vendor:\n{\n  \"ticket_id\": 1,\n  \"type\": \"vendor\",\n  \"vendor_name\": \"PT Service\",\n  \"vendor_contact\": \"081234567890\",\n  \"vendor_description\": \"AC Refrigeration Service\"\n}"
+      operationId: createANewWorkOrderPOSTworkOrdersRequestBodyticketId1typesparepartitemsnameChargerquantity1unitpcsestimatedPrice150000nameCablequantity2unitpcsestimatedPrice50000ORForVendorticketId1typevendorvendorNamePTServicevendorContact081234567890vendorDescriptionACRefrigerationService
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  type: string
+                  description: 'The <code>id</code> of an existing record in the tickets table.'
+                  example: architecto
+                type:
+                  type: string
+                  description: ''
+                  example: license
+                  enum:
+                    - sparepart
+                    - vendor
+                    - license
+                items:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: object
+                    nullable: true
+                    properties:
+                      name:
+                        type: string
+                        description: 'This field is required when <code>items</code> is present. Must not be greater than 255 characters.'
+                        example: v
+                      quantity:
+                        type: number
+                        description: 'This field is required when <code>items</code> is present. Must be at least 1.'
+                        example: 26
+                      unit:
+                        type: string
+                        description: 'This field is required when <code>items</code> is present. Must not be greater than 50 characters.'
+                        example: l
+                      remarks:
+                        type: string
+                        description: ''
+                        example: architecto
+                        nullable: true
+                      estimated_price:
+                        type: number
+                        description: 'Must be at least 0.'
+                        example: 39
+                        nullable: true
+                vendor_name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                vendor_contact:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: g
+                  nullable: true
+                vendor_description:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                license_name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+              required:
+                - ticket_id
+                - type
+      security: []
+  '/api/work-orders/{id}':
+    get:
+      summary: 'Get a single work order'
+      operationId: getASingleWorkOrder
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: "Update work order (items, vendor info, etc)\nPATCH /work-orders/{id}"
+      operationId: updateWorkOrderitemsVendorInfoEtcPATCHworkOrdersid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  description: ''
+                  example: null
+                  items:
+                    type: object
+                    nullable: true
+                    properties:
+                      name:
+                        type: string
+                        description: 'Must not be greater than 255 characters.'
+                        example: 'n'
+                      quantity:
+                        type: number
+                        description: 'Must be at least 1.'
+                        example: 67
+                      unit:
+                        type: string
+                        description: 'Must not be greater than 50 characters.'
+                        example: z
+                      remarks:
+                        type: string
+                        description: ''
+                        example: architecto
+                        nullable: true
+                      estimated_price:
+                        type: number
+                        description: 'Must be at least 0.'
+                        example: 39
+                        nullable: true
+                    required:
+                      - name
+                      - quantity
+                      - unit
+                vendor_name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                  nullable: true
+                vendor_contact:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                vendor_description:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+      security: []
+    delete:
+      summary: "Delete a work order\nOnly allowed if status is requested"
+      operationId: deleteAWorkOrderOnlyAllowedIfStatusIsRequested
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the work order.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/work-orders/{workOrder_id}/status':
+    patch:
+      summary: "Update work order status - flexible transitions allowed\nPATCH /work-orders/{id}/status"
+      operationId: updateWorkOrderStatusFlexibleTransitionsAllowedPATCHworkOrdersidstatus
+      description: "Request body:\n{\n  \"status\": \"requested\" | \"in_procurement\" | \"completed\" | \"unsuccessful\",\n  \"vendor_name\": \"PT ABC\",     // optional for vendor type\n  \"vendor_contact\": \"08xx\",    // optional for vendor type\n  \"completion_notes\": \"...\",   // required for completed\n  \"failure_reason\": \"...\"      // required for unsuccessful\n}"
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: ''
+                  example: completed
+                  enum:
+                    - requested
+                    - in_procurement
+                    - completed
+                    - unsuccessful
+                completion_notes:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                failure_reason:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                vendor_name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                  nullable: true
+                vendor_contact:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: g
+                  nullable: true
+              required:
+                - status
+      security: []
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/work-orders/{workOrder_id}/change-bmn-condition':
+    patch:
+      summary: 'Change BMN condition for unsuccessful work order (sparepart/vendor only)'
+      operationId: changeBMNConditionForUnsuccessfulWorkOrdersparepartvendorOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                asset_condition_change:
+                  type: string
+                  description: ''
+                  example: 'Rusak Ringan'
+                  enum:
+                    - Baik
+                    - 'Rusak Ringan'
+                    - 'Rusak Berat'
+              required:
+                - asset_condition_change
+      security: []
+    parameters:
+      -
+        in: path
+        name: workOrder_id
+        description: 'The ID of the workOrder.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  /api/work-orders/stats/summary:
+    get:
+      summary: "Get work order statistics\nGET /work-orders/stats/summary"
+      operationId: getWorkOrderStatisticsGETworkOrdersstatssummary
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/kartu-kendali:
+    get:
+      summary: "Kartu Kendali List - 1 entry per TIKET perbaikan\nSemua tiket type=perbaikan ditampilkan (tidak harus punya work order)"
+      operationId: kartuKendaliList1EntryPerTIKETPerbaikanSemuaTiketTypeperbaikanDitampilkantidakHarusPunyaWorkOrder
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/kartu-kendali/export:
+    get:
+      summary: "Export Kartu Kendali ke Excel\nGET /kartu-kendali/export"
+      operationId: exportKartuKendaliKeExcelGETkartuKendaliexport
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  '/api/kartu-kendali/{ticket_id}':
+    get:
+      summary: "Kartu Kendali Detail - 1 tiket perbaikan dengan semua info\nGET /kartu-kendali/{ticket}\nMenampilkan diagnosis, work orders (jika ada), dll"
+      operationId: kartuKendaliDetail1TiketPerbaikanDenganSemuaInfoGETkartuKendaliticketMenampilkanDiagnosisWorkOrdersjikaAdaDll
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: ticket_id
+        description: 'The ID of the ticket.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/notifications:
+    get:
+      summary: "Get user's notifications\nGET /notifications?page=1&per_page=15&unread_only=false"
+      operationId: getUsersNotificationsGETnotificationspage1perPage15unreadOnlyfalse
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  '/api/notifications/{notification_id}/read':
+    patch:
+      summary: "Mark notification as read\nPATCH /notifications/{id}/read"
+      operationId: markNotificationAsReadPATCHnotificationsidread
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: notification_id
+        description: 'The ID of the notification.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/notifications/read-all:
+    patch:
+      summary: "Mark all notifications as read\nPATCH /notifications/read-all"
+      operationId: markAllNotificationsAsReadPATCHnotificationsreadAll
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  '/api/notifications/{notification_id}':
+    delete:
+      summary: "Delete notification\nDELETE /notifications/{id}"
+      operationId: deleteNotificationDELETEnotificationsid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: notification_id
+        description: 'The ID of the notification.'
+        example: 1
+        required: true
+        schema:
+          type: integer
+  /api/notifications/unread-count:
+    get:
+      summary: "Get unread count\nGET /notifications/unread-count"
+      operationId: getUnreadCountGETnotificationsunreadCount
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  /api/zoom/accounts:
+    get:
+      summary: 'Get all zoom accounts (active only for pegawai/teknisi, all for admin)'
+      operationId: getAllZoomAccountsactiveOnlyForPegawaiteknisiAllForAdmin
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'Create new zoom account (admin only)'
+      operationId: createNewZoomAccountadminOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_id:
+                  type: string
+                  description: ''
+                  example: architecto
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: 'n'
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: ashly64@example.com
+                host_key:
+                  type: string
+                  description: 'Must be 6 characters.'
+                  example: vdljni
+                plan_type:
+                  type: string
+                  description: ''
+                  example: Business
+                  enum:
+                    - Pro
+                    - Business
+                    - Enterprise
+                max_participants:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  example: 23
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                color:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  example: vdljnikhwaykcmyu
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: true
+              required:
+                - account_id
+                - name
+                - email
+                - host_key
+                - plan_type
+                - max_participants
+                - color
+      security: []
+    put:
+      summary: 'Bulk update zoom accounts (admin only)'
+      operationId: bulkUpdateZoomAccountsadminOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  '/api/zoom/accounts/{id}':
+    get:
+      summary: 'Get single zoom account'
+      operationId: getSingleZoomAccount
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'Update zoom account (admin only)'
+      operationId: updateZoomAccountadminOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: ''
+                  example: null
+                host_key:
+                  type: string
+                  description: 'Must be 6 characters.'
+                  example: ngzmiy
+                plan_type:
+                  type: string
+                  description: ''
+                  example: Enterprise
+                  enum:
+                    - Pro
+                    - Business
+                    - Enterprise
+                max_participants:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  example: 16
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                color:
+                  type: string
+                  description: 'Must not be greater than 20 characters.'
+                  example: vdljnikhwaykcmyu
+                is_active:
+                  type: boolean
+                  description: ''
+                  example: true
+      security: []
+    delete:
+      summary: 'Delete zoom account (admin only)'
+      operationId: deleteZoomAccountadminOnly
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the account.'
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/zoom/accounts/check-availability:
+    post:
+      summary: 'Check availability for specific date and time'
+      operationId: checkAvailabilityForSpecificDateAndTime
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: 'Must be a valid date.'
+                  example: '2025-12-15T12:31:45'
+                start_time:
+                  type: string
+                  description: 'Must be a valid date in the format <code>H:i</code>.'
+                  example: '12:31'
+                end_time:
+                  type: string
+                  description: 'Must be a valid date in the format <code>H:i</code>.'
+                  example: '12:31'
+              required:
+                - date
+                - start_time
+                - end_time
+      security: []
+  '/api/zoom/accounts/{accountId}/conflicts':
+    get:
+      summary: 'Get conflicts for specific account, date and time'
+      operationId: getConflictsForSpecificAccountDateAndTime
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: 'Must be a valid date.'
+                  example: '2025-12-15T12:31:45'
+                start_time:
+                  type: string
+                  description: 'Must be a valid date in the format <code>H:i</code>.'
+                  example: '12:31'
+                end_time:
+                  type: string
+                  description: 'Must be a valid date in the format <code>H:i</code>.'
+                  example: '12:31'
+                exclude_ticket_id:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+              required:
+                - date
+                - start_time
+                - end_time
+      security: []
+    parameters:
+      -
+        in: path
+        name: accountId
+        description: ''
+        example: architecto
+        required: true
+        schema:
+          type: string
+  /api/audit-logs:
+    get:
+      summary: ''
+      operationId: getApiAuditLogs
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: ''
+      operationId: postApiAuditLogs
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  description: ''
+                  example: architecto
+                details:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+                ipAddress:
+                  type: string
+                  description: ''
+                  example: architecto
+                  nullable: true
+              required:
+                - action
+      security: []
+  /api/audit-logs/my-logs:
+    get:
+      summary: ''
+      operationId: getApiAuditLogsMyLogs
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+  '/api/audit-logs/{id}':
+    get:
+      summary: ''
+      operationId: getApiAuditLogsId
+      description: ''
+      parameters: []
+      responses:
+        401:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  success: false
+                  message: Unauthenticated.
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthenticated.
+      tags:
+        - Endpoints
+      security: []
+    delete:
+      summary: ''
+      operationId: deleteApiAuditLogsId
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the audit log.'
+        example: architecto
+        required: true
+        schema:
+          type: string

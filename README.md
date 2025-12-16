@@ -74,3 +74,69 @@ VITE_API_TIMEOUT=30000
 
 **Dokumentasi lengkap:** `EMAIL_NOTIFICATION_SYSTEM.md`
 
+---
+
+## 📚 Dokumentasi API
+
+### 1. Dokumentasi API Backend (Bahasa Indonesia)
+File lengkap: [docs/API_DOCUMENTATION_ID.md](docs/API_DOCUMENTATION_ID.md)
+
+**Isi:**
+- 100+ endpoint dengan detail lengkap
+- Request/Response examples
+- Validasi field
+- Status codes & error handling
+- Enum values untuk semua opsi
+- Kategori: Auth, Users, Tickets, Assets, Zoom, Work Orders, dll
+
+### 2. Ekstrak API Calls dari Frontend
+
+**Quick Start:**
+```bash
+# Jalankan script ekstraksi otomatis
+node extract-api-calls.js
+
+# Output:
+# - Terminal: Ringkasan 120 API calls
+# - File JSON: frontend-api-calls.json (detail lengkap)
+```
+
+**Dokumentasi:**
+- [docs/FRONTEND_API_CALLS.md](docs/FRONTEND_API_CALLS.md) - Daftar semua API calls frontend
+- [docs/API_EXTRACTION_GUIDE.md](docs/API_EXTRACTION_GUIDE.md) - Panduan lengkap ekstraksi
+
+**Cara Alternatif:**
+```bash
+# Grep manual - cari endpoint tertentu
+grep -r "api.get\|api.post" frontend/src --include="*.tsx" -n
+
+# Cari endpoint spesifik
+grep -r "tickets" frontend/src --include="*.tsx" | grep "api\."
+```
+
+**Statistik API Calls:**
+- Total: 120 calls
+- Unique endpoints: 49
+- GET: 32 | POST: 28 | PATCH: 38 | PUT: 18 | DELETE: 4
+
+### 3. OpenAPI Specification (Backend)
+File: [docs/api_docs.yaml](docs/api_docs.yaml)
+- Format: OpenAPI 3.0
+- Auto-generated via Laravel Scribe
+- Update dengan: `php artisan scribe:generate`
+
+---
+
+## 🛠️ Tech Stack
+
+**Quick Reference:**
+- Laravel 12.38.1, React 19.2.1, MySQL 8.0.44
+- PHP 8.3.6, Node.js 24.11.1, TypeScript 5.9.3
+- Vite 7.2.2, Tailwind CSS 4.1.17
+
+**Dokumentasi Lengkap:** [docs/TECH_STACK.md](docs/TECH_STACK.md)
+
+**Key Dependencies:**
+- Backend: Sanctum (Auth), PHPSpreadsheet (Excel), Scribe (API Docs), PestPHP (Testing)
+- Frontend: Radix UI (26 components), React Hook Form, Recharts, Lucide Icons
+
