@@ -761,8 +761,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                   >
                                     <StatusIcon
                                       className={`h-4 w-4 ${statusStyle.text === "text-gray-900"
-                                          ? "text-gray-900"
-                                          : "text-white"
+                                        ? "text-gray-900"
+                                        : "text-white"
                                         }`}
                                     />
                                   </div>
@@ -850,8 +850,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                 </div>
               ) : (
                 /* Calendar Grid View */
-                <div className="w-full overflow-hidden border">
-                  <div className="flex bg-white overflow-x-auto">
+                <div className="!w-full overflow-hidden border">
+                  <div className="flex md:!w-full md:gap-0 md:!mr-0 bg-white overflow-x-auto">
                     {/* Time Column - Sticky */}
                     <div className="sticky left-0 z-20 flex-shrink-0 w-16 md:w-24 bg-white border-r border-gray-300 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                       {/* Header Cell */}
@@ -877,33 +877,30 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                     {/* Account Columns */}
                     <div
                       className="flex border-l border-gray-300"
-                      // Removed fixed calc() logic for mobile safety
                       style={{
-                        minWidth: "fit-content"
+                        // On desktop with ≤3 accounts: fill remaining space
+                        // Otherwise: use fit-content for horizontal scroll
+                        flex: zoomAccounts.length <= 3 ? "1 1 0" : "none",
+                        minWidth: zoomAccounts.length <= 3 ? undefined : "fit-content"
                       }}
                     >
                       {zoomAccounts.map((account, accountIndex) => {
                         const accountBookings = getAccountBookings(account);
 
-                        // Responsive Width Logic:
-                        // On Mobile (max-md): Fixed width 200px to force scrolling
-                        // On Desktop: Dynamic calculation
-                        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-                        const baseWidth = isMobile
-                          ? "200px"
-                          : zoomAccounts.length <= 3
-                            ? `calc((100vw - 350px) / ${zoomAccounts.length})`
-                            : "320px";
+                        // Width Logic:
+                        // ≤3 accounts: flex to fill available space equally
+                        // >3 accounts: fixed 320px width for horizontal scroll
+                        const shouldUseFlex = zoomAccounts.length <= 3;
 
                         return (
                           <div
                             key={account.id}
-                            className={`border-r last:border-r-0 border-gray-300 relative shrink-0 ${accountIndex % 2 === 0 ? "bg-gray-50/30" : "bg-white"
+                            className={`border-r last:border-r-0 border-gray-300 relative ${accountIndex % 2 === 0 ? "bg-gray-50/30" : "bg-white"
                               }`}
                             style={{
-                              width: baseWidth,
-                              minWidth: "200px", // Safety minimum
-                              flex: "none",
+                              // ≤3 accounts: flex fills space, >3 accounts: fixed width
+                              flex: shouldUseFlex ? "1 1 0" : "0 0 320px",
+                              minWidth: shouldUseFlex ? "200px" : "320px",
                             }}
                           >
                             {/* Header Cell */}
@@ -917,8 +914,8 @@ export const ZoomAdminGrid: React.FC<ZoomAdminGridProps> = ({
                                 </span>
                                 <span
                                   className={`text-[10px] md:text-xs ${account.isActive
-                                      ? "text-green-600"
-                                      : "text-gray-500"
+                                    ? "text-green-600"
+                                    : "text-gray-500"
                                     }`}
                                 >
                                   {account.isActive ? "● Aktif" : "● Nonaktif"}
